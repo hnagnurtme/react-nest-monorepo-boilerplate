@@ -1,0 +1,1398 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/healthz": {
+      "get": {
+        "operationId": "HealthController_getLiveness",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "The process is running"
+          }
+        },
+        "summary": "Liveness check",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/readyz": {
+      "get": {
+        "operationId": "HealthController_getReadiness",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Every dependency is reachable"
+          },
+          "503": {
+            "description": "A dependency is down"
+          }
+        },
+        "summary": "Readiness check",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "operationId": "AuthController_login_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Authenticated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "accessToken",
+                        "user"
+                      ],
+                      "properties": {
+                        "accessToken": {
+                          "type": "string"
+                        },
+                        "user": {
+                          "type": "object",
+                          "required": [
+                            "id",
+                            "email",
+                            "fullName",
+                            "role"
+                          ],
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "email": {
+                              "type": "string",
+                              "format": "email"
+                            },
+                            "fullName": {
+                              "type": "string"
+                            },
+                            "role": {
+                              "type": "string",
+                              "enum": [
+                                "PLATFORM_ADMIN",
+                                "TENANT_ADMIN",
+                                "TENANT_MEMBER"
+                              ]
+                            },
+                            "tenantId": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "refreshToken": {
+                          "type": "string"
+                        },
+                        "csrfToken": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated, or the token is invalid or expired",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "403": {
+            "description": "Authenticated, but not allowed to do this",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "422": {
+            "description": "The payload failed validation",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded; see Retry-After",
+            "content": {
+              "application/problem+json": {}
+            }
+          }
+        },
+        "summary": "Exchange credentials for a token pair",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/register": {
+      "post": {
+        "operationId": "AuthController_register_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "OTP verification code sent to email",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "email",
+                        "message",
+                        "expiresInSeconds"
+                      ],
+                      "properties": {
+                        "email": {
+                          "type": "string",
+                          "format": "email"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "expiresInSeconds": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The resource is in a state that forbids this change",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "422": {
+            "description": "The payload failed validation",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded; see Retry-After",
+            "content": {
+              "application/problem+json": {}
+            }
+          }
+        },
+        "summary": "Register a new account (creates its tenant) and send verification OTP email",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/verify-email": {
+      "post": {
+        "operationId": "AuthController_verifyEmail_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyEmailDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Account activated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "user",
+                        "message"
+                      ],
+                      "properties": {
+                        "user": {
+                          "type": "object",
+                          "required": [
+                            "id",
+                            "email",
+                            "fullName",
+                            "role"
+                          ],
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "email": {
+                              "type": "string",
+                              "format": "email"
+                            },
+                            "fullName": {
+                              "type": "string"
+                            },
+                            "role": {
+                              "type": "string",
+                              "enum": [
+                                "PLATFORM_ADMIN",
+                                "TENANT_ADMIN",
+                                "TENANT_MEMBER"
+                              ]
+                            },
+                            "tenantId": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed request",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "409": {
+            "description": "The resource is in a state that forbids this change",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "422": {
+            "description": "The payload failed validation",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded; see Retry-After",
+            "content": {
+              "application/problem+json": {}
+            }
+          }
+        },
+        "summary": "Verify 6-digit OTP code and activate account",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "operationId": "AuthController_refresh_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Rotated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "accessToken",
+                        "user"
+                      ],
+                      "properties": {
+                        "accessToken": {
+                          "type": "string"
+                        },
+                        "user": {
+                          "type": "object",
+                          "required": [
+                            "id",
+                            "email",
+                            "fullName",
+                            "role"
+                          ],
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "email": {
+                              "type": "string",
+                              "format": "email"
+                            },
+                            "fullName": {
+                              "type": "string"
+                            },
+                            "role": {
+                              "type": "string",
+                              "enum": [
+                                "PLATFORM_ADMIN",
+                                "TENANT_ADMIN",
+                                "TENANT_MEMBER"
+                              ]
+                            },
+                            "tenantId": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "refreshToken": {
+                          "type": "string"
+                        },
+                        "csrfToken": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated, or the token is invalid or expired",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "403": {
+            "description": "Authenticated, but not allowed to do this",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "422": {
+            "description": "The payload failed validation",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded; see Retry-After",
+            "content": {
+              "application/problem+json": {}
+            }
+          }
+        },
+        "summary": "Rotate a refresh token for a new pair",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/resend-otp": {
+      "post": {
+        "operationId": "AuthController_resendOtp_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResendOtpDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "New OTP sent to email",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "email",
+                        "message",
+                        "cooldownSeconds"
+                      ],
+                      "properties": {
+                        "email": {
+                          "type": "string",
+                          "format": "email"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "cooldownSeconds": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such resource, or the caller may not know it exists",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "409": {
+            "description": "The resource is in a state that forbids this change",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "422": {
+            "description": "The payload failed validation",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded; see Retry-After",
+            "content": {
+              "application/problem+json": {}
+            }
+          }
+        },
+        "summary": "Resend verification OTP email (subject to 60s cooldown)",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/forgot-password": {
+      "post": {
+        "operationId": "AuthController_forgotPassword_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password reset code sent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "message",
+                        "expiresInSeconds"
+                      ],
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                          "example": "If this email address exists in our system, a password reset code has been sent."
+                        },
+                        "expiresInSeconds": {
+                          "type": "integer",
+                          "example": 300
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "The payload failed validation",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded; see Retry-After",
+            "content": {
+              "application/problem+json": {}
+            }
+          }
+        },
+        "summary": "Request password reset OTP via email",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/reset-password": {
+      "post": {
+        "operationId": "AuthController_resetPassword_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password reset successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "message"
+                      ],
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                          "example": "Operation completed successfully."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed request",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "404": {
+            "description": "No such resource, or the caller may not know it exists",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "422": {
+            "description": "The payload failed validation",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded; see Retry-After",
+            "content": {
+              "application/problem+json": {}
+            }
+          }
+        },
+        "summary": "Reset password using OTP code",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/change-password": {
+      "post": {
+        "operationId": "AuthController_changePassword_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password changed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "message"
+                      ],
+                      "properties": {
+                        "message": {
+                          "type": "string",
+                          "example": "Operation completed successfully."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated, or the token is invalid or expired",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "403": {
+            "description": "Authenticated, but not allowed to do this",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "422": {
+            "description": "The payload failed validation",
+            "content": {
+              "application/problem+json": {}
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Change password for currently authenticated user",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "operationId": "AuthController_logout_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Session revoked"
+          },
+          "403": {
+            "description": "Authenticated, but not allowed to do this",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "422": {
+            "description": "The payload failed validation",
+            "content": {
+              "application/problem+json": {}
+            }
+          }
+        },
+        "summary": "Revoke the current login",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/logout-all": {
+      "post": {
+        "operationId": "AuthController_logoutAll_v1",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": "All sessions revoked"
+          },
+          "401": {
+            "description": "Not authenticated, or the token is invalid or expired",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "403": {
+            "description": "Authenticated, but not allowed to do this",
+            "content": {
+              "application/problem+json": {}
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Revoke every login of the current user",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "operationId": "AuthController_me_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "The caller",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "email",
+                        "fullName",
+                        "role"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "email": {
+                          "type": "string",
+                          "format": "email"
+                        },
+                        "fullName": {
+                          "type": "string"
+                        },
+                        "role": {
+                          "type": "string",
+                          "enum": [
+                            "PLATFORM_ADMIN",
+                            "TENANT_ADMIN",
+                            "TENANT_MEMBER"
+                          ]
+                        },
+                        "tenantId": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated, or the token is invalid or expired",
+            "content": {
+              "application/problem+json": {}
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "The currently authenticated user",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/users": {
+      "get": {
+        "operationId": "UsersController_list_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "A page of users",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "email",
+                          "fullName",
+                          "phoneNumber",
+                          "role",
+                          "tenantId",
+                          "isActive",
+                          "createdAt"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "email": {
+                            "type": "string",
+                            "format": "email"
+                          },
+                          "fullName": {
+                            "type": "string"
+                          },
+                          "phoneNumber": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "role": {
+                            "type": "string",
+                            "enum": [
+                              "PLATFORM_ADMIN",
+                              "TENANT_ADMIN",
+                              "TENANT_MEMBER"
+                            ]
+                          },
+                          "tenantId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "nullable": true
+                          },
+                          "isActive": {
+                            "type": "boolean"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "required": [
+                        "page",
+                        "limit",
+                        "total",
+                        "totalPages"
+                      ],
+                      "properties": {
+                        "page": {
+                          "type": "integer"
+                        },
+                        "limit": {
+                          "type": "integer"
+                        },
+                        "total": {
+                          "type": "integer"
+                        },
+                        "totalPages": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated, or the token is invalid or expired",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "403": {
+            "description": "Authenticated, but not allowed to do this",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "422": {
+            "description": "The payload failed validation",
+            "content": {
+              "application/problem+json": {}
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "List users visible to the caller (own tenant; all for platform admin)",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/api/v1/users/{id}": {
+      "get": {
+        "operationId": "UsersController_get_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "The user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "email",
+                        "fullName",
+                        "phoneNumber",
+                        "role",
+                        "tenantId",
+                        "isActive",
+                        "createdAt"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "email": {
+                          "type": "string",
+                          "format": "email"
+                        },
+                        "fullName": {
+                          "type": "string"
+                        },
+                        "phoneNumber": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "role": {
+                          "type": "string",
+                          "enum": [
+                            "PLATFORM_ADMIN",
+                            "TENANT_ADMIN",
+                            "TENANT_MEMBER"
+                          ]
+                        },
+                        "tenantId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "nullable": true
+                        },
+                        "isActive": {
+                          "type": "boolean"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated, or the token is invalid or expired",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "403": {
+            "description": "Authenticated, but not allowed to do this",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "404": {
+            "description": "No such resource, or the caller may not know it exists",
+            "content": {
+              "application/problem+json": {}
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Get one user",
+        "tags": [
+          "users"
+        ]
+      },
+      "patch": {
+        "operationId": "UsersController_update_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "The updated user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "email",
+                        "fullName",
+                        "phoneNumber",
+                        "role",
+                        "tenantId",
+                        "isActive",
+                        "createdAt"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "email": {
+                          "type": "string",
+                          "format": "email"
+                        },
+                        "fullName": {
+                          "type": "string"
+                        },
+                        "phoneNumber": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "role": {
+                          "type": "string",
+                          "enum": [
+                            "PLATFORM_ADMIN",
+                            "TENANT_ADMIN",
+                            "TENANT_MEMBER"
+                          ]
+                        },
+                        "tenantId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "nullable": true
+                        },
+                        "isActive": {
+                          "type": "boolean"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated, or the token is invalid or expired",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "403": {
+            "description": "Authenticated, but not allowed to do this",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "404": {
+            "description": "No such resource, or the caller may not know it exists",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "422": {
+            "description": "The payload failed validation",
+            "content": {
+              "application/problem+json": {}
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Update a user profile (admins may also activate or deactivate)",
+        "tags": [
+          "users"
+        ]
+      },
+      "delete": {
+        "operationId": "UsersController_remove_v1",
+        "parameters": [],
+        "responses": {
+          "401": {
+            "description": "Not authenticated, or the token is invalid or expired",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "403": {
+            "description": "Authenticated, but not allowed to do this",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "404": {
+            "description": "No such resource, or the caller may not know it exists",
+            "content": {
+              "application/problem+json": {}
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Soft-delete a user",
+        "tags": [
+          "users"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "API",
+    "description": "Success responses are wrapped in `{ data, meta? }`; errors follow RFC 9457 Problem Details with `application/problem+json`.",
+    "version": "1.0.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "access-token": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http",
+        "description": "Paste the access token only. Swagger adds the Bearer prefix."
+      }
+    },
+    "schemas": {
+      "LoginDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 256
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "RegisterDto": {
+        "type": "object",
+        "properties": {
+          "fullName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 256
+          },
+          "phoneNumber": {
+            "type": "string",
+            "pattern": "^(0|\\+84)[3|5|7|8|9][0-9]{8}$"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 256
+          },
+          "agreeTerms": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "fullName",
+          "email",
+          "password",
+          "agreeTerms"
+        ]
+      },
+      "VerifyEmailDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "otp": {
+            "type": "string",
+            "pattern": "^\\d{6}$"
+          }
+        },
+        "required": [
+          "email",
+          "otp"
+        ]
+      },
+      "RefreshDto": {
+        "type": "object",
+        "properties": {
+          "refreshToken": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "ResendOtpDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "ForgotPasswordDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "ResetPasswordDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "otp": {
+            "type": "string",
+            "pattern": "^\\d{6}$"
+          },
+          "newPassword": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "email",
+          "otp",
+          "newPassword"
+        ]
+      },
+      "ChangePasswordDto": {
+        "type": "object",
+        "properties": {
+          "currentPassword": {
+            "type": "string",
+            "minLength": 1
+          },
+          "newPassword": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "currentPassword",
+          "newPassword"
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "title": "Người dùng",
+  "subtitle": "Những người dùng trong không gian làm việc.",
+  "columns": {
+    "fullName": "Họ tên",
+    "email": "Email",
+    "role": "Vai trò",
+    "status": "Trạng thái"
+  },
+  "status": {
+    "active": "Hoạt động",
+    "inactive": "Ngưng hoạt động"
+  },
+  "empty": "Không có người dùng.",
+  "loading": "Đang tải người dùng...",
+  "error": "Không thể tải danh sách người dùng.",
+  "pagination": {
+    "previous": "Trước",
+    "next": "Sau",
+    "summary": "Trang {{page}} / {{totalPages}} ({{total}} người dùng)"
+  },
+  "back": "Trang chủ"
+}

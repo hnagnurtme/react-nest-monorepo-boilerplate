@@ -1,0 +1,115 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": ["**/.env.*local", "packages/tsconfig/*.json", "pnpm-lock.yaml"],
+  "globalEnv": ["NODE_ENV", "CI"],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "env": ["VITE_API_URL", "VITE_APP_ENV"],
+      "outputs": ["dist/**", "build/**"]
+    },
+    "lint": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "typecheck": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "inputs": ["src/**", "test/**", "tests/**", "package.json", "tsconfig.json"],
+      "outputs": ["coverage/**"]
+    },
+    "test:integration": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "env": [
+        "DATABASE_URL",
+        "MIGRATION_DATABASE_URL",
+        "REDIS_URL",
+        "JWT_ACCESS_SECRET",
+        "JWT_REFRESH_SECRET",
+        "COOKIE_SECURE",
+        "COOKIE_DOMAIN"
+      ]
+    },
+    "db:generate": {
+      "cache": false,
+      "env": [
+        "DATABASE_URL",
+        "MIGRATION_DATABASE_URL",
+        "REDIS_URL",
+        "JWT_ACCESS_SECRET",
+        "JWT_REFRESH_SECRET",
+        "COOKIE_SECURE",
+        "COOKIE_DOMAIN"
+      ]
+    },
+    "db:migrate": {
+      "cache": false,
+      "env": [
+        "DATABASE_URL",
+        "MIGRATION_DATABASE_URL",
+        "REDIS_URL",
+        "JWT_ACCESS_SECRET",
+        "JWT_REFRESH_SECRET",
+        "COOKIE_SECURE",
+        "COOKIE_DOMAIN"
+      ],
+      "dependsOn": ["^build"]
+    },
+    "db:studio": {
+      "cache": false,
+      "persistent": true,
+      "env": [
+        "DATABASE_URL",
+        "MIGRATION_DATABASE_URL",
+        "REDIS_URL",
+        "JWT_ACCESS_SECRET",
+        "JWT_REFRESH_SECRET",
+        "COOKIE_SECURE",
+        "COOKIE_DOMAIN"
+      ]
+    },
+    "export:openapi": {
+      "cache": false,
+      "outputs": ["../../packages/api-contract/openapi.json"],
+      "env": [
+        "DATABASE_URL",
+        "MIGRATION_DATABASE_URL",
+        "REDIS_URL",
+        "JWT_ACCESS_SECRET",
+        "JWT_REFRESH_SECRET",
+        "COOKIE_SECURE",
+        "COOKIE_DOMAIN"
+      ],
+      "dependsOn": ["^build"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "start": {
+      "cache": false,
+      "persistent": true,
+      "dependsOn": ["build"]
+    },
+    "clean": {
+      "cache": false
+    },
+    "db:seed": {
+      "cache": false,
+      "env": [
+        "DATABASE_URL",
+        "MIGRATION_DATABASE_URL",
+        "REDIS_URL",
+        "JWT_ACCESS_SECRET",
+        "JWT_REFRESH_SECRET",
+        "COOKIE_SECURE",
+        "COOKIE_DOMAIN"
+      ],
+      "dependsOn": ["^build"]
+    }
+  }
+}

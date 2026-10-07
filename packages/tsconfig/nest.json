@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "NestJS",
+  "extends": "./base.json",
+  "_comment": "ESM: the workspace packages (@repo/shared-types) and several Nest 11 add-ons ship ESM-only, so the API is ESM too. Relative imports therefore carry an explicit .js extension. Alias paths are declared in apps/api/tsconfig.json, not here — `baseUrl` resolves relative to the file that declares it. Canonical alias table: docs/rules/01-typescript.md A2.",
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "verbatimModuleSyntax": false,
+    "esModuleInterop": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "target": "ES2022",
+    "outDir": "./dist"
+  }
+}

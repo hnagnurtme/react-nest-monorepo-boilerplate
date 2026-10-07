@@ -1,0 +1,25 @@
+# Enforces docs/rules/07-security.md section A.
+title = "Secret scanning configuration"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "jwt-secret-hardcoded"
+description = "Hard-coded JWT secret, or a fallback default for one"
+regex = '''(?i)JWT_SECRET\s*[:=]\s*["'][^"'$][^"']{8,}["']'''
+tags = ["secret", "jwt"]
+
+[[rules]]
+id = "env-default-fallback"
+description = "process.env.X || 'default-value' — a fallback for a security variable is a committed secret"
+regex = '''process\.env\.[A-Z_]*(SECRET|KEY|TOKEN|PASSWORD)[A-Z_]*\s*\|\|\s*["'][^"']+["']'''
+tags = ["secret", "fallback"]
+
+[allowlist]
+description = "Skip example files and documentation"
+paths = [
+  '''\.env\.example$''',
+  '''docs/.*\.md$''',
+  '''pnpm-lock\.yaml$''',
+]

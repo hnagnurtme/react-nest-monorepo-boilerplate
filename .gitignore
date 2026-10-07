@@ -1,0 +1,41 @@
+node_modules/
+dist/
+build/
+coverage/
+.turbo/
+*.tsbuildinfo
+
+.env
+.env.*
+!.env.example
+
+.DS_Store
+*.log
+
+*.py[cod]
+
+.pnpm-store/
+
+# MCP configuration & credentials
+.agents/mcp_config.json
+
+# AI agent tool directories (local developer tooling)
+.claude/
+.codex/
+.cursor/
+.gemini/
+.kiro/
+.omo/
+.vscode/
+.mcp.json
+
+
+# Compiled output emitted next to sources (build goes to dist/)
+packages/*/src/**/*.js
+packages/*/src/**/*.js.map
+packages/*/src/**/*.d.ts
+packages/*/src/**/*.d.ts.map
+packages/*/test/**/*.js
+packages/*/test/**/*.js.map
+packages/*/test/**/*.d.ts
+packages/*/test/**/*.d.ts.map

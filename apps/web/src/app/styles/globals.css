@@ -1,0 +1,48 @@
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Inter:wght@400;500;600;700&display=swap');
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Inter', 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, sans-serif;
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
+
+  --color-primary: #006a43;
+  --color-primary-hover: #005233;
+  --color-primary-active: #1e6915;
+  --color-primary-light: #eaf7f0;
+  --color-primary-subtle: #f3faf6;
+  --color-primary-foreground: #ffffff;
+
+  --color-secondary: #eaf7f0;
+  --color-secondary-foreground: #006a43;
+
+  --color-background: #ffffff;
+  --color-surface-subtlest: #f8faf8;
+  --color-foreground: #151e19;
+
+  --color-card: #ffffff;
+  --color-card-foreground: #151e19;
+
+  --color-muted: #f3faf6;
+  --color-muted-foreground: #6e7a71;
+
+  --color-border: #e1ebe2;
+  --color-input: #e1ebe2;
+  --color-input-focus: #006a43;
+
+  --color-destructive: #d32f2f;
+  --color-destructive-foreground: #ffffff;
+  --color-destructive-light: #ffdad6;
+}
+
+:root {
+  font-family: var(--font-sans);
+  color: var(--color-foreground);
+  background-color: var(--color-surface-subtlest);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+}

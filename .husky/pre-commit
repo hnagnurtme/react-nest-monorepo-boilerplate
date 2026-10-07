@@ -1,0 +1,10 @@
+pnpm exec lint-staged
+
+# Local secret scanning. CI always runs gitleaks so this is an early guardrail;
+# if not installed locally, issue a warning without blocking the commit.
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks protect --staged --config .gitleaks.toml --no-banner --redact
+else
+  echo "⚠ gitleaks is not installed — skipping local secret scan (CI will still scan)."
+  echo "  Install via: brew install gitleaks"
+fi

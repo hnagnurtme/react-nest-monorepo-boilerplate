@@ -1,0 +1,78 @@
+import { Injectable } from '@nestjs/common';
+import { and, asc, count, desc, eq, isNull, sql } from 'drizzle-orm';
+
+import type { SortSpec } from '@/common/index.js';
+import type { Tx } from '@/core/database/drizzle.module.js';
+import { users, type User } from '@/core/database/schema/index.js';
+
+export const USER_SORT_FIELDS = ['createdAt', 'fullName', 'email'] as const;
+export type UserSortField = (typeof USER_SORT_FIELDS)[number];
+
+export interface UserPatch {
+  fullName?: string;
+  phoneNumber?: string | null;
+  isActive?: boolean;
+}
+
+/**
+ * No tenant filter appears in any query below: tenant isolation is enforced by
+ * the RLS policy on `users`, not by application code (ADR-0003). Never export
+ * this class from the module index.
+ */
+@Injectable()
+export class UsersRepository {
+  async list(
+    tx: Tx,
+    page: { limit: number; offset: number },
+    sort: SortSpec<UserSortField> | undefined,
+  ): Promise<User[]> {
+    const column = users[sort?.field ?? 'createdAt'];
+    const order = sort?.direction === 'asc' ? asc(column) : desc(column);
+
+    return tx
+      .select()
+      .from(users)
+      .where(isNull(users.deletedAt))
+      .orderBy(order, desc(users.id))
+      .limit(page.limit)
+      .offset(page.offset);
+  }
+
+  async count(tx: Tx): Promise<number> {
+    const [row] = await tx.select({ total: count() }).from(users).where(isNull(users.deletedAt));
+    return row?.total ?? 0;
+  }
+
+  async findById(tx: Tx, id: string): Promise<User | undefined> {
+    const [row] = await tx
+      .select()
+      .from(users)
+      .where(and(eq(users.id, id), isNull(users.deletedAt)))
+      .limit(1);
+
+    return row;
+  }
+
+  async update(tx: Tx, id: string, patch: UserPatch): Promise<User | undefined> {
+    const [row] = await tx
+      .update(users)
+      .set({
+        ...patch,
+        updatedAt: sql`now()`,
+      })
+      .where(and(eq(users.id, id), isNull(users.deletedAt)))
+      .returning();
+
+    return row;
+  }
+
+  async softDelete(tx: Tx, id: string): Promise<boolean> {
+    const rows = await tx
+      .update(users)
+      .set({ deletedAt: sql`now()`, isActive: false, updatedAt: sql`now()` })
+      .where(and(eq(users.id, id), isNull(users.deletedAt)))
+      .returning({ id: users.id });
+
+    return rows.length > 0;
+  }
+}

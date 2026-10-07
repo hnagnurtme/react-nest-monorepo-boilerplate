@@ -1,0 +1,37 @@
+# Git & metadata
+.git
+.gitignore
+.github
+
+# Dependencies & build outputs
+node_modules
+**/node_modules
+dist
+**/dist
+build
+**/build
+.turbo
+**/.turbo
+*.tsbuildinfo
+**/*.tsbuildinfo
+
+# Environment variables & secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Tests & Coverage
+coverage
+**/coverage
+.nyc_output
+
+# Python virtual environment & cache
+**/*.pyc
+**/*.pyo
+
+# Excluded apps from backend docker context
+apps/web
+docs
+infra

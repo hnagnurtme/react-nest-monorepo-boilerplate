@@ -1,0 +1,10 @@
+node_modules
+dist
+build
+coverage
+.turbo
+pnpm-lock.yaml
+packages/api-contract/openapi.json
+packages/api-contract/src/generated.ts
+apps/api/drizzle
+**/*.d.ts

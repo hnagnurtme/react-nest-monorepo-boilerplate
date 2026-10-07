@@ -1,0 +1,23 @@
+{
+  "title": "Users",
+  "subtitle": "People in your workspace.",
+  "columns": {
+    "fullName": "Name",
+    "email": "Email",
+    "role": "Role",
+    "status": "Status"
+  },
+  "status": {
+    "active": "Active",
+    "inactive": "Inactive"
+  },
+  "empty": "No users found.",
+  "loading": "Loading users...",
+  "error": "Could not load users.",
+  "pagination": {
+    "previous": "Previous",
+    "next": "Next",
+    "summary": "Page {{page}} of {{totalPages}} ({{total}} users)"
+  },
+  "back": "Home"
+}

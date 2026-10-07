@@ -1,0 +1,313 @@
+# Enforces docs/rules/09-git-va-ci.md section E.
+name: CI Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '24'
+  PNPM_VERSION: '9.15.4'
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  # E1: secret scan — runs first so it fails fast
+  secret-scan:
+    name: Secret Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .gitleaks.toml
+
+  # Path & Branch change detection
+  changes:
+    name: Detect Changes & Scope
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      is_main: ${{ steps.branch.outputs.is_main }}
+      docs_only: ${{ steps.filter.outputs.docs_only }}
+      ts_any: ${{ steps.evaluate.outputs.ts_any }}
+      api_any: ${{ steps.evaluate.outputs.api_any }}
+    steps:
+      - uses: actions/checkout@v6
+      - id: branch
+        run: |
+          if [ "${{ github.base_ref }}" = "main" ] || [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "is_main=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_main=false" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          filters: |
+            docs_only:
+              - 'docs/**'
+              - '*.md'
+              - 'LICENSE'
+              - 'AGENTS.md'
+              - '.github/ISSUE_TEMPLATE/**'
+              - '.github/pull_request_template.md'
+            shared:
+              - 'packages/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'turbo.json'
+              - 'tsconfig.json'
+              - '.github/workflows/ci.yml'
+            api:
+              - 'apps/api/**'
+            web:
+              - 'apps/web/**'
+      - id: evaluate
+        run: |
+          is_main="${{ steps.branch.outputs.is_main }}"
+          shared="${{ steps.filter.outputs.shared }}"
+          api="${{ steps.filter.outputs.api }}"
+          web="${{ steps.filter.outputs.web }}"
+
+          if [ "$is_main" = "true" ] || [ "$shared" = "true" ] || [ "$api" = "true" ] || [ "$web" = "true" ]; then
+            echo "ts_any=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ts_any=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          if [ "$is_main" = "true" ] || [ "$shared" = "true" ] || [ "$api" = "true" ]; then
+            echo "api_any=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "api_any=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # 09 section B: commits must follow Conventional Commits (lightweight, no pnpm install)
+  commitlint:
+    name: Commit Message
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: wagoid/commitlint-github-action@v6
+        with:
+          configFile: commitlint.config.mjs
+
+  # Parallel Node/TS job 1: Format & Lint
+  quality:
+    name: Code Quality (Format & Lint)
+    needs: changes
+    if: needs.changes.outputs.ts_any == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - name: Cache Turborepo
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-quality-${{ runner.os }}-${{ github.sha }}
+          restore-keys: turbo-quality-${{ runner.os }}-
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check
+      - run: pnpm turbo run lint -- --max-warnings=0
+
+  # Parallel Node/TS job 2: Typecheck
+  typecheck:
+    name: Typecheck
+    needs: changes
+    if: needs.changes.outputs.ts_any == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - name: Cache Turborepo
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-typecheck-${{ runner.os }}-${{ github.sha }}
+          restore-keys: turbo-typecheck-${{ runner.os }}-
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm turbo run typecheck
+
+  # Parallel Node/TS job 3: Unit tests & Audit
+  test-unit:
+    name: Unit Tests & Dependency Audit
+    needs: changes
+    if: needs.changes.outputs.ts_any == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - name: Cache Turborepo
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-test-${{ runner.os }}-${{ github.sha }}
+          restore-keys: turbo-test-${{ runner.os }}-
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm turbo run test
+      - run: pnpm audit:ci
+
+  # 08-testing.md sections C+D: RLS and integration tests need a real Postgres
+  integration:
+    name: Integration & RLS
+    needs: changes
+    if: needs.changes.outputs.api_any == 'true'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: boilerplate_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 10s
+          --health-timeout 5s --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 10s
+          --health-timeout 5s --health-retries 5
+    env:
+      MIGRATION_DATABASE_URL: postgres://postgres:postgres@localhost:5432/boilerplate_test
+      DATABASE_URL: postgres://boilerplate_app:app@localhost:5432/boilerplate_test
+      REDIS_URL: redis://localhost:6379
+      COOKIE_SECURE: 'false'
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Generate throwaway JWT secrets
+        run: |
+          {
+            echo "JWT_ACCESS_SECRET=$(openssl rand -hex 32)"
+            echo "JWT_REFRESH_SECRET=$(openssl rand -hex 32)"
+          } >> "$GITHUB_ENV"
+
+      - name: Check if SQL migrations exist
+        id: check-migrations
+        run: |
+          if find apps/api/drizzle -type f -name '*.sql' -print -quit 2>/dev/null | grep -q .; then
+            echo "has_migrations=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_migrations=false" >> "$GITHUB_OUTPUT"
+            echo "No SQL migrations found in apps/api/drizzle. Skipping DB migration and RLS tests."
+          fi
+
+      - name: Run migrations (privileged connection, SET ROLE boilerplate_owner)
+        if: steps.check-migrations.outputs.has_migrations == 'true'
+        run: pnpm db:migrate
+
+      # Deploys re-run migrate.ts against a database that already has roles and
+      # tables; a non-idempotent step here broke production once.
+      - name: Re-run migrations (must be idempotent)
+        if: steps.check-migrations.outputs.has_migrations == 'true'
+        run: pnpm db:migrate
+
+      - name: Integration tests (app role, RLS in effect)
+        if: steps.check-migrations.outputs.has_migrations == 'true'
+        run: pnpm test:integration
+
+  # 06-api-design.md section F2: a regenerated spec must produce no diff
+  openapi-drift:
+    name: OpenAPI Contract Drift
+    needs: changes
+    if: needs.changes.outputs.api_any == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm contract:generate
+      - name: Fail if the contract was not re-committed
+        run: |
+          if ! git diff --quiet; then
+            echo "::error::API contract is out of sync with the code. Run 'pnpm contract:generate' and commit the result."
+            git diff --stat
+            exit 1
+          fi
+
+  # Aggregator Gate: Single required check for GitHub Branch Protection
+  ci-gate:
+    name: CI Gate
+    needs:
+      - secret-scan
+      - commitlint
+      - changes
+      - quality
+      - typecheck
+      - test-unit
+      - openapi-drift
+      - integration
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Evaluate pipeline results
+        run: |
+          results='${{ toJSON(needs) }}'
+          echo "CI Status Evaluation: $results"
+
+          failed=$(echo "$results" | jq -r 'to_entries[] | select(.value.result == "failure" or .value.result == "cancelled") | .key')
+          if [ -n "$failed" ]; then
+            echo "::error::The following required CI jobs failed: $failed"
+            exit 1
+          fi
+
+          echo "All checks passed or appropriately skipped based on scope."
