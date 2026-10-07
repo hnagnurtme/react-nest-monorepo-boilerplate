@@ -3,14 +3,17 @@ import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { AbilityProvider } from '@/features/auth';
+import { ThemeProvider } from '@/shared/components';
 import { ToastProvider } from '@/shared/ui';
 
 import { ErrorBoundary } from './components/error-boundary';
 
-const STALE_MINUTES = 60;
-const SECONDS_PER_MINUTE = 60;
-const MS_PER_SECOND = 1000;
-const STALE_TIME_MS = STALE_MINUTES * SECONDS_PER_MINUTE * MS_PER_SECOND;
+/**
+ * Admin lists change under the user's feet (another admin edits a role), so the
+ * window where a cached page is served without a background refetch is short.
+ * Mutations still invalidate explicitly; this only covers changes made elsewhere.
+ */
+const STALE_TIME_MS = 30_000;
 
 export function AppProviders({ children }: { children?: ReactNode }) {
   const { t } = useTranslation('auth');
@@ -21,7 +24,7 @@ export function AppProviders({ children }: { children?: ReactNode }) {
           queries: {
             staleTime: STALE_TIME_MS,
             retry: 1,
-            refetchOnWindowFocus: false,
+            refetchOnWindowFocus: true,
           },
         },
       }),
@@ -29,11 +32,13 @@ export function AppProviders({ children }: { children?: ReactNode }) {
 
   return (
     <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <ToastProvider closeLabel={t('common.closeNotification')}>
-          <AbilityProvider>{children}</AbilityProvider>
-        </ToastProvider>
-      </QueryClientProvider>
+      <ThemeProvider>
+        <QueryClientProvider client={queryClient}>
+          <ToastProvider closeLabel={t('common.closeNotification')}>
+            <AbilityProvider>{children}</AbilityProvider>
+          </ToastProvider>
+        </QueryClientProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }

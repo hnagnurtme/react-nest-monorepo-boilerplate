@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { and, asc, count, desc, eq, isNull, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, isNull, or, sql, type SQL } from 'drizzle-orm';
 
 import type { SortSpec } from '@/common/index.js';
 import type { Tx } from '@/core/database/drizzle.module.js';
@@ -8,10 +8,37 @@ import { users, type NewUser, type User } from '@/core/database/schema/index.js'
 export const USER_SORT_FIELDS = ['createdAt', 'fullName', 'email'] as const;
 export type UserSortField = (typeof USER_SORT_FIELDS)[number];
 
+export interface UserFilter {
+  /** Case-insensitive substring of the full name or the email. */
+  search?: string | undefined;
+}
+
 export interface UserPatch {
   fullName?: string;
   phoneNumber?: string | null;
   isActive?: boolean;
+}
+
+/**
+ * Binding the term as a parameter stops SQL injection but not LIKE
+ * metacharacters: without this, a search for `a%` would match everything after
+ * an `a`. Backslash is Postgres' default LIKE escape character.
+ */
+function escapeLikePattern(value: string): string {
+  return value.replaceAll(/[\\%_]/g, (character) => `\\${character}`);
+}
+
+/**
+ * Soft-deleted rows are always excluded. The leading `%` means this predicate
+ * cannot use a b-tree index: add a trigram index (`pg_trgm`) if the table grows
+ * past a few thousand rows.
+ */
+function listWhere(filter: UserFilter): SQL | undefined {
+  const notDeleted = isNull(users.deletedAt);
+  if (filter.search === undefined || filter.search === '') return notDeleted;
+
+  const pattern = `%${escapeLikePattern(filter.search)}%`;
+  return and(notDeleted, or(ilike(users.fullName, pattern), ilike(users.email, pattern)));
 }
 
 /**
@@ -25,6 +52,7 @@ export class UsersRepository {
     tx: Tx,
     page: { limit: number; offset: number },
     sort: SortSpec<UserSortField> | undefined,
+    filter: UserFilter = {},
   ): Promise<User[]> {
     const column = users[sort?.field ?? 'createdAt'];
     const order = sort?.direction === 'asc' ? asc(column) : desc(column);
@@ -32,14 +60,15 @@ export class UsersRepository {
     return tx
       .select()
       .from(users)
-      .where(isNull(users.deletedAt))
+      .where(listWhere(filter))
       .orderBy(order, desc(users.id))
       .limit(page.limit)
       .offset(page.offset);
   }
 
-  async count(tx: Tx): Promise<number> {
-    const [row] = await tx.select({ total: count() }).from(users).where(isNull(users.deletedAt));
+  /** Counted with the same predicate as `list`, or the page meta would not match. */
+  async count(tx: Tx, filter: UserFilter = {}): Promise<number> {
+    const [row] = await tx.select({ total: count() }).from(users).where(listWhere(filter));
     return row?.total ?? 0;
   }
 

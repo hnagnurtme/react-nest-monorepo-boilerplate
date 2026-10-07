@@ -1,5 +1,12 @@
 @import 'tailwindcss';
 
+/*
+ * Dark mode is driven by a class on <html> so the user's choice can override the
+ * OS preference; ThemeProvider writes that class. The default `dark:` variant in
+ * Tailwind v4 reads prefers-color-scheme only, which cannot be overridden.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans:
     system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
@@ -25,7 +32,8 @@
   --color-card-foreground: #151e19;
 
   --color-muted: #f3faf6;
-  --color-muted-foreground: #6e7a71;
+  /* #6e7a71 read at 4.48:1 on white — just under WCAG AA for body text. */
+  --color-muted-foreground: #68736b;
 
   --color-border: #e1ebe2;
   --color-input: #e1ebe2;
@@ -33,13 +41,80 @@
 
   --color-destructive: #d32f2f;
   --color-destructive-foreground: #ffffff;
-  --color-destructive-light: #ffdad6;
+  /* Lightened from #ffdad6 so `text-destructive` on it clears AA (was 3.85:1). */
+  --color-destructive-light: #fff5f5;
+  --color-destructive-border: #f5bdbd;
+
+  --color-success: #15803d;
+  --color-success-foreground: #ffffff;
+  --color-success-light: #f0fdf4;
+  --color-success-border: #dcfce7;
+
+  --color-warning: #b45309;
+  --color-warning-foreground: #ffffff;
+  --color-warning-light: #fffbeb;
+  --color-warning-border: #fde68a;
+
+  /* Modal scrim. Carries its own alpha so `bg-overlay` needs no opacity utility. */
+  --color-overlay: rgb(9 20 15 / 0.45);
+}
+
+/*
+ * Dark palette: the same token names, so every component that already uses a
+ * semantic class (bg-card, text-muted-foreground, ...) follows with no edit.
+ */
+:root.dark {
+  --color-primary: #2fa36f;
+  --color-primary-hover: #3cb47e;
+  --color-primary-active: #278c5e;
+  --color-primary-light: #13281f;
+  --color-primary-subtle: #101c17;
+  --color-primary-foreground: #04150d;
+
+  --color-secondary: #16211c;
+  --color-secondary-foreground: #8fe0b8;
+
+  --color-background: #0b100d;
+  --color-surface-subtlest: #0b100d;
+  --color-foreground: #e6ede8;
+
+  --color-card: #121916;
+  --color-card-foreground: #e6ede8;
+
+  --color-muted: #16211c;
+  --color-muted-foreground: #93a39a;
+
+  --color-border: #233029;
+  --color-input: #233029;
+  --color-input-focus: #2fa36f;
+
+  --color-destructive: #f87171;
+  --color-destructive-foreground: #1a0a0a;
+  --color-destructive-light: #3a1414;
+  --color-destructive-border: #5a1f1f;
+
+  --color-success: #34d399;
+  --color-success-foreground: #052e1b;
+  --color-success-light: #0f2a20;
+  --color-success-border: #1d4336;
+
+  --color-warning: #fbbf24;
+  --color-warning-foreground: #241a04;
+  --color-warning-light: #2a2008;
+  --color-warning-border: #4a3a10;
+
+  --color-overlay: rgb(0 0 0 / 0.65);
 }
 
 :root {
   font-family: var(--font-sans);
   color: var(--color-foreground);
   background-color: var(--color-surface-subtlest);
+  color-scheme: light;
+}
+
+:root.dark {
+  color-scheme: dark;
 }
 
 body {

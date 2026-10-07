@@ -7,17 +7,26 @@ export const USERS_ENDPOINT = '/api/v1/users';
 
 export const usersKeys = {
   all: ['users'] as const,
-  list: (page: number, limit: number) => ['users', 'list', page, limit] as const,
+  list: (page: number, limit: number, search: string) =>
+    ['users', 'list', page, limit, search] as const,
 };
 
-export function useUsers(page: number, limit: number): UseQueryResult<UsersPage, ApiError> {
+/** `search` matches the name or the email server-side; '' means no filter. */
+export function useUsers(
+  page: number,
+  limit: number,
+  search = '',
+): UseQueryResult<UsersPage, ApiError> {
   return useQuery<UsersPage, ApiError>({
-    queryKey: usersKeys.list(page, limit),
+    queryKey: usersKeys.list(page, limit, search),
     queryFn: async () => {
       const response = await rawPagedRequest<UserListItem>(USERS_ENDPOINT, {
-        params: { page, limit },
+        params: { page, limit, ...(search === '' ? {} : { search }) },
       });
       return { items: response.data, meta: response.meta };
     },
+    // Keeps the previous page on screen while a new search term loads, instead
+    // of flashing the empty state between keystrokes.
+    placeholderData: (previous) => previous,
   });
 }

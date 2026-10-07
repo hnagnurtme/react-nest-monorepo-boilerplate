@@ -24,7 +24,7 @@
   "pagination": {
     "previous": "Previous",
     "next": "Next",
-    "summary": "Page {{page}} of {{totalPages}} ({{total}} tenants)"
+    "summary": "Page {{page}} of {{totalPages}} ({{total, number}} tenants)"
   },
   "create": {
     "name": "Name",

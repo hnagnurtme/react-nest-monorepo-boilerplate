@@ -210,7 +210,6 @@ describe('RolesPage', () => {
   });
 
   it('deletes a custom role after confirmation', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
     const fetchMock = mockApi(makeTenantAdmin(), TENANT_ADMIN_GRANTS, makeHandler());
     renderRoles();
     const user = userEvent.setup();
@@ -218,6 +217,7 @@ describe('RolesPage', () => {
     await user.click(await screen.findByRole('button', { name: 'Open role Support' }));
     const dialog = await screen.findByRole('dialog');
     await user.click(await within(dialog).findByRole('button', { name: 'Delete role' }));
+    await user.click(await screen.findByRole('button', { name: 'Confirm' }));
 
     await waitFor(() => {
       expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'DELETE')).toBe(true);
@@ -225,7 +225,6 @@ describe('RolesPage', () => {
   });
 
   it('shows a conflict message when deleting a role that is still in use', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
     const base = makeHandler();
     mockApi(makeTenantAdmin(), TENANT_ADMIN_GRANTS, (url, init) =>
       init?.method === 'DELETE'
@@ -238,6 +237,7 @@ describe('RolesPage', () => {
     await user.click(await screen.findByRole('button', { name: 'Open role Support' }));
     const dialog = await screen.findByRole('dialog');
     await user.click(await within(dialog).findByRole('button', { name: 'Delete role' }));
+    await user.click(await screen.findByRole('button', { name: 'Confirm' }));
 
     expect(await screen.findByText(/still assigned to users/)).toBeInTheDocument();
   });

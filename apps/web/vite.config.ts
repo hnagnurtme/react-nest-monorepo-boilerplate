@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { fileURLToPath, URL } from 'node:url';
 import react from '@vitejs/plugin-react';
 import { loadEnv } from 'vite';
@@ -15,7 +16,20 @@ function appTitle(appName: string) {
   };
 }
 
+/*
+ * The design tokens stay in CSS (one source of truth) but the WCAG contrast test
+ * has to read them. A `?raw` import would already have been compiled by the
+ * Tailwind plugin, so the raw text is injected at config time instead.
+ */
+const globalsCss = readFileSync(
+  fileURLToPath(new URL('./src/app/styles/globals.css', import.meta.url)),
+  'utf8',
+);
+
 export default defineConfig(({ mode }) => ({
+  define: {
+    GLOBALS_CSS_RAW: JSON.stringify(globalsCss),
+  },
   plugins: [
     react(),
     tailwindcss(),

@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next';
 import { z } from 'zod';
 
 export const PHONE_REGEX = /^\+?[0-9]{7,15}$/;
@@ -11,7 +12,7 @@ export interface CreateUserSchemaOptions {
   isPlatformActor: boolean;
   /** Scope of a role id, so a platform role means "no tenant". */
   scopeOf: (roleId: string) => RoleScopeName | undefined;
-  t: (key: string) => string;
+  t: TFunction<'users'>;
 }
 
 export interface CreateUserFormValues {

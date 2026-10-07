@@ -8,7 +8,19 @@ const PHONE_REGEX = /^\+?[0-9]{7,15}$/;
 const MIN_PASSWORD_LENGTH = 8;
 const MAX_PASSWORD_LENGTH = 256;
 
-export class ListUsersDto extends createZodDto(pageQuerySchema) {}
+const MAX_SEARCH_LENGTH = 100;
+
+/**
+ * `search` matches the name or the email, case-insensitively. It is a filter, not
+ * a tenant selector: which users are visible is still decided by RLS.
+ */
+export const listUsersSchema = pageQuerySchema.extend({
+  search: z.string().trim().min(1).max(MAX_SEARCH_LENGTH).optional(),
+});
+
+export class ListUsersDto extends createZodDto(listUsersSchema) {}
+
+export type ListUsersQuery = z.infer<typeof listUsersSchema>;
 
 export const updateUserSchema = z
   .object({

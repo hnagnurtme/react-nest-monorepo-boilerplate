@@ -3,6 +3,7 @@ import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { UsersPage } from '@/features/users';
+import { formatDate } from '@/lib/i18n/format';
 
 import {
   jsonResponse,
@@ -63,6 +64,10 @@ const listHandler: FetchHandler = (url, init) => {
       meta: { page: 1, limit: 100, total: 2, totalPages: 1 },
     });
   }
+  // A search for a term no row matches comes back empty, like the API would.
+  if (url.includes('search=zzz')) {
+    return jsonResponse({ data: [], meta: { page: 1, limit: 20, total: 0, totalPages: 0 } });
+  }
   return url.includes('page=2') ? page(2) : page(1);
 };
 
@@ -85,6 +90,49 @@ describe('UsersPage', () => {
     await waitFor(() => {
       expect(fetchMock.mock.calls.some(([url]) => url.includes('page=2'))).toBe(true);
     });
+  });
+
+  it('formats the created date for the active locale', async () => {
+    mockApi(makeUser(), MEMBER_GRANTS, listHandler);
+    renderWithProviders(<UsersPage />, ['/users']);
+
+    expect(await screen.findByText('user1@example.com')).toBeInTheDocument();
+    // Asserted through the same formatter: a literal would break outside UTC.
+    expect(screen.getByText(formatDate('2026-01-01T00:00:00.000Z', 'en'))).toBeInTheDocument();
+  });
+
+  it('sends a debounced search term, drops the page and reports no match', async () => {
+    const fetchMock = mockApi(makeUser(), MEMBER_GRANTS, listHandler);
+    renderWithProviders(<UsersPage />, ['/users?page=2']);
+    const user = userEvent.setup();
+
+    expect(await screen.findByText('user2@example.com')).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText('Search users'), 'zzz');
+
+    await waitFor(() => {
+      expect(fetchMock.mock.calls.some(([url]) => url.includes('search=zzz'))).toBe(true);
+    });
+    // One request per settled term, not one per keystroke.
+    expect(fetchMock.mock.calls.filter(([url]) => url.includes('search=')).length).toBe(1);
+    // Page 2 of the old result set is meaningless, so the term resets to page 1.
+    expect(
+      fetchMock.mock.calls.some(([url]) => url.includes('search=') && url.includes('page=2')),
+    ).toBe(false);
+
+    expect(await screen.findByText('No user matches "zzz".')).toBeInTheDocument();
+  });
+
+  it('clearing the search box restores the unfiltered list', async () => {
+    mockApi(makeUser(), MEMBER_GRANTS, listHandler);
+    renderWithProviders(<UsersPage />, ['/users?q=zzz']);
+    const user = userEvent.setup();
+
+    expect(await screen.findByText('No user matches "zzz".')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Clear search' }));
+
+    expect(await screen.findByText('user1@example.com')).toBeInTheDocument();
   });
 
   it('shows an error message when the request fails', async () => {
@@ -124,7 +172,6 @@ describe('UsersPage', () => {
   });
 
   it('lets a tenant admin deactivate and delete another user in their tenant', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
     const fetchMock = mockApi(makeTenantAdmin(), TENANT_ADMIN_GRANTS, listHandler);
     renderWithProviders(<UsersPage />, ['/users']);
     const user = userEvent.setup();
@@ -137,6 +184,7 @@ describe('UsersPage', () => {
     });
 
     await user.click(screen.getByRole('button', { name: 'Delete' }));
+    await user.click(await screen.findByRole('button', { name: 'Confirm' }));
     await waitFor(() => {
       expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'DELETE')).toBe(true);
     });

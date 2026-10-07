@@ -8,6 +8,7 @@ import type { PermissionGrant } from '@repo/shared-types';
 
 import type { PublicUser } from '@/entities/session';
 import { AbilityProvider, useAbilityLoading } from '@/features/auth';
+import { ThemeProvider } from '@/shared/components';
 import { ToastProvider } from '@/shared/ui';
 
 import { abilitiesResponse, ABILITIES_URL, setSessionUser } from './fixtures/auth';
@@ -51,13 +52,15 @@ export function renderWithProviders(
   });
   return render(
     <QueryClientProvider client={queryClient}>
-      <ToastProvider>
-        <AbilityProvider>
-          <AbilityReady>
-            <MemoryRouter initialEntries={initialEntries}>{ui}</MemoryRouter>
-          </AbilityReady>
-        </AbilityProvider>
-      </ToastProvider>
+      <ThemeProvider>
+        <ToastProvider>
+          <AbilityProvider>
+            <AbilityReady>
+              <MemoryRouter initialEntries={initialEntries}>{ui}</MemoryRouter>
+            </AbilityReady>
+          </AbilityProvider>
+        </ToastProvider>
+      </ThemeProvider>
     </QueryClientProvider>,
   );
 }
