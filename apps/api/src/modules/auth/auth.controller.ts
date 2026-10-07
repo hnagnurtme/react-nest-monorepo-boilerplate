@@ -24,14 +24,7 @@ import {
 import { AuthzService } from '@/core/authz/index.js';
 
 import { AuthCookieInterceptor } from './auth-cookie.interceptor.js';
-import {
-  ACCESS_TOKEN_SECURITY_SCHEME,
-  ApiAbilitiesResponse,
-  ApiAuthBodyResponse,
-  ApiForgotPasswordResponse,
-  ApiMessageResponse,
-  ApiPublicUserResponse,
-} from './auth.openapi.js';
+import { ACCESS_TOKEN_SECURITY_SCHEME } from './auth.constants.js';
 import { AuthService } from './auth.service.js';
 import type {
   AuthBody,
@@ -47,6 +40,11 @@ import {
   LoginDto,
   RefreshDto,
   ResetPasswordDto,
+  AbilitiesEnvelopeDto,
+  AuthBodyEnvelopeDto,
+  ForgotPasswordEnvelopeDto,
+  MessageEnvelopeDto,
+  PublicUserEnvelopeDto,
 } from './dto/index.js';
 import { RefreshCookie } from './refresh-token.decorator.js';
 
@@ -73,7 +71,7 @@ export class AuthController {
   @Throttle({ default: { limit: LOGIN_LIMIT, ttl: seconds(WINDOW_SECONDS) } })
   @ApiOperation({ summary: 'Exchange credentials for a token pair' })
   @ApiBody({ type: LoginDto })
-  @ApiAuthBodyResponse('Authenticated')
+  @ApiResponse({ status: HttpStatus.OK, description: 'Authenticated', type: AuthBodyEnvelopeDto })
   @ApiProblemResponses(FORBIDDEN, UNAUTHORIZED, UNPROCESSABLE_ENTITY, TOO_MANY_REQUESTS)
   login(
     @Body() dto: LoginDto,
@@ -88,7 +86,7 @@ export class AuthController {
   @Throttle({ default: { limit: REFRESH_LIMIT, ttl: seconds(WINDOW_SECONDS) } })
   @ApiOperation({ summary: 'Rotate a refresh token for a new pair' })
   @ApiBody({ type: RefreshDto })
-  @ApiAuthBodyResponse('Rotated')
+  @ApiResponse({ status: HttpStatus.OK, description: 'Rotated', type: AuthBodyEnvelopeDto })
   @ApiProblemResponses(UNAUTHORIZED, FORBIDDEN, UNPROCESSABLE_ENTITY, TOO_MANY_REQUESTS)
   refresh(
     @Body() dto: RefreshDto,
@@ -104,7 +102,11 @@ export class AuthController {
   @Throttle({ default: { limit: OTP_LIMIT, ttl: seconds(WINDOW_SECONDS) } })
   @ApiOperation({ summary: 'Request password reset OTP via email' })
   @ApiBody({ type: ForgotPasswordDto })
-  @ApiForgotPasswordResponse('Password reset code sent')
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Password reset code sent',
+    type: ForgotPasswordEnvelopeDto,
+  })
   @ApiProblemResponses(UNPROCESSABLE_ENTITY, TOO_MANY_REQUESTS)
   forgotPassword(@Body() dto: ForgotPasswordDto): Promise<ForgotPasswordResponse> {
     return this.auth.forgotPassword(dto);
@@ -116,7 +118,11 @@ export class AuthController {
   @Throttle({ default: { limit: OTP_LIMIT, ttl: seconds(WINDOW_SECONDS) } })
   @ApiOperation({ summary: 'Reset password using OTP code' })
   @ApiBody({ type: ResetPasswordDto })
-  @ApiMessageResponse('Password reset successful')
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Password reset successful',
+    type: MessageEnvelopeDto,
+  })
   @ApiProblemResponses(BAD_REQUEST, NOT_FOUND, UNPROCESSABLE_ENTITY, TOO_MANY_REQUESTS)
   resetPassword(@Body() dto: ResetPasswordDto): Promise<ResetPasswordResponse> {
     return this.auth.resetPassword(dto);
@@ -127,7 +133,11 @@ export class AuthController {
   @ApiBearerAuth(ACCESS_TOKEN_SECURITY_SCHEME)
   @ApiOperation({ summary: 'Change password for currently authenticated user' })
   @ApiBody({ type: ChangePasswordDto })
-  @ApiMessageResponse('Password changed successfully')
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Password changed successfully',
+    type: MessageEnvelopeDto,
+  })
   @ApiProblemResponses(UNAUTHORIZED, FORBIDDEN, UNPROCESSABLE_ENTITY)
   changePassword(
     @CurrentUser() actor: AuthContext,
@@ -164,7 +174,7 @@ export class AuthController {
   @Get('me')
   @ApiBearerAuth(ACCESS_TOKEN_SECURITY_SCHEME)
   @ApiOperation({ summary: 'The currently authenticated user' })
-  @ApiPublicUserResponse('The caller')
+  @ApiResponse({ status: HttpStatus.OK, description: 'The caller', type: PublicUserEnvelopeDto })
   @ApiProblemResponses(UNAUTHORIZED)
   me(@CurrentUser() actor: AuthContext): Promise<PublicUser> {
     return this.auth.getProfile(actor.id);
@@ -175,7 +185,11 @@ export class AuthController {
   @ApiOperation({
     summary: "The caller's permissions as packed CASL rules, for the client to build its ability",
   })
-  @ApiAbilitiesResponse('Packed CASL rules')
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Packed CASL rules',
+    type: AbilitiesEnvelopeDto,
+  })
   @ApiProblemResponses(UNAUTHORIZED)
   abilities(): { rules: PackedRules } {
     return { rules: packAbility(this.authz.current()) };

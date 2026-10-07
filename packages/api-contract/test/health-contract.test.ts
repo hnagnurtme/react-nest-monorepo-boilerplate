@@ -14,6 +14,7 @@ interface OpenApiOperation {
 }
 
 interface OpenApiSchema {
+  $ref?: string;
   type?: string;
   required?: string[];
   properties?: Record<string, OpenApiSchema>;
@@ -25,6 +26,7 @@ interface OpenApiResponse {
 }
 
 interface OpenApiDocument {
+  components?: { schemas?: Record<string, OpenApiSchema> };
   paths: Record<string, { get?: OpenApiOperation; post?: OpenApiOperation }>;
 }
 
@@ -48,9 +50,13 @@ test('documents the login success envelope', async () => {
   const openApiPath = new URL('../openapi.json', import.meta.url);
   const document = JSON.parse(await readFile(openApiPath, 'utf8')) as OpenApiDocument;
 
-  const loginResponse =
+  const schema =
     document.paths['/api/v1/auth/login']?.post?.responses?.['200']?.content?.['application/json']
       ?.schema;
+  // Response schemas are components (generated from Zod), so follow the $ref.
+  const loginResponse = schema?.$ref
+    ? document.components?.schemas?.[schema.$ref.split('/').pop() ?? '']
+    : schema;
 
   assert.equal(loginResponse?.type, 'object');
   assert.deepEqual(loginResponse.required, ['data']);

@@ -7,3 +7,9 @@ export {
   setUserRolesSchema,
   updateUserSchema,
 } from './user.dto.js';
+export {
+  UserEnvelopeDto,
+  UserListEnvelopeDto,
+  userResponseSchema,
+  userRoleResponseSchema,
+} from './user-response.dto.js';

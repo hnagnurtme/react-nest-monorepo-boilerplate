@@ -26,12 +26,14 @@ export interface SortSpec<TField extends string> {
   direction: 'asc' | 'desc';
 }
 
-export interface PaginationMeta {
-  page: number;
-  limit: number;
-  total: number;
-  totalPages: number;
-}
+export const paginationMetaSchema = z.object({
+  page: z.number().int(),
+  limit: z.number().int(),
+  total: z.number().int(),
+  totalPages: z.number().int(),
+});
+
+export type PaginationMeta = z.infer<typeof paginationMetaSchema>;
 
 /**
  * Resolves `sortBy` against an allowlist of sortable fields.

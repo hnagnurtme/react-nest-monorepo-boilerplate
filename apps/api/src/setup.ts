@@ -15,7 +15,7 @@ import {
   createSwaggerCsrfConfigScript,
 } from '@/core/openapi/swagger-csrf-request.interceptor.js';
 
-import { ACCESS_TOKEN_SECURITY_SCHEME } from './modules/auth/auth.openapi.js';
+import { ACCESS_TOKEN_SECURITY_SCHEME } from './modules/auth/auth.constants.js';
 
 export function setupSecurity(app: INestApplication, env: EnvConfig): void {
   app.use(helmet());

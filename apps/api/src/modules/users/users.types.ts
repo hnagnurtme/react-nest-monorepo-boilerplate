@@ -1,17 +1,7 @@
-export interface UserRoleResponse {
-  id: string;
-  key: string;
-  name: string;
-}
+import type { z } from 'zod';
 
-/** Whitelisted shape of a user in API responses (docs/rules/06-api-design.md C6). */
-export interface UserResponse {
-  id: string;
-  email: string;
-  fullName: string;
-  phoneNumber: string | null;
-  roles: UserRoleResponse[];
-  tenantId: string | null;
-  isActive: boolean;
-  createdAt: string;
-}
+import type { userResponseSchema, userRoleResponseSchema } from './dto/index.js';
+
+export type UserRoleResponse = z.infer<typeof userRoleResponseSchema>;
+
+export type UserResponse = z.infer<typeof userResponseSchema>;

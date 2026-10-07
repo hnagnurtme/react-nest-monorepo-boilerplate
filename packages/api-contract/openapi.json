@@ -54,80 +54,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "required": [
-                    "data"
-                  ],
-                  "properties": {
-                    "data": {
-                      "type": "object",
-                      "required": [
-                        "accessToken",
-                        "user"
-                      ],
-                      "properties": {
-                        "accessToken": {
-                          "type": "string"
-                        },
-                        "user": {
-                          "type": "object",
-                          "required": [
-                            "id",
-                            "email",
-                            "fullName",
-                            "scope",
-                            "roles"
-                          ],
-                          "properties": {
-                            "id": {
-                              "type": "string"
-                            },
-                            "email": {
-                              "type": "string",
-                              "format": "email"
-                            },
-                            "fullName": {
-                              "type": "string"
-                            },
-                            "scope": {
-                              "type": "string",
-                              "enum": [
-                                "platform",
-                                "tenant"
-                              ]
-                            },
-                            "roles": {
-                              "type": "array",
-                              "items": {
-                                "type": "object",
-                                "required": [
-                                  "key",
-                                  "name"
-                                ],
-                                "properties": {
-                                  "key": {
-                                    "type": "string"
-                                  },
-                                  "name": {
-                                    "type": "string"
-                                  }
-                                }
-                              }
-                            },
-                            "tenantId": {
-                              "type": "string"
-                            }
-                          }
-                        },
-                        "refreshToken": {
-                          "type": "string"
-                        },
-                        "csrfToken": {
-                          "type": "string"
-                        }
-                      }
-                    }
-                  }
+                  "$ref": "#/components/schemas/AuthBodyEnvelopeDto"
                 }
               }
             }
@@ -183,80 +110,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "required": [
-                    "data"
-                  ],
-                  "properties": {
-                    "data": {
-                      "type": "object",
-                      "required": [
-                        "accessToken",
-                        "user"
-                      ],
-                      "properties": {
-                        "accessToken": {
-                          "type": "string"
-                        },
-                        "user": {
-                          "type": "object",
-                          "required": [
-                            "id",
-                            "email",
-                            "fullName",
-                            "scope",
-                            "roles"
-                          ],
-                          "properties": {
-                            "id": {
-                              "type": "string"
-                            },
-                            "email": {
-                              "type": "string",
-                              "format": "email"
-                            },
-                            "fullName": {
-                              "type": "string"
-                            },
-                            "scope": {
-                              "type": "string",
-                              "enum": [
-                                "platform",
-                                "tenant"
-                              ]
-                            },
-                            "roles": {
-                              "type": "array",
-                              "items": {
-                                "type": "object",
-                                "required": [
-                                  "key",
-                                  "name"
-                                ],
-                                "properties": {
-                                  "key": {
-                                    "type": "string"
-                                  },
-                                  "name": {
-                                    "type": "string"
-                                  }
-                                }
-                              }
-                            },
-                            "tenantId": {
-                              "type": "string"
-                            }
-                          }
-                        },
-                        "refreshToken": {
-                          "type": "string"
-                        },
-                        "csrfToken": {
-                          "type": "string"
-                        }
-                      }
-                    }
-                  }
+                  "$ref": "#/components/schemas/AuthBodyEnvelopeDto"
                 }
               }
             }
@@ -312,29 +166,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "required": [
-                    "data"
-                  ],
-                  "properties": {
-                    "data": {
-                      "type": "object",
-                      "required": [
-                        "message",
-                        "expiresInSeconds"
-                      ],
-                      "properties": {
-                        "message": {
-                          "type": "string",
-                          "example": "If this email address exists in our system, a password reset code has been sent."
-                        },
-                        "expiresInSeconds": {
-                          "type": "integer",
-                          "example": 300
-                        }
-                      }
-                    }
-                  }
+                  "$ref": "#/components/schemas/ForgotPasswordEnvelopeDto"
                 }
               }
             }
@@ -378,24 +210,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "required": [
-                    "data"
-                  ],
-                  "properties": {
-                    "data": {
-                      "type": "object",
-                      "required": [
-                        "message"
-                      ],
-                      "properties": {
-                        "message": {
-                          "type": "string",
-                          "example": "Operation completed successfully."
-                        }
-                      }
-                    }
-                  }
+                  "$ref": "#/components/schemas/MessageEnvelopeDto"
                 }
               }
             }
@@ -451,24 +266,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "required": [
-                    "data"
-                  ],
-                  "properties": {
-                    "data": {
-                      "type": "object",
-                      "required": [
-                        "message"
-                      ],
-                      "properties": {
-                        "message": {
-                          "type": "string",
-                          "example": "Operation completed successfully."
-                        }
-                      }
-                    }
-                  }
+                  "$ref": "#/components/schemas/MessageEnvelopeDto"
                 }
               }
             }
@@ -582,62 +380,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "required": [
-                    "data"
-                  ],
-                  "properties": {
-                    "data": {
-                      "type": "object",
-                      "required": [
-                        "id",
-                        "email",
-                        "fullName",
-                        "scope",
-                        "roles"
-                      ],
-                      "properties": {
-                        "id": {
-                          "type": "string"
-                        },
-                        "email": {
-                          "type": "string",
-                          "format": "email"
-                        },
-                        "fullName": {
-                          "type": "string"
-                        },
-                        "scope": {
-                          "type": "string",
-                          "enum": [
-                            "platform",
-                            "tenant"
-                          ]
-                        },
-                        "roles": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "required": [
-                              "key",
-                              "name"
-                            ],
-                            "properties": {
-                              "key": {
-                                "type": "string"
-                              },
-                              "name": {
-                                "type": "string"
-                              }
-                            }
-                          }
-                        },
-                        "tenantId": {
-                          "type": "string"
-                        }
-                      }
-                    }
-                  }
+                  "$ref": "#/components/schemas/PublicUserEnvelopeDto"
                 }
               }
             }
@@ -670,24 +413,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "required": [
-                    "data"
-                  ],
-                  "properties": {
-                    "data": {
-                      "type": "object",
-                      "required": [
-                        "rules"
-                      ],
-                      "properties": {
-                        "rules": {
-                          "type": "array",
-                          "items": {}
-                        }
-                      }
-                    }
-                  }
+                  "$ref": "#/components/schemas/AbilitiesEnvelopeDto"
                 }
               }
             }
@@ -720,46 +446,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "required": [
-                    "data"
-                  ],
-                  "properties": {
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "required": [
-                          "action",
-                          "subject",
-                          "description",
-                          "presets"
-                        ],
-                        "properties": {
-                          "action": {
-                            "type": "string"
-                          },
-                          "subject": {
-                            "type": "string"
-                          },
-                          "description": {
-                            "type": "string"
-                          },
-                          "presets": {
-                            "type": "array",
-                            "items": {
-                              "type": "string",
-                              "enum": [
-                                "any",
-                                "own_tenant",
-                                "own_record"
-                              ]
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
+                  "$ref": "#/components/schemas/PermissionOptionsEnvelopeDto"
                 }
               }
             }
@@ -798,112 +485,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "required": [
-                    "data",
-                    "meta"
-                  ],
-                  "properties": {
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "required": [
-                          "id",
-                          "key",
-                          "name",
-                          "scope",
-                          "isSystem",
-                          "tenantId",
-                          "permissions"
-                        ],
-                        "properties": {
-                          "id": {
-                            "type": "string",
-                            "format": "uuid"
-                          },
-                          "key": {
-                            "type": "string"
-                          },
-                          "name": {
-                            "type": "string"
-                          },
-                          "scope": {
-                            "type": "string",
-                            "enum": [
-                              "platform",
-                              "tenant"
-                            ]
-                          },
-                          "isSystem": {
-                            "type": "boolean"
-                          },
-                          "tenantId": {
-                            "type": "string",
-                            "format": "uuid",
-                            "nullable": true
-                          },
-                          "permissions": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "required": [
-                                "action",
-                                "subject",
-                                "preset"
-                              ],
-                              "properties": {
-                                "action": {
-                                  "type": "string",
-                                  "enum": [
-                                    "manage",
-                                    "create",
-                                    "read",
-                                    "update",
-                                    "delete"
-                                  ]
-                                },
-                                "subject": {
-                                  "type": "string"
-                                },
-                                "preset": {
-                                  "type": "string",
-                                  "enum": [
-                                    "any",
-                                    "own_tenant",
-                                    "own_record"
-                                  ]
-                                }
-                              }
-                            }
-                          }
-                        }
-                      }
-                    },
-                    "meta": {
-                      "type": "object",
-                      "required": [
-                        "page",
-                        "limit",
-                        "total",
-                        "totalPages"
-                      ],
-                      "properties": {
-                        "page": {
-                          "type": "integer"
-                        },
-                        "limit": {
-                          "type": "integer"
-                        },
-                        "total": {
-                          "type": "integer"
-                        },
-                        "totalPages": {
-                          "type": "integer"
-                        }
-                      }
-                    }
-                  }
+                  "$ref": "#/components/schemas/RoleListEnvelopeDto"
                 }
               }
             }
@@ -956,85 +538,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "required": [
-                    "data"
-                  ],
-                  "properties": {
-                    "data": {
-                      "type": "object",
-                      "required": [
-                        "id",
-                        "key",
-                        "name",
-                        "scope",
-                        "isSystem",
-                        "tenantId",
-                        "permissions"
-                      ],
-                      "properties": {
-                        "id": {
-                          "type": "string",
-                          "format": "uuid"
-                        },
-                        "key": {
-                          "type": "string"
-                        },
-                        "name": {
-                          "type": "string"
-                        },
-                        "scope": {
-                          "type": "string",
-                          "enum": [
-                            "platform",
-                            "tenant"
-                          ]
-                        },
-                        "isSystem": {
-                          "type": "boolean"
-                        },
-                        "tenantId": {
-                          "type": "string",
-                          "format": "uuid",
-                          "nullable": true
-                        },
-                        "permissions": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "required": [
-                              "action",
-                              "subject",
-                              "preset"
-                            ],
-                            "properties": {
-                              "action": {
-                                "type": "string",
-                                "enum": [
-                                  "manage",
-                                  "create",
-                                  "read",
-                                  "update",
-                                  "delete"
-                                ]
-                              },
-                              "subject": {
-                                "type": "string"
-                              },
-                              "preset": {
-                                "type": "string",
-                                "enum": [
-                                  "any",
-                                  "own_tenant",
-                                  "own_record"
-                                ]
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
+                  "$ref": "#/components/schemas/RoleEnvelopeDto"
                 }
               }
             }
@@ -1085,85 +589,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "required": [
-                    "data"
-                  ],
-                  "properties": {
-                    "data": {
-                      "type": "object",
-                      "required": [
-                        "id",
-                        "key",
-                        "name",
-                        "scope",
-                        "isSystem",
-                        "tenantId",
-                        "permissions"
-                      ],
-                      "properties": {
-                        "id": {
-                          "type": "string",
-                          "format": "uuid"
-                        },
-                        "key": {
-                          "type": "string"
-                        },
-                        "name": {
-                          "type": "string"
-                        },
-                        "scope": {
-                          "type": "string",
-                          "enum": [
-                            "platform",
-                            "tenant"
-                          ]
-                        },
-                        "isSystem": {
-                          "type": "boolean"
-                        },
-                        "tenantId": {
-                          "type": "string",
-                          "format": "uuid",
-                          "nullable": true
-                        },
-                        "permissions": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "required": [
-                              "action",
-                              "subject",
-                              "preset"
-                            ],
-                            "properties": {
-                              "action": {
-                                "type": "string",
-                                "enum": [
-                                  "manage",
-                                  "create",
-                                  "read",
-                                  "update",
-                                  "delete"
-                                ]
-                              },
-                              "subject": {
-                                "type": "string"
-                              },
-                              "preset": {
-                                "type": "string",
-                                "enum": [
-                                  "any",
-                                  "own_tenant",
-                                  "own_record"
-                                ]
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
+                  "$ref": "#/components/schemas/RoleEnvelopeDto"
                 }
               }
             }
@@ -1216,85 +642,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "required": [
-                    "data"
-                  ],
-                  "properties": {
-                    "data": {
-                      "type": "object",
-                      "required": [
-                        "id",
-                        "key",
-                        "name",
-                        "scope",
-                        "isSystem",
-                        "tenantId",
-                        "permissions"
-                      ],
-                      "properties": {
-                        "id": {
-                          "type": "string",
-                          "format": "uuid"
-                        },
-                        "key": {
-                          "type": "string"
-                        },
-                        "name": {
-                          "type": "string"
-                        },
-                        "scope": {
-                          "type": "string",
-                          "enum": [
-                            "platform",
-                            "tenant"
-                          ]
-                        },
-                        "isSystem": {
-                          "type": "boolean"
-                        },
-                        "tenantId": {
-                          "type": "string",
-                          "format": "uuid",
-                          "nullable": true
-                        },
-                        "permissions": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "required": [
-                              "action",
-                              "subject",
-                              "preset"
-                            ],
-                            "properties": {
-                              "action": {
-                                "type": "string",
-                                "enum": [
-                                  "manage",
-                                  "create",
-                                  "read",
-                                  "update",
-                                  "delete"
-                                ]
-                              },
-                              "subject": {
-                                "type": "string"
-                              },
-                              "preset": {
-                                "type": "string",
-                                "enum": [
-                                  "any",
-                                  "own_tenant",
-                                  "own_record"
-                                ]
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
+                  "$ref": "#/components/schemas/RoleEnvelopeDto"
                 }
               }
             }
@@ -1400,85 +748,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "required": [
-                    "data"
-                  ],
-                  "properties": {
-                    "data": {
-                      "type": "object",
-                      "required": [
-                        "id",
-                        "key",
-                        "name",
-                        "scope",
-                        "isSystem",
-                        "tenantId",
-                        "permissions"
-                      ],
-                      "properties": {
-                        "id": {
-                          "type": "string",
-                          "format": "uuid"
-                        },
-                        "key": {
-                          "type": "string"
-                        },
-                        "name": {
-                          "type": "string"
-                        },
-                        "scope": {
-                          "type": "string",
-                          "enum": [
-                            "platform",
-                            "tenant"
-                          ]
-                        },
-                        "isSystem": {
-                          "type": "boolean"
-                        },
-                        "tenantId": {
-                          "type": "string",
-                          "format": "uuid",
-                          "nullable": true
-                        },
-                        "permissions": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "required": [
-                              "action",
-                              "subject",
-                              "preset"
-                            ],
-                            "properties": {
-                              "action": {
-                                "type": "string",
-                                "enum": [
-                                  "manage",
-                                  "create",
-                                  "read",
-                                  "update",
-                                  "delete"
-                                ]
-                              },
-                              "subject": {
-                                "type": "string"
-                              },
-                              "preset": {
-                                "type": "string",
-                                "enum": [
-                                  "any",
-                                  "own_tenant",
-                                  "own_record"
-                                ]
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
+                  "$ref": "#/components/schemas/RoleEnvelopeDto"
                 }
               }
             }
@@ -1529,68 +799,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "required": [
-                    "data",
-                    "meta"
-                  ],
-                  "properties": {
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "required": [
-                          "id",
-                          "name",
-                          "slug",
-                          "isActive",
-                          "createdAt"
-                        ],
-                        "properties": {
-                          "id": {
-                            "type": "string",
-                            "format": "uuid"
-                          },
-                          "name": {
-                            "type": "string"
-                          },
-                          "slug": {
-                            "type": "string"
-                          },
-                          "isActive": {
-                            "type": "boolean"
-                          },
-                          "createdAt": {
-                            "type": "string",
-                            "format": "date-time"
-                          }
-                        }
-                      }
-                    },
-                    "meta": {
-                      "type": "object",
-                      "required": [
-                        "page",
-                        "limit",
-                        "total",
-                        "totalPages"
-                      ],
-                      "properties": {
-                        "page": {
-                          "type": "integer"
-                        },
-                        "limit": {
-                          "type": "integer"
-                        },
-                        "total": {
-                          "type": "integer"
-                        },
-                        "totalPages": {
-                          "type": "integer"
-                        }
-                      }
-                    }
-                  }
+                  "$ref": "#/components/schemas/TenantListEnvelopeDto"
                 }
               }
             }
@@ -1643,41 +852,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "required": [
-                    "data"
-                  ],
-                  "properties": {
-                    "data": {
-                      "type": "object",
-                      "required": [
-                        "id",
-                        "name",
-                        "slug",
-                        "isActive",
-                        "createdAt"
-                      ],
-                      "properties": {
-                        "id": {
-                          "type": "string",
-                          "format": "uuid"
-                        },
-                        "name": {
-                          "type": "string"
-                        },
-                        "slug": {
-                          "type": "string"
-                        },
-                        "isActive": {
-                          "type": "boolean"
-                        },
-                        "createdAt": {
-                          "type": "string",
-                          "format": "date-time"
-                        }
-                      }
-                    }
-                  }
+                  "$ref": "#/components/schemas/TenantEnvelopeDto"
                 }
               }
             }
@@ -1728,41 +903,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "required": [
-                    "data"
-                  ],
-                  "properties": {
-                    "data": {
-                      "type": "object",
-                      "required": [
-                        "id",
-                        "name",
-                        "slug",
-                        "isActive",
-                        "createdAt"
-                      ],
-                      "properties": {
-                        "id": {
-                          "type": "string",
-                          "format": "uuid"
-                        },
-                        "name": {
-                          "type": "string"
-                        },
-                        "slug": {
-                          "type": "string"
-                        },
-                        "isActive": {
-                          "type": "boolean"
-                        },
-                        "createdAt": {
-                          "type": "string",
-                          "format": "date-time"
-                        }
-                      }
-                    }
-                  }
+                  "$ref": "#/components/schemas/TenantEnvelopeDto"
                 }
               }
             }
@@ -1815,41 +956,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "required": [
-                    "data"
-                  ],
-                  "properties": {
-                    "data": {
-                      "type": "object",
-                      "required": [
-                        "id",
-                        "name",
-                        "slug",
-                        "isActive",
-                        "createdAt"
-                      ],
-                      "properties": {
-                        "id": {
-                          "type": "string",
-                          "format": "uuid"
-                        },
-                        "name": {
-                          "type": "string"
-                        },
-                        "slug": {
-                          "type": "string"
-                        },
-                        "isActive": {
-                          "type": "boolean"
-                        },
-                        "createdAt": {
-                          "type": "string",
-                          "format": "date-time"
-                        }
-                      }
-                    }
-                  }
+                  "$ref": "#/components/schemas/TenantEnvelopeDto"
                 }
               }
             }
@@ -1900,104 +1007,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "required": [
-                    "data",
-                    "meta"
-                  ],
-                  "properties": {
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "required": [
-                          "id",
-                          "email",
-                          "fullName",
-                          "phoneNumber",
-                          "roles",
-                          "tenantId",
-                          "isActive",
-                          "createdAt"
-                        ],
-                        "properties": {
-                          "id": {
-                            "type": "string",
-                            "format": "uuid"
-                          },
-                          "email": {
-                            "type": "string",
-                            "format": "email"
-                          },
-                          "fullName": {
-                            "type": "string"
-                          },
-                          "phoneNumber": {
-                            "type": "string",
-                            "nullable": true
-                          },
-                          "roles": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "required": [
-                                "id",
-                                "key",
-                                "name"
-                              ],
-                              "properties": {
-                                "id": {
-                                  "type": "string",
-                                  "format": "uuid"
-                                },
-                                "key": {
-                                  "type": "string"
-                                },
-                                "name": {
-                                  "type": "string"
-                                }
-                              }
-                            }
-                          },
-                          "tenantId": {
-                            "type": "string",
-                            "format": "uuid",
-                            "nullable": true
-                          },
-                          "isActive": {
-                            "type": "boolean"
-                          },
-                          "createdAt": {
-                            "type": "string",
-                            "format": "date-time"
-                          }
-                        }
-                      }
-                    },
-                    "meta": {
-                      "type": "object",
-                      "required": [
-                        "page",
-                        "limit",
-                        "total",
-                        "totalPages"
-                      ],
-                      "properties": {
-                        "page": {
-                          "type": "integer"
-                        },
-                        "limit": {
-                          "type": "integer"
-                        },
-                        "total": {
-                          "type": "integer"
-                        },
-                        "totalPages": {
-                          "type": "integer"
-                        }
-                      }
-                    }
-                  }
+                  "$ref": "#/components/schemas/UserListEnvelopeDto"
                 }
               }
             }
@@ -2050,77 +1060,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "required": [
-                    "data"
-                  ],
-                  "properties": {
-                    "data": {
-                      "type": "object",
-                      "required": [
-                        "id",
-                        "email",
-                        "fullName",
-                        "phoneNumber",
-                        "roles",
-                        "tenantId",
-                        "isActive",
-                        "createdAt"
-                      ],
-                      "properties": {
-                        "id": {
-                          "type": "string",
-                          "format": "uuid"
-                        },
-                        "email": {
-                          "type": "string",
-                          "format": "email"
-                        },
-                        "fullName": {
-                          "type": "string"
-                        },
-                        "phoneNumber": {
-                          "type": "string",
-                          "nullable": true
-                        },
-                        "roles": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "required": [
-                              "id",
-                              "key",
-                              "name"
-                            ],
-                            "properties": {
-                              "id": {
-                                "type": "string",
-                                "format": "uuid"
-                              },
-                              "key": {
-                                "type": "string"
-                              },
-                              "name": {
-                                "type": "string"
-                              }
-                            }
-                          }
-                        },
-                        "tenantId": {
-                          "type": "string",
-                          "format": "uuid",
-                          "nullable": true
-                        },
-                        "isActive": {
-                          "type": "boolean"
-                        },
-                        "createdAt": {
-                          "type": "string",
-                          "format": "date-time"
-                        }
-                      }
-                    }
-                  }
+                  "$ref": "#/components/schemas/UserEnvelopeDto"
                 }
               }
             }
@@ -2171,77 +1111,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "required": [
-                    "data"
-                  ],
-                  "properties": {
-                    "data": {
-                      "type": "object",
-                      "required": [
-                        "id",
-                        "email",
-                        "fullName",
-                        "phoneNumber",
-                        "roles",
-                        "tenantId",
-                        "isActive",
-                        "createdAt"
-                      ],
-                      "properties": {
-                        "id": {
-                          "type": "string",
-                          "format": "uuid"
-                        },
-                        "email": {
-                          "type": "string",
-                          "format": "email"
-                        },
-                        "fullName": {
-                          "type": "string"
-                        },
-                        "phoneNumber": {
-                          "type": "string",
-                          "nullable": true
-                        },
-                        "roles": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "required": [
-                              "id",
-                              "key",
-                              "name"
-                            ],
-                            "properties": {
-                              "id": {
-                                "type": "string",
-                                "format": "uuid"
-                              },
-                              "key": {
-                                "type": "string"
-                              },
-                              "name": {
-                                "type": "string"
-                              }
-                            }
-                          }
-                        },
-                        "tenantId": {
-                          "type": "string",
-                          "format": "uuid",
-                          "nullable": true
-                        },
-                        "isActive": {
-                          "type": "boolean"
-                        },
-                        "createdAt": {
-                          "type": "string",
-                          "format": "date-time"
-                        }
-                      }
-                    }
-                  }
+                  "$ref": "#/components/schemas/UserEnvelopeDto"
                 }
               }
             }
@@ -2294,77 +1164,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "required": [
-                    "data"
-                  ],
-                  "properties": {
-                    "data": {
-                      "type": "object",
-                      "required": [
-                        "id",
-                        "email",
-                        "fullName",
-                        "phoneNumber",
-                        "roles",
-                        "tenantId",
-                        "isActive",
-                        "createdAt"
-                      ],
-                      "properties": {
-                        "id": {
-                          "type": "string",
-                          "format": "uuid"
-                        },
-                        "email": {
-                          "type": "string",
-                          "format": "email"
-                        },
-                        "fullName": {
-                          "type": "string"
-                        },
-                        "phoneNumber": {
-                          "type": "string",
-                          "nullable": true
-                        },
-                        "roles": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "required": [
-                              "id",
-                              "key",
-                              "name"
-                            ],
-                            "properties": {
-                              "id": {
-                                "type": "string",
-                                "format": "uuid"
-                              },
-                              "key": {
-                                "type": "string"
-                              },
-                              "name": {
-                                "type": "string"
-                              }
-                            }
-                          }
-                        },
-                        "tenantId": {
-                          "type": "string",
-                          "format": "uuid",
-                          "nullable": true
-                        },
-                        "isActive": {
-                          "type": "boolean"
-                        },
-                        "createdAt": {
-                          "type": "string",
-                          "format": "date-time"
-                        }
-                      }
-                    }
-                  }
+                  "$ref": "#/components/schemas/UserEnvelopeDto"
                 }
               }
             }
@@ -2458,77 +1258,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "required": [
-                    "data"
-                  ],
-                  "properties": {
-                    "data": {
-                      "type": "object",
-                      "required": [
-                        "id",
-                        "email",
-                        "fullName",
-                        "phoneNumber",
-                        "roles",
-                        "tenantId",
-                        "isActive",
-                        "createdAt"
-                      ],
-                      "properties": {
-                        "id": {
-                          "type": "string",
-                          "format": "uuid"
-                        },
-                        "email": {
-                          "type": "string",
-                          "format": "email"
-                        },
-                        "fullName": {
-                          "type": "string"
-                        },
-                        "phoneNumber": {
-                          "type": "string",
-                          "nullable": true
-                        },
-                        "roles": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "required": [
-                              "id",
-                              "key",
-                              "name"
-                            ],
-                            "properties": {
-                              "id": {
-                                "type": "string",
-                                "format": "uuid"
-                              },
-                              "key": {
-                                "type": "string"
-                              },
-                              "name": {
-                                "type": "string"
-                              }
-                            }
-                          }
-                        },
-                        "tenantId": {
-                          "type": "string",
-                          "format": "uuid",
-                          "nullable": true
-                        },
-                        "isActive": {
-                          "type": "boolean"
-                        },
-                        "createdAt": {
-                          "type": "string",
-                          "format": "date-time"
-                        }
-                      }
-                    }
-                  }
+                  "$ref": "#/components/schemas/UserEnvelopeDto"
                 }
               }
             }
@@ -2613,6 +1343,82 @@
           "password"
         ]
       },
+      "AuthBodyEnvelopeDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "accessToken": {
+                "type": "string"
+              },
+              "user": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "fullName": {
+                    "type": "string"
+                  },
+                  "tenantId": {
+                    "type": "string"
+                  },
+                  "scope": {
+                    "type": "string",
+                    "enum": [
+                      "platform",
+                      "tenant"
+                    ]
+                  },
+                  "roles": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "key": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "key",
+                        "name"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "id",
+                  "email",
+                  "fullName",
+                  "scope",
+                  "roles"
+                ]
+              },
+              "refreshToken": {
+                "type": "string"
+              },
+              "csrfToken": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "accessToken",
+              "user"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
       "RefreshDto": {
         "type": "object",
         "properties": {
@@ -2633,6 +1439,29 @@
         },
         "required": [
           "email"
+        ]
+      },
+      "ForgotPasswordEnvelopeDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "message": {
+                "type": "string"
+              },
+              "expiresInSeconds": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "message",
+              "expiresInSeconds"
+            ]
+          }
+        },
+        "required": [
+          "data"
         ]
       },
       "ResetPasswordDto": {
@@ -2658,6 +1487,25 @@
           "newPassword"
         ]
       },
+      "MessageEnvelopeDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "message"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
       "ChangePasswordDto": {
         "type": "object",
         "properties": {
@@ -2674,6 +1522,234 @@
         "required": [
           "currentPassword",
           "newPassword"
+        ]
+      },
+      "PublicUserEnvelopeDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "email": {
+                "type": "string",
+                "format": "email"
+              },
+              "fullName": {
+                "type": "string"
+              },
+              "tenantId": {
+                "type": "string"
+              },
+              "scope": {
+                "type": "string",
+                "enum": [
+                  "platform",
+                  "tenant"
+                ]
+              },
+              "roles": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "key",
+                    "name"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "id",
+              "email",
+              "fullName",
+              "scope",
+              "roles"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "AbilitiesEnvelopeDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "rules": {
+                "type": "array",
+                "items": {}
+              }
+            },
+            "required": [
+              "rules"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "PermissionOptionsEnvelopeDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "action": {
+                  "type": "string"
+                },
+                "subject": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "presets": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "any",
+                      "own_tenant",
+                      "own_record"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "action",
+                "subject",
+                "description",
+                "presets"
+              ]
+            }
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "RoleListEnvelopeDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "key": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "scope": {
+                  "type": "string",
+                  "enum": [
+                    "platform",
+                    "tenant"
+                  ]
+                },
+                "isSystem": {
+                  "type": "boolean"
+                },
+                "tenantId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "nullable": true
+                },
+                "permissions": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "action": {
+                        "type": "string",
+                        "enum": [
+                          "manage",
+                          "create",
+                          "read",
+                          "update",
+                          "delete"
+                        ]
+                      },
+                      "subject": {
+                        "type": "string"
+                      },
+                      "preset": {
+                        "type": "string",
+                        "enum": [
+                          "any",
+                          "own_tenant",
+                          "own_record"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "action",
+                      "subject",
+                      "preset"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "key",
+                "name",
+                "scope",
+                "isSystem",
+                "tenantId",
+                "permissions"
+              ]
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "page": {
+                "type": "integer"
+              },
+              "limit": {
+                "type": "integer"
+              },
+              "total": {
+                "type": "integer"
+              },
+              "totalPages": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "page",
+              "limit",
+              "total",
+              "totalPages"
+            ]
+          }
+        },
+        "required": [
+          "data",
+          "meta"
         ]
       },
       "CreateRoleDto": {
@@ -2728,6 +1804,87 @@
         "required": [
           "name",
           "permissions"
+        ]
+      },
+      "RoleEnvelopeDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "key": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "scope": {
+                "type": "string",
+                "enum": [
+                  "platform",
+                  "tenant"
+                ]
+              },
+              "isSystem": {
+                "type": "boolean"
+              },
+              "tenantId": {
+                "type": "string",
+                "format": "uuid",
+                "nullable": true
+              },
+              "permissions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "action": {
+                      "type": "string",
+                      "enum": [
+                        "manage",
+                        "create",
+                        "read",
+                        "update",
+                        "delete"
+                      ]
+                    },
+                    "subject": {
+                      "type": "string"
+                    },
+                    "preset": {
+                      "type": "string",
+                      "enum": [
+                        "any",
+                        "own_tenant",
+                        "own_record"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "action",
+                    "subject",
+                    "preset"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "id",
+              "key",
+              "name",
+              "scope",
+              "isSystem",
+              "tenantId",
+              "permissions"
+            ]
+          }
+        },
+        "required": [
+          "data"
         ]
       },
       "UpdateRoleDto": {
@@ -2787,6 +1944,70 @@
           "permissions"
         ]
       },
+      "TenantListEnvelopeDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "slug": {
+                  "type": "string"
+                },
+                "isActive": {
+                  "type": "boolean"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "slug",
+                "isActive",
+                "createdAt"
+              ]
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "page": {
+                "type": "integer"
+              },
+              "limit": {
+                "type": "integer"
+              },
+              "total": {
+                "type": "integer"
+              },
+              "totalPages": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "page",
+              "limit",
+              "total",
+              "totalPages"
+            ]
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
+      },
       "CreateTenantDto": {
         "type": "object",
         "properties": {
@@ -2805,6 +2026,43 @@
           "name"
         ]
       },
+      "TenantEnvelopeDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              },
+              "slug": {
+                "type": "string"
+              },
+              "isActive": {
+                "type": "boolean"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "slug",
+              "isActive",
+              "createdAt"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
       "UpdateTenantDto": {
         "type": "object",
         "properties": {
@@ -2817,6 +2075,106 @@
             "type": "boolean"
           }
         }
+      },
+      "UserListEnvelopeDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "email": {
+                  "type": "string",
+                  "format": "email"
+                },
+                "fullName": {
+                  "type": "string"
+                },
+                "phoneNumber": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "roles": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "key": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "key",
+                      "name"
+                    ]
+                  }
+                },
+                "tenantId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "nullable": true
+                },
+                "isActive": {
+                  "type": "boolean"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "id",
+                "email",
+                "fullName",
+                "phoneNumber",
+                "roles",
+                "tenantId",
+                "isActive",
+                "createdAt"
+              ]
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "page": {
+                "type": "integer"
+              },
+              "limit": {
+                "type": "integer"
+              },
+              "total": {
+                "type": "integer"
+              },
+              "totalPages": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "page",
+              "limit",
+              "total",
+              "totalPages"
+            ]
+          }
+        },
+        "required": [
+          "data",
+          "meta"
+        ]
       },
       "CreateUserDto": {
         "type": "object",
@@ -2859,6 +2217,79 @@
           "fullName",
           "password",
           "roleIds"
+        ]
+      },
+      "UserEnvelopeDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "email": {
+                "type": "string",
+                "format": "email"
+              },
+              "fullName": {
+                "type": "string"
+              },
+              "phoneNumber": {
+                "type": "string",
+                "nullable": true
+              },
+              "roles": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "key": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "key",
+                    "name"
+                  ]
+                }
+              },
+              "tenantId": {
+                "type": "string",
+                "format": "uuid",
+                "nullable": true
+              },
+              "isActive": {
+                "type": "boolean"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "id",
+              "email",
+              "fullName",
+              "phoneNumber",
+              "roles",
+              "tenantId",
+              "isActive",
+              "createdAt"
+            ]
+          }
+        },
+        "required": [
+          "data"
         ]
       },
       "UpdateUserDto": {

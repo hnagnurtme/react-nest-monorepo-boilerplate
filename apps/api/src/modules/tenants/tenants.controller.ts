@@ -13,7 +13,7 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 
 import {
@@ -25,8 +25,13 @@ import {
 import { CheckPolicies, PoliciesGuard } from '@/core/guards/index.js';
 import { ACCESS_TOKEN_SECURITY_SCHEME } from '@/modules/auth/index.js';
 
-import { CreateTenantDto, ListTenantsDto, UpdateTenantDto } from './dto/index.js';
-import { ApiTenantListResponse, ApiTenantResponse } from './tenants.openapi.js';
+import {
+  CreateTenantDto,
+  ListTenantsDto,
+  TenantEnvelopeDto,
+  TenantListEnvelopeDto,
+  UpdateTenantDto,
+} from './dto/index.js';
 import { TenantsService } from './tenants.service.js';
 import type { TenantResponse } from './tenants.types.js';
 
@@ -44,7 +49,11 @@ export class TenantsController {
   @ApiOperation({
     summary: 'List tenants visible to the caller (own tenant; all for platform admin)',
   })
-  @ApiTenantListResponse('A page of tenants')
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'A page of tenants',
+    type: TenantListEnvelopeDto,
+  })
   @ApiProblemResponses(UNAUTHORIZED, FORBIDDEN, UNPROCESSABLE_ENTITY)
   list(@Query() query: ListTenantsDto): Promise<{ items: TenantResponse[]; meta: PaginationMeta }> {
     return this.tenants.list(query);
@@ -54,7 +63,11 @@ export class TenantsController {
   @HttpCode(HttpStatus.CREATED)
   @CheckPolicies((ability) => ability.can('create', 'Tenant'))
   @ApiOperation({ summary: 'Create a tenant (platform admin only)' })
-  @ApiTenantResponse('The created tenant', HttpStatus.CREATED)
+  @ApiResponse({
+    status: HttpStatus.CREATED,
+    description: 'The created tenant',
+    type: TenantEnvelopeDto,
+  })
   @ApiBody({ type: CreateTenantDto })
   @ApiProblemResponses(UNAUTHORIZED, FORBIDDEN, CONFLICT, UNPROCESSABLE_ENTITY)
   async create(
@@ -69,7 +82,7 @@ export class TenantsController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get one tenant' })
-  @ApiTenantResponse('The tenant')
+  @ApiResponse({ status: HttpStatus.OK, description: 'The tenant', type: TenantEnvelopeDto })
   @ApiProblemResponses(UNAUTHORIZED, FORBIDDEN, NOT_FOUND)
   get(@Param('id', ParseUUIDPipe) id: string): Promise<TenantResponse> {
     return this.tenants.findOrThrow(id);
@@ -77,7 +90,11 @@ export class TenantsController {
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update a tenant (platform admin may also activate or deactivate)' })
-  @ApiTenantResponse('The updated tenant')
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'The updated tenant',
+    type: TenantEnvelopeDto,
+  })
   @ApiBody({ type: UpdateTenantDto })
   @ApiProblemResponses(UNAUTHORIZED, FORBIDDEN, NOT_FOUND, UNPROCESSABLE_ENTITY)
   update(

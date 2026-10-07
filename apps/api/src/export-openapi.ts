@@ -26,7 +26,7 @@ const { DocumentBuilder, SwaggerModule } = await import('@nestjs/swagger');
 const { VersioningType } = await import('@nestjs/common');
 const { cleanupOpenApiDoc } = await import('nestjs-zod');
 const { AppModule } = await import('./app.module.js');
-const { ACCESS_TOKEN_SECURITY_SCHEME } = await import('./modules/auth/auth.openapi.js');
+const { ACCESS_TOKEN_SECURITY_SCHEME } = await import('./modules/auth/auth.constants.js');
 
 async function exportOpenApi(): Promise<void> {
   const app = await NestFactory.create(AppModule, { logger: ['error', 'warn'] });

@@ -15,7 +15,7 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 
 import {
@@ -27,12 +27,15 @@ import {
 import { CheckPolicies, PoliciesGuard } from '@/core/guards/index.js';
 import { ACCESS_TOKEN_SECURITY_SCHEME } from '@/modules/auth/index.js';
 
-import { CreateRoleDto, ListRolesDto, SetRolePermissionsDto, UpdateRoleDto } from './dto/index.js';
 import {
-  ApiPermissionOptionsResponse,
-  ApiRoleListResponse,
-  ApiRoleResponse,
-} from './roles.openapi.js';
+  CreateRoleDto,
+  ListRolesDto,
+  PermissionOptionsEnvelopeDto,
+  RoleEnvelopeDto,
+  RoleListEnvelopeDto,
+  SetRolePermissionsDto,
+  UpdateRoleDto,
+} from './dto/index.js';
 import { RolesService } from './roles.service.js';
 import type { PermissionOption, RoleResponse } from './roles.types.js';
 
@@ -50,7 +53,11 @@ export class RolesController {
   @ApiOperation({
     summary: 'Permissions the caller may put into a role (the catalog it already holds)',
   })
-  @ApiPermissionOptionsResponse('Grantable permissions')
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Grantable permissions',
+    type: PermissionOptionsEnvelopeDto,
+  })
   @ApiProblemResponses(UNAUTHORIZED, FORBIDDEN)
   permissions(): PermissionOption[] {
     return this.roles.grantable();
@@ -59,7 +66,7 @@ export class RolesController {
   @Get('roles')
   @CheckPolicies((ability) => ability.can('read', 'Role'))
   @ApiOperation({ summary: "List roles: the shared system roles and the tenant's own" })
-  @ApiRoleListResponse('A page of roles')
+  @ApiResponse({ status: HttpStatus.OK, description: 'A page of roles', type: RoleListEnvelopeDto })
   @ApiProblemResponses(UNAUTHORIZED, FORBIDDEN, UNPROCESSABLE_ENTITY)
   list(@Query() query: ListRolesDto): Promise<{ items: RoleResponse[]; meta: PaginationMeta }> {
     return this.roles.list(query);
@@ -70,7 +77,11 @@ export class RolesController {
   @CheckPolicies((ability) => ability.can('create', 'Role'))
   @ApiOperation({ summary: 'Create a custom role in a tenant' })
   @ApiBody({ type: CreateRoleDto })
-  @ApiRoleResponse('The created role', HttpStatus.CREATED)
+  @ApiResponse({
+    status: HttpStatus.CREATED,
+    description: 'The created role',
+    type: RoleEnvelopeDto,
+  })
   @ApiProblemResponses(UNAUTHORIZED, FORBIDDEN, CONFLICT, UNPROCESSABLE_ENTITY)
   async create(
     @CurrentUser() actor: AuthContext,
@@ -84,7 +95,7 @@ export class RolesController {
 
   @Get('roles/:id')
   @ApiOperation({ summary: 'Get one role with its permissions' })
-  @ApiRoleResponse('The role')
+  @ApiResponse({ status: HttpStatus.OK, description: 'The role', type: RoleEnvelopeDto })
   @ApiProblemResponses(UNAUTHORIZED, FORBIDDEN, NOT_FOUND)
   get(@Param('id', ParseUUIDPipe) id: string): Promise<RoleResponse> {
     return this.roles.findOrThrow(id);
@@ -93,7 +104,7 @@ export class RolesController {
   @Patch('roles/:id')
   @ApiOperation({ summary: 'Rename a custom role (system roles are immutable)' })
   @ApiBody({ type: UpdateRoleDto })
-  @ApiRoleResponse('The updated role')
+  @ApiResponse({ status: HttpStatus.OK, description: 'The updated role', type: RoleEnvelopeDto })
   @ApiProblemResponses(UNAUTHORIZED, FORBIDDEN, NOT_FOUND, CONFLICT, UNPROCESSABLE_ENTITY)
   rename(
     @CurrentUser() actor: AuthContext,
@@ -106,7 +117,11 @@ export class RolesController {
   @Put('roles/:id/permissions')
   @ApiOperation({ summary: 'Replace the permissions of a custom role (never more than you hold)' })
   @ApiBody({ type: SetRolePermissionsDto })
-  @ApiRoleResponse('The role with its new permissions')
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'The role with its new permissions',
+    type: RoleEnvelopeDto,
+  })
   @ApiProblemResponses(UNAUTHORIZED, FORBIDDEN, NOT_FOUND, UNPROCESSABLE_ENTITY)
   setPermissions(
     @CurrentUser() actor: AuthContext,

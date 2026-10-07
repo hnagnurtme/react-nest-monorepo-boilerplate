@@ -15,7 +15,7 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 
 import {
@@ -27,8 +27,14 @@ import {
 import { CheckPolicies, PoliciesGuard } from '@/core/guards/index.js';
 import { ACCESS_TOKEN_SECURITY_SCHEME } from '@/modules/auth/index.js';
 
-import { CreateUserDto, ListUsersDto, SetUserRolesDto, UpdateUserDto } from './dto/index.js';
-import { ApiUserListResponse, ApiUserResponse } from './users.openapi.js';
+import {
+  CreateUserDto,
+  ListUsersDto,
+  SetUserRolesDto,
+  UpdateUserDto,
+  UserEnvelopeDto,
+  UserListEnvelopeDto,
+} from './dto/index.js';
 import { UsersService } from './users.service.js';
 import type { UserResponse } from './users.types.js';
 
@@ -46,7 +52,7 @@ export class UsersController {
   @ApiOperation({
     summary: 'List users visible to the caller (own tenant; all for platform admin)',
   })
-  @ApiUserListResponse('A page of users')
+  @ApiResponse({ status: HttpStatus.OK, description: 'A page of users', type: UserListEnvelopeDto })
   @ApiProblemResponses(UNAUTHORIZED, FORBIDDEN, UNPROCESSABLE_ENTITY)
   list(@Query() query: ListUsersDto): Promise<{ items: UserResponse[]; meta: PaginationMeta }> {
     return this.users.list(query);
@@ -58,7 +64,11 @@ export class UsersController {
   @ApiOperation({
     summary: 'Create a user (admins only; there is no self sign-up)',
   })
-  @ApiUserResponse('The created user', HttpStatus.CREATED)
+  @ApiResponse({
+    status: HttpStatus.CREATED,
+    description: 'The created user',
+    type: UserEnvelopeDto,
+  })
   @ApiBody({ type: CreateUserDto })
   @ApiProblemResponses(UNAUTHORIZED, FORBIDDEN, CONFLICT, UNPROCESSABLE_ENTITY)
   async create(
@@ -75,7 +85,7 @@ export class UsersController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get one user' })
-  @ApiUserResponse('The user')
+  @ApiResponse({ status: HttpStatus.OK, description: 'The user', type: UserEnvelopeDto })
   @ApiProblemResponses(UNAUTHORIZED, FORBIDDEN, NOT_FOUND)
   get(@Param('id', ParseUUIDPipe) id: string): Promise<UserResponse> {
     return this.users.findOrThrow(id);
@@ -83,7 +93,7 @@ export class UsersController {
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update a user profile (admins may also activate or deactivate)' })
-  @ApiUserResponse('The updated user')
+  @ApiResponse({ status: HttpStatus.OK, description: 'The updated user', type: UserEnvelopeDto })
   @ApiBody({ type: UpdateUserDto })
   @ApiProblemResponses(UNAUTHORIZED, FORBIDDEN, NOT_FOUND, UNPROCESSABLE_ENTITY)
   update(
@@ -99,7 +109,11 @@ export class UsersController {
     summary: 'Replace the roles of a user (never your own, never more than you hold)',
   })
   @ApiBody({ type: SetUserRolesDto })
-  @ApiUserResponse('The user with its new roles')
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'The user with its new roles',
+    type: UserEnvelopeDto,
+  })
   @ApiProblemResponses(UNAUTHORIZED, FORBIDDEN, NOT_FOUND, CONFLICT, UNPROCESSABLE_ENTITY)
   setRoles(
     @CurrentUser() actor: AuthContext,

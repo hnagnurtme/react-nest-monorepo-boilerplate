@@ -7,3 +7,15 @@ export {
   ResetPasswordDto,
   ChangePasswordDto,
 } from './password-reset.dto.js';
+export {
+  AbilitiesEnvelopeDto,
+  AuthBodyEnvelopeDto,
+  ForgotPasswordEnvelopeDto,
+  MessageEnvelopeDto,
+  PublicUserEnvelopeDto,
+  abilitiesResponseSchema,
+  authBodySchema,
+  forgotPasswordResponseSchema,
+  messageResponseSchema,
+  publicUserSchema,
+} from './auth-response.dto.js';

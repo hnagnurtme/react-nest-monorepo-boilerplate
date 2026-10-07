@@ -157,11 +157,12 @@ The API is **ESM** (`NodeNext`): relative imports carry an explicit `.js` extens
 <feature>.controller.ts
 <feature>.service.ts
 <feature>.repository.ts
-<feature>.openapi.ts
 <feature>.types.ts
-dto/
+dto/       ← request AND response Zod schemas (`*-response.dto.ts`); types are `z.infer`
 index.ts   ← the ONLY public surface; Repository is never exported from index
 ```
+
+There are no hand-written OpenAPI JSON schemas. Response shapes are Zod schemas wrapped by `dataEnvelope()` / `pagedEnvelope()` (`common/dto`), turned into DTO classes with `createZodDto`, and attached with `@ApiResponse({ type: XEnvelopeDto })`.
 
 Services throw domain errors (`core/errors`), **not** `HttpException`. `GlobalExceptionFilter` maps them to RFC 9457 responses, and also unwraps Drizzle's `cause` to map Postgres SQLSTATE codes (`23505` → 409 `RESOURCE_CONFLICT`, `23503` → 409 `REFERENCE_CONSTRAINT`, `23514` → 422). Do not `throw new NotFoundException()` in a service.
 

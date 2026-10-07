@@ -1,7 +1,5 @@
-export interface TenantResponse {
-  id: string;
-  name: string;
-  slug: string;
-  isActive: boolean;
-  createdAt: string;
-}
+import type { z } from 'zod';
+
+import type { tenantResponseSchema } from './dto/index.js';
+
+export type TenantResponse = z.infer<typeof tenantResponseSchema>;

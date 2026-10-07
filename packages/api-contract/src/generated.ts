@@ -361,6 +361,26 @@ export interface components {
             email: string;
             password: string;
         };
+        AuthBodyEnvelopeDto: {
+            data: {
+                accessToken: string;
+                user: {
+                    id: string;
+                    /** Format: email */
+                    email: string;
+                    fullName: string;
+                    tenantId?: string;
+                    /** @enum {string} */
+                    scope: "platform" | "tenant";
+                    roles: {
+                        key: string;
+                        name: string;
+                    }[];
+                };
+                refreshToken?: string;
+                csrfToken?: string;
+            };
+        };
         /** @default {} */
         RefreshDto: {
             refreshToken?: string;
@@ -369,15 +389,80 @@ export interface components {
             /** Format: email */
             email: string;
         };
+        ForgotPasswordEnvelopeDto: {
+            data: {
+                message: string;
+                expiresInSeconds: number;
+            };
+        };
         ResetPasswordDto: {
             /** Format: email */
             email: string;
             otp: string;
             newPassword: string;
         };
+        MessageEnvelopeDto: {
+            data: {
+                message: string;
+            };
+        };
         ChangePasswordDto: {
             currentPassword: string;
             newPassword: string;
+        };
+        PublicUserEnvelopeDto: {
+            data: {
+                id: string;
+                /** Format: email */
+                email: string;
+                fullName: string;
+                tenantId?: string;
+                /** @enum {string} */
+                scope: "platform" | "tenant";
+                roles: {
+                    key: string;
+                    name: string;
+                }[];
+            };
+        };
+        AbilitiesEnvelopeDto: {
+            data: {
+                rules: unknown[];
+            };
+        };
+        PermissionOptionsEnvelopeDto: {
+            data: {
+                action: string;
+                subject: string;
+                description: string;
+                presets: ("any" | "own_tenant" | "own_record")[];
+            }[];
+        };
+        RoleListEnvelopeDto: {
+            data: {
+                /** Format: uuid */
+                id: string;
+                key: string;
+                name: string;
+                /** @enum {string} */
+                scope: "platform" | "tenant";
+                isSystem: boolean;
+                /** Format: uuid */
+                tenantId: string | null;
+                permissions: {
+                    /** @enum {string} */
+                    action: "manage" | "create" | "read" | "update" | "delete";
+                    subject: string;
+                    /** @enum {string} */
+                    preset: "any" | "own_tenant" | "own_record";
+                }[];
+            }[];
+            meta: {
+                page: number;
+                limit: number;
+                total: number;
+                totalPages: number;
+            };
         };
         CreateRoleDto: {
             name: string;
@@ -391,6 +476,26 @@ export interface components {
                 preset: "any" | "own_tenant" | "own_record";
             }[];
         };
+        RoleEnvelopeDto: {
+            data: {
+                /** Format: uuid */
+                id: string;
+                key: string;
+                name: string;
+                /** @enum {string} */
+                scope: "platform" | "tenant";
+                isSystem: boolean;
+                /** Format: uuid */
+                tenantId: string | null;
+                permissions: {
+                    /** @enum {string} */
+                    action: "manage" | "create" | "read" | "update" | "delete";
+                    subject: string;
+                    /** @enum {string} */
+                    preset: "any" | "own_tenant" | "own_record";
+                }[];
+            };
+        };
         UpdateRoleDto: {
             name: string;
         };
@@ -403,13 +508,68 @@ export interface components {
                 preset: "any" | "own_tenant" | "own_record";
             }[];
         };
+        TenantListEnvelopeDto: {
+            data: {
+                /** Format: uuid */
+                id: string;
+                name: string;
+                slug: string;
+                isActive: boolean;
+                /** Format: date-time */
+                createdAt: string;
+            }[];
+            meta: {
+                page: number;
+                limit: number;
+                total: number;
+                totalPages: number;
+            };
+        };
         CreateTenantDto: {
             name: string;
             slug?: string;
         };
+        TenantEnvelopeDto: {
+            data: {
+                /** Format: uuid */
+                id: string;
+                name: string;
+                slug: string;
+                isActive: boolean;
+                /** Format: date-time */
+                createdAt: string;
+            };
+        };
         UpdateTenantDto: {
             name?: string;
             isActive?: boolean;
+        };
+        UserListEnvelopeDto: {
+            data: {
+                /** Format: uuid */
+                id: string;
+                /** Format: email */
+                email: string;
+                fullName: string;
+                phoneNumber: string | null;
+                roles: {
+                    /** Format: uuid */
+                    id: string;
+                    key: string;
+                    name: string;
+                }[];
+                /** Format: uuid */
+                tenantId: string | null;
+                isActive: boolean;
+                /** Format: date-time */
+                createdAt: string;
+            }[];
+            meta: {
+                page: number;
+                limit: number;
+                total: number;
+                totalPages: number;
+            };
         };
         CreateUserDto: {
             /** Format: email */
@@ -420,6 +580,27 @@ export interface components {
             roleIds: string[];
             /** Format: uuid */
             tenantId?: string;
+        };
+        UserEnvelopeDto: {
+            data: {
+                /** Format: uuid */
+                id: string;
+                /** Format: email */
+                email: string;
+                fullName: string;
+                phoneNumber: string | null;
+                roles: {
+                    /** Format: uuid */
+                    id: string;
+                    key: string;
+                    name: string;
+                }[];
+                /** Format: uuid */
+                tenantId: string | null;
+                isActive: boolean;
+                /** Format: date-time */
+                createdAt: string;
+            };
         };
         UpdateUserDto: {
             fullName?: string;
@@ -500,26 +681,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        data: {
-                            accessToken: string;
-                            user: {
-                                id: string;
-                                /** Format: email */
-                                email: string;
-                                fullName: string;
-                                /** @enum {string} */
-                                scope: "platform" | "tenant";
-                                roles: {
-                                    key: string;
-                                    name: string;
-                                }[];
-                                tenantId?: string;
-                            };
-                            refreshToken?: string;
-                            csrfToken?: string;
-                        };
-                    };
+                    "application/json": components["schemas"]["AuthBodyEnvelopeDto"];
                 };
             };
             /** @description Not authenticated, or the token is invalid or expired */
@@ -579,26 +741,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        data: {
-                            accessToken: string;
-                            user: {
-                                id: string;
-                                /** Format: email */
-                                email: string;
-                                fullName: string;
-                                /** @enum {string} */
-                                scope: "platform" | "tenant";
-                                roles: {
-                                    key: string;
-                                    name: string;
-                                }[];
-                                tenantId?: string;
-                            };
-                            refreshToken?: string;
-                            csrfToken?: string;
-                        };
-                    };
+                    "application/json": components["schemas"]["AuthBodyEnvelopeDto"];
                 };
             };
             /** @description Not authenticated, or the token is invalid or expired */
@@ -658,14 +801,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        data: {
-                            /** @example If this email address exists in our system, a password reset code has been sent. */
-                            message: string;
-                            /** @example 300 */
-                            expiresInSeconds: number;
-                        };
-                    };
+                    "application/json": components["schemas"]["ForgotPasswordEnvelopeDto"];
                 };
             };
             /** @description The payload failed validation */
@@ -707,12 +843,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        data: {
-                            /** @example Operation completed successfully. */
-                            message: string;
-                        };
-                    };
+                    "application/json": components["schemas"]["MessageEnvelopeDto"];
                 };
             };
             /** @description Malformed request */
@@ -772,12 +903,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        data: {
-                            /** @example Operation completed successfully. */
-                            message: string;
-                        };
-                    };
+                    "application/json": components["schemas"]["MessageEnvelopeDto"];
                 };
             };
             /** @description Not authenticated, or the token is invalid or expired */
@@ -900,21 +1026,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        data: {
-                            id: string;
-                            /** Format: email */
-                            email: string;
-                            fullName: string;
-                            /** @enum {string} */
-                            scope: "platform" | "tenant";
-                            roles: {
-                                key: string;
-                                name: string;
-                            }[];
-                            tenantId?: string;
-                        };
-                    };
+                    "application/json": components["schemas"]["PublicUserEnvelopeDto"];
                 };
             };
             /** @description Not authenticated, or the token is invalid or expired */
@@ -943,11 +1055,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        data: {
-                            rules: unknown[];
-                        };
-                    };
+                    "application/json": components["schemas"]["AbilitiesEnvelopeDto"];
                 };
             };
             /** @description Not authenticated, or the token is invalid or expired */
@@ -976,14 +1084,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        data: {
-                            action: string;
-                            subject: string;
-                            description: string;
-                            presets: ("any" | "own_tenant" | "own_record")[];
-                        }[];
-                    };
+                    "application/json": components["schemas"]["PermissionOptionsEnvelopeDto"];
                 };
             };
             /** @description Not authenticated, or the token is invalid or expired */
@@ -1021,32 +1122,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        data: {
-                            /** Format: uuid */
-                            id: string;
-                            key: string;
-                            name: string;
-                            /** @enum {string} */
-                            scope: "platform" | "tenant";
-                            isSystem: boolean;
-                            /** Format: uuid */
-                            tenantId: string | null;
-                            permissions: {
-                                /** @enum {string} */
-                                action: "manage" | "create" | "read" | "update" | "delete";
-                                subject: string;
-                                /** @enum {string} */
-                                preset: "any" | "own_tenant" | "own_record";
-                            }[];
-                        }[];
-                        meta: {
-                            page: number;
-                            limit: number;
-                            total: number;
-                            totalPages: number;
-                        };
-                    };
+                    "application/json": components["schemas"]["RoleListEnvelopeDto"];
                 };
             };
             /** @description Not authenticated, or the token is invalid or expired */
@@ -1097,26 +1173,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        data: {
-                            /** Format: uuid */
-                            id: string;
-                            key: string;
-                            name: string;
-                            /** @enum {string} */
-                            scope: "platform" | "tenant";
-                            isSystem: boolean;
-                            /** Format: uuid */
-                            tenantId: string | null;
-                            permissions: {
-                                /** @enum {string} */
-                                action: "manage" | "create" | "read" | "update" | "delete";
-                                subject: string;
-                                /** @enum {string} */
-                                preset: "any" | "own_tenant" | "own_record";
-                            }[];
-                        };
-                    };
+                    "application/json": components["schemas"]["RoleEnvelopeDto"];
                 };
             };
             /** @description Not authenticated, or the token is invalid or expired */
@@ -1172,26 +1229,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        data: {
-                            /** Format: uuid */
-                            id: string;
-                            key: string;
-                            name: string;
-                            /** @enum {string} */
-                            scope: "platform" | "tenant";
-                            isSystem: boolean;
-                            /** Format: uuid */
-                            tenantId: string | null;
-                            permissions: {
-                                /** @enum {string} */
-                                action: "manage" | "create" | "read" | "update" | "delete";
-                                subject: string;
-                                /** @enum {string} */
-                                preset: "any" | "own_tenant" | "own_record";
-                            }[];
-                        };
-                    };
+                    "application/json": components["schemas"]["RoleEnvelopeDto"];
                 };
             };
             /** @description Not authenticated, or the token is invalid or expired */
@@ -1289,26 +1327,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        data: {
-                            /** Format: uuid */
-                            id: string;
-                            key: string;
-                            name: string;
-                            /** @enum {string} */
-                            scope: "platform" | "tenant";
-                            isSystem: boolean;
-                            /** Format: uuid */
-                            tenantId: string | null;
-                            permissions: {
-                                /** @enum {string} */
-                                action: "manage" | "create" | "read" | "update" | "delete";
-                                subject: string;
-                                /** @enum {string} */
-                                preset: "any" | "own_tenant" | "own_record";
-                            }[];
-                        };
-                    };
+                    "application/json": components["schemas"]["RoleEnvelopeDto"];
                 };
             };
             /** @description Not authenticated, or the token is invalid or expired */
@@ -1377,26 +1396,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        data: {
-                            /** Format: uuid */
-                            id: string;
-                            key: string;
-                            name: string;
-                            /** @enum {string} */
-                            scope: "platform" | "tenant";
-                            isSystem: boolean;
-                            /** Format: uuid */
-                            tenantId: string | null;
-                            permissions: {
-                                /** @enum {string} */
-                                action: "manage" | "create" | "read" | "update" | "delete";
-                                subject: string;
-                                /** @enum {string} */
-                                preset: "any" | "own_tenant" | "own_record";
-                            }[];
-                        };
-                    };
+                    "application/json": components["schemas"]["RoleEnvelopeDto"];
                 };
             };
             /** @description Not authenticated, or the token is invalid or expired */
@@ -1452,23 +1452,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        data: {
-                            /** Format: uuid */
-                            id: string;
-                            name: string;
-                            slug: string;
-                            isActive: boolean;
-                            /** Format: date-time */
-                            createdAt: string;
-                        }[];
-                        meta: {
-                            page: number;
-                            limit: number;
-                            total: number;
-                            totalPages: number;
-                        };
-                    };
+                    "application/json": components["schemas"]["TenantListEnvelopeDto"];
                 };
             };
             /** @description Not authenticated, or the token is invalid or expired */
@@ -1519,17 +1503,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        data: {
-                            /** Format: uuid */
-                            id: string;
-                            name: string;
-                            slug: string;
-                            isActive: boolean;
-                            /** Format: date-time */
-                            createdAt: string;
-                        };
-                    };
+                    "application/json": components["schemas"]["TenantEnvelopeDto"];
                 };
             };
             /** @description Not authenticated, or the token is invalid or expired */
@@ -1585,17 +1559,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        data: {
-                            /** Format: uuid */
-                            id: string;
-                            name: string;
-                            slug: string;
-                            isActive: boolean;
-                            /** Format: date-time */
-                            createdAt: string;
-                        };
-                    };
+                    "application/json": components["schemas"]["TenantEnvelopeDto"];
                 };
             };
             /** @description Not authenticated, or the token is invalid or expired */
@@ -1646,17 +1610,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        data: {
-                            /** Format: uuid */
-                            id: string;
-                            name: string;
-                            slug: string;
-                            isActive: boolean;
-                            /** Format: date-time */
-                            createdAt: string;
-                        };
-                    };
+                    "application/json": components["schemas"]["TenantEnvelopeDto"];
                 };
             };
             /** @description Not authenticated, or the token is invalid or expired */
@@ -1712,33 +1666,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        data: {
-                            /** Format: uuid */
-                            id: string;
-                            /** Format: email */
-                            email: string;
-                            fullName: string;
-                            phoneNumber: string | null;
-                            roles: {
-                                /** Format: uuid */
-                                id: string;
-                                key: string;
-                                name: string;
-                            }[];
-                            /** Format: uuid */
-                            tenantId: string | null;
-                            isActive: boolean;
-                            /** Format: date-time */
-                            createdAt: string;
-                        }[];
-                        meta: {
-                            page: number;
-                            limit: number;
-                            total: number;
-                            totalPages: number;
-                        };
-                    };
+                    "application/json": components["schemas"]["UserListEnvelopeDto"];
                 };
             };
             /** @description Not authenticated, or the token is invalid or expired */
@@ -1789,27 +1717,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        data: {
-                            /** Format: uuid */
-                            id: string;
-                            /** Format: email */
-                            email: string;
-                            fullName: string;
-                            phoneNumber: string | null;
-                            roles: {
-                                /** Format: uuid */
-                                id: string;
-                                key: string;
-                                name: string;
-                            }[];
-                            /** Format: uuid */
-                            tenantId: string | null;
-                            isActive: boolean;
-                            /** Format: date-time */
-                            createdAt: string;
-                        };
-                    };
+                    "application/json": components["schemas"]["UserEnvelopeDto"];
                 };
             };
             /** @description Not authenticated, or the token is invalid or expired */
@@ -1865,27 +1773,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        data: {
-                            /** Format: uuid */
-                            id: string;
-                            /** Format: email */
-                            email: string;
-                            fullName: string;
-                            phoneNumber: string | null;
-                            roles: {
-                                /** Format: uuid */
-                                id: string;
-                                key: string;
-                                name: string;
-                            }[];
-                            /** Format: uuid */
-                            tenantId: string | null;
-                            isActive: boolean;
-                            /** Format: date-time */
-                            createdAt: string;
-                        };
-                    };
+                    "application/json": components["schemas"]["UserEnvelopeDto"];
                 };
             };
             /** @description Not authenticated, or the token is invalid or expired */
@@ -1974,27 +1862,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        data: {
-                            /** Format: uuid */
-                            id: string;
-                            /** Format: email */
-                            email: string;
-                            fullName: string;
-                            phoneNumber: string | null;
-                            roles: {
-                                /** Format: uuid */
-                                id: string;
-                                key: string;
-                                name: string;
-                            }[];
-                            /** Format: uuid */
-                            tenantId: string | null;
-                            isActive: boolean;
-                            /** Format: date-time */
-                            createdAt: string;
-                        };
-                    };
+                    "application/json": components["schemas"]["UserEnvelopeDto"];
                 };
             };
             /** @description Not authenticated, or the token is invalid or expired */
@@ -2054,27 +1922,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        data: {
-                            /** Format: uuid */
-                            id: string;
-                            /** Format: email */
-                            email: string;
-                            fullName: string;
-                            phoneNumber: string | null;
-                            roles: {
-                                /** Format: uuid */
-                                id: string;
-                                key: string;
-                                name: string;
-                            }[];
-                            /** Format: uuid */
-                            tenantId: string | null;
-                            isActive: boolean;
-                            /** Format: date-time */
-                            createdAt: string;
-                        };
-                    };
+                    "application/json": components["schemas"]["UserEnvelopeDto"];
                 };
             };
             /** @description Not authenticated, or the token is invalid or expired */

@@ -1,19 +1,7 @@
-import type { PermissionGrant, RoleScope } from '@repo/shared-types';
+import type { z } from 'zod';
 
-export interface RoleResponse {
-  id: string;
-  key: string;
-  name: string;
-  scope: RoleScope;
-  isSystem: boolean;
-  tenantId: string | null;
-  permissions: PermissionGrant[];
-}
+import type { permissionOptionSchema, roleResponseSchema } from './dto/index.js';
 
-export interface PermissionOption {
-  action: string;
-  subject: string;
-  description: string;
-  /** Reach levels the caller is allowed to hand out for this permission. */
-  presets: string[];
-}
+export type RoleResponse = z.infer<typeof roleResponseSchema>;
+
+export type PermissionOption = z.infer<typeof permissionOptionSchema>;

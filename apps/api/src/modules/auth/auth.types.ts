@@ -1,39 +1,21 @@
-import type { RoleScope } from '@repo/shared-types';
+import type { z } from 'zod';
 
-/**
- * The user as the outside world may see them. Built explicitly rather than by
- * deleting fields from the row: a whitelist keeps a column added next year from
- * leaking by default (docs/rules/06-api-design.md C6).
- */
-export interface PublicUser {
-  id: string;
-  email: string;
-  fullName: string;
-  tenantId: string | undefined;
-  /** 'platform' users sit above every tenant. */
-  scope: RoleScope;
-  roles: { key: string; name: string }[];
-}
+import type {
+  authBodySchema,
+  forgotPasswordResponseSchema,
+  messageResponseSchema,
+  publicUserSchema,
+} from './dto/index.js';
 
-export interface AuthBody {
-  accessToken: string;
-  user: PublicUser;
-  /** Present for non-browser clients only; web receives it as an httpOnly cookie. */
-  refreshToken?: string;
-  /** Present for web clients only; mirrors the readable CSRF cookie. */
-  csrfToken?: string;
-}
+export type PublicUser = z.infer<typeof publicUserSchema>;
 
-export interface ForgotPasswordResponse {
-  message: string;
-  expiresInSeconds: number;
-}
-export interface ResetPasswordResponse {
-  message: string;
-}
-export interface ChangePasswordResponse {
-  message: string;
-}
+export type AuthBody = z.infer<typeof authBodySchema>;
+
+export type ForgotPasswordResponse = z.infer<typeof forgotPasswordResponseSchema>;
+
+export type ResetPasswordResponse = z.infer<typeof messageResponseSchema>;
+
+export type ChangePasswordResponse = z.infer<typeof messageResponseSchema>;
 
 export interface CookieInstruction {
   name: string;
