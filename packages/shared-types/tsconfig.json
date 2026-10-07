@@ -2,9 +2,8 @@
   "extends": "@repo/tsconfig/base.json",
   "compilerOptions": {
     "noEmit": true,
-    "baseUrl": ".",
     "paths": {
-      "@repo/shared-types": ["src"]
+      "@repo/shared-types": ["./src"]
     }
   },
   "include": ["src/**/*.ts", "test/**/*.ts"],

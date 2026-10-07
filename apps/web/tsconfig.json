@@ -2,9 +2,8 @@
   "extends": "@repo/tsconfig/react.json",
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.tsbuildinfo",
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
+      "@/*": ["./src/*"],
       "@repo/shared-types": ["../../packages/shared-types/src"],
       "@repo/api-contract": ["../../packages/api-contract/src"]
     },

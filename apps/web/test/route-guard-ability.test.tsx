@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { AppAbility } from '@repo/shared-types';
@@ -22,6 +22,12 @@ function ProtectedPage() {
   return <div data-testid="protected-page">Protected Content</div>;
 }
 
+function HomeProbe() {
+  const location = useLocation();
+  const denied = (location.state as { accessDenied?: boolean } | null)?.accessDenied === true;
+  return <div data-testid="home-page">{denied ? 'denied' : 'Home'}</div>;
+}
+
 const canManageAll = (ability: AppAbility): boolean => ability.can('manage', 'all');
 
 function renderGuard(checkAbility?: (ability: AppAbility) => boolean, initialEntry = '/protected') {
@@ -39,7 +45,7 @@ function renderGuard(checkAbility?: (ability: AppAbility) => boolean, initialEnt
                 </RouteGuard>
               }
             />
-            <Route path="/" element={<div data-testid="home-page">Home</div>} />
+            <Route path="/" element={<HomeProbe />} />
             <Route path="/login" element={<div data-testid="login-page">Login</div>} />
           </Routes>
         </AbilityProvider>
@@ -96,7 +102,7 @@ describe('RouteGuard with abilities', () => {
     mockApi(makeUser(), MEMBER_GRANTS);
     renderGuard(canManageAll);
 
-    expect(await screen.findByTestId('home-page')).toBeInTheDocument();
+    expect(await screen.findByTestId('home-page')).toHaveTextContent('denied');
     expect(screen.queryByTestId('protected-page')).not.toBeInTheDocument();
   });
 

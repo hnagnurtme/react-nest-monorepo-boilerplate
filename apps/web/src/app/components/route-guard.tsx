@@ -36,7 +36,8 @@ export function RouteGuard({ checkAbility, children }: RouteGuardProps): React.R
 
   // Check CASL ability
   if (checkAbility && !checkAbility(ability)) {
-    return <Navigate to="/" replace />;
+    // Say why: a silent redirect to the home page reads as a bug.
+    return <Navigate to="/" replace state={{ accessDenied: true }} />;
   }
 
   return children;

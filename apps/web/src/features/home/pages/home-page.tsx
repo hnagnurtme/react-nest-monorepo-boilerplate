@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
 import { useAuthStore } from '@/entities/session';
 import { CanAction } from '@/features/auth';
@@ -8,6 +8,8 @@ import { useBrand } from '@/shared/hooks';
 export function HomePage() {
   const { t } = useTranslation('auth');
   const brand = useBrand();
+  const location = useLocation();
+  const accessDenied = (location.state as { accessDenied?: boolean } | null)?.accessDenied === true;
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const user = useAuthStore((s) => s.user);
   const clearAuth = useAuthStore((s) => s.clearAuth);
@@ -24,6 +26,14 @@ export function HomePage() {
             alt={brand.name}
             className="mx-auto mb-4 h-24 w-auto rounded-xl object-contain"
           />
+        ) : null}
+        {accessDenied ? (
+          <p
+            role="alert"
+            className="bg-destructive/10 text-destructive mb-4 rounded-lg p-3 text-xs"
+          >
+            {t('home.accessDenied')}
+          </p>
         ) : null}
         <h1 className="text-foreground text-2xl font-bold">{brand.name}</h1>
         <p className="text-muted-foreground mt-2 text-sm">{brand.slogan}</p>

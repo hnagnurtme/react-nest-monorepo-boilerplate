@@ -3,15 +3,14 @@
   "compilerOptions": {
     "rootDir": "src",
     "outDir": "dist",
-    "baseUrl": ".",
     "paths": {
-      "@/config": ["src/config/index.ts"],
-      "@/config/*": ["src/config/*"],
-      "@/common": ["src/common/index.ts"],
-      "@/common/*": ["src/common/*"],
-      "@/core/*": ["src/core/*"],
-      "@/integrations/*": ["src/integrations/*"],
-      "@/modules/*": ["src/modules/*"]
+      "@/config": ["./src/config/index.ts"],
+      "@/config/*": ["./src/config/*"],
+      "@/common": ["./src/common/index.ts"],
+      "@/common/*": ["./src/common/*"],
+      "@/core/*": ["./src/core/*"],
+      "@/integrations/*": ["./src/integrations/*"],
+      "@/modules/*": ["./src/modules/*"]
     }
   },
   "include": ["src/**/*.ts"],

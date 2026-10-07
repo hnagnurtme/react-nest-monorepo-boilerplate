@@ -8,7 +8,15 @@ const STRING_SUBSTRING_START = 2;
 const STRING_SUBSTRING_END = 9;
 const DEFAULT_TOAST_DURATION_MS = 5000;
 
-function ToastItem({ toast, onClose }: { toast: ToastMessage; onClose: (id: string) => void }) {
+function ToastItem({
+  toast,
+  onClose,
+  closeLabel,
+}: {
+  toast: ToastMessage;
+  onClose: (id: string) => void;
+  closeLabel: string;
+}) {
   return (
     <div
       className={`pointer-events-auto flex items-start gap-3 rounded-xl border p-4 shadow-lg transition-all ${
@@ -32,7 +40,7 @@ function ToastItem({ toast, onClose }: { toast: ToastMessage; onClose: (id: stri
           onClose(toast.id);
         }}
         className="text-muted-foreground hover:text-foreground cursor-pointer"
-        aria-label="Đóng thông báo"
+        aria-label={closeLabel}
       >
         <X className="h-4 w-4" />
       </button>
@@ -40,7 +48,14 @@ function ToastItem({ toast, onClose }: { toast: ToastMessage; onClose: (id: stri
   );
 }
 
-export function ToastProvider({ children }: { children: ReactNode }) {
+export function ToastProvider({
+  children,
+  closeLabel = 'Close notification',
+}: {
+  children: ReactNode;
+  /** Accessible name of the dismiss button; pass a translated string. */
+  closeLabel?: string;
+}) {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   const removeToast = useCallback((id: string) => {
@@ -75,7 +90,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         className="aria-live-polite pointer-events-none fixed bottom-4 right-4 z-50 flex w-full max-w-sm flex-col gap-2"
       >
         {toasts.map((toast) => (
-          <ToastItem key={toast.id} toast={toast} onClose={removeToast} />
+          <ToastItem key={toast.id} toast={toast} onClose={removeToast} closeLabel={closeLabel} />
         ))}
       </div>
     </ToastContext.Provider>

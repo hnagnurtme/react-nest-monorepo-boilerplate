@@ -12,6 +12,8 @@ import { useAuthStore } from '@/entities/session';
 import { AUTH_ENDPOINTS } from '@/features/auth/endpoints';
 import { apiClient } from '@/lib/http/client';
 
+import { parsePackedRules } from './packed-rules.schema';
+
 export const abilityKeys = {
   all: ['abilities'] as const,
   session: (userId: string, accessToken: string | null) =>
@@ -49,7 +51,8 @@ export function AbilityProvider({ children }: { children: ReactNode }) {
     staleTime: 0,
     queryFn: async () => {
       const { rules } = await apiClient.get(AUTH_ENDPOINTS.ABILITIES);
-      return rules as PackedRules;
+      // A payload that is not valid packed rules grants nothing.
+      return parsePackedRules(rules) ?? [];
     },
   });
 
