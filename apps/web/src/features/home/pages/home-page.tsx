@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
 import { useAuthStore } from '@/entities/session';
+import { CanAction } from '@/features/auth';
 import { useBrand } from '@/shared/hooks';
 
 export function HomePage() {
@@ -35,11 +36,11 @@ export function HomePage() {
             <Link to="/users" className={linkClass}>
               {t('home.users')}
             </Link>
-            {user.role === 'PLATFORM_ADMIN' ? (
+            <CanAction I="create" a="Tenant">
               <Link to="/tenants" className={linkClass}>
                 {t('home.tenants')}
               </Link>
-            ) : null}
+            </CanAction>
             <button
               type="button"
               onClick={clearAuth}

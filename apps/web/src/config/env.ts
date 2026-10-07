@@ -30,6 +30,7 @@ function parseEnv(): z.infer<typeof envSchema> {
   });
 
   if (!result.success) {
+    // eslint-disable-next-line no-console
     console.error('Invalid environment variables:', result.error.flatten().fieldErrors);
     throw new Error('Invalid environment variables');
   }

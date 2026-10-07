@@ -59,7 +59,7 @@
   },
   "lint-staged": {
     "*.{ts,tsx}": [
-      "eslint --fix --no-warn-ignored",
+      "eslint --fix --no-warn-ignored --report-unused-disable-directives-severity off",
       "prettier --write"
     ],
     "*.{json,md,yaml,yml}": [
