@@ -13,12 +13,6 @@ export interface PublicUser {
   tenantId: string | undefined;
 }
 
-export interface RegisteredUser {
-  id: string;
-  email: string;
-  fullName: string;
-}
-
 export interface AuthBody {
   accessToken: string;
   user: PublicUser;
@@ -26,23 +20,6 @@ export interface AuthBody {
   refreshToken?: string;
   /** Present for web clients only; mirrors the readable CSRF cookie. */
   csrfToken?: string;
-}
-
-export interface RegisterResponse {
-  email: string;
-  message: string;
-  expiresInSeconds: number;
-}
-
-export interface ResendOtpResponse {
-  email: string;
-  message: string;
-  cooldownSeconds: number;
-}
-
-export interface VerifyEmailResponse {
-  user: PublicUser;
-  message: string;
 }
 
 export interface ForgotPasswordResponse {

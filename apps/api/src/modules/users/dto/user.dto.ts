@@ -1,21 +1,42 @@
 import { createZodDto } from 'nestjs-zod/dto';
 import { z } from 'zod';
 
+import { USER_ROLES } from '@repo/shared-types';
+
 import { pageQuerySchema } from '@/common/index.js';
+
+/** E.164-ish: optional +, 7 to 15 digits. */
+const PHONE_REGEX = /^\+?[0-9]{7,15}$/;
+const MIN_PASSWORD_LENGTH = 8;
+const MAX_PASSWORD_LENGTH = 256;
 
 export class ListUsersDto extends createZodDto(pageQuerySchema) {}
 
 export const updateUserSchema = z
   .object({
     fullName: z.string().trim().min(2).max(100).optional(),
-    phoneNumber: z
-      .string()
-      .regex(/^(0|\+84)[3|5|7|8|9][0-9]{8}$/, 'Invalid phone number')
-      .nullable()
-      .optional(),
+    phoneNumber: z.string().regex(PHONE_REGEX, 'Invalid phone number').nullable().optional(),
     isActive: z.boolean().optional(),
   })
   .strict()
   .refine((value) => Object.keys(value).length > 0, 'At least one field is required');
 
 export class UpdateUserDto extends createZodDto(updateUserSchema) {}
+
+/**
+ * `tenantId` is accepted here, and only here, because a platform admin creates
+ * users for any tenant. For a tenant admin the service ignores nothing: a
+ * differing value is rejected, and an absent one is filled from the token.
+ */
+export const createUserSchema = z
+  .object({
+    email: z.string().email().max(MAX_PASSWORD_LENGTH).toLowerCase().trim(),
+    fullName: z.string().trim().min(2).max(100),
+    phoneNumber: z.string().regex(PHONE_REGEX, 'Invalid phone number').optional(),
+    password: z.string().min(MIN_PASSWORD_LENGTH).max(MAX_PASSWORD_LENGTH),
+    role: z.enum(USER_ROLES),
+    tenantId: z.string().uuid().optional(),
+  })
+  .strict();
+
+export class CreateUserDto extends createZodDto(createUserSchema) {}

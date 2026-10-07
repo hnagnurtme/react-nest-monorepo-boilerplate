@@ -68,41 +68,6 @@ export class AuthRepository {
     return row;
   }
 
-  async updateUnverifiedUser(
-    tx: Tx,
-    userId: string,
-    values: Pick<NewUser, 'fullName' | 'phoneNumber' | 'passwordHash'>,
-  ): Promise<User> {
-    const [row] = await tx
-      .update(users)
-      .set({
-        fullName: values.fullName,
-        phoneNumber: values.phoneNumber,
-        passwordHash: values.passwordHash,
-        updatedAt: sql`now()`,
-      })
-      .where(and(eq(users.id, userId), eq(users.isEmailVerified, false), isNull(users.deletedAt)))
-      .returning();
-
-    if (row === undefined) throw new Error('Not found accout unverified to update');
-    return row;
-  }
-
-  async verifyUserEmail(tx: Tx, email: string): Promise<User> {
-    const [row] = await tx
-      .update(users)
-      .set({
-        isEmailVerified: true,
-        isActive: true,
-        updatedAt: sql`now()`,
-      })
-      .where(and(eq(users.email, email), isNull(users.deletedAt)))
-      .returning();
-
-    if (row === undefined) throw new Error('Not found account to verify email.');
-    return row;
-  }
-
   async updateUserPassword(tx: Tx, userId: string, passwordHash: string): Promise<void> {
     await tx
       .update(users)

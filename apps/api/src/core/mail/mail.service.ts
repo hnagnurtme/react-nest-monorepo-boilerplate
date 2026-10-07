@@ -79,30 +79,6 @@ export class MailService {
   }
 
   /**
-   * Send registration verification OTP email
-   */
-  async sendOtpMail(payload: OtpEmailPayload): Promise<void> {
-    const { toEmail, recipientName, otp, ttlMinutes = 5 } = payload;
-
-    this.logger.log(
-      `[MailService REGISTER-OTP] >>> Verification OTP for [${toEmail}]: ${otp} (expires in ${String(ttlMinutes)} min) <<<`,
-    );
-
-    const renderedHtml = this.renderTemplateFromFile('otp-verification.html', {
-      recipientName,
-      otp,
-      ttlMinutes: ttlMinutes.toString(),
-      year: new Date().getFullYear().toString(),
-    });
-
-    await this.sendMail({
-      to: toEmail,
-      subject: `Your verification code: ${otp}`,
-      html: renderedHtml,
-    });
-  }
-
-  /**
    * Send reset password OTP email
    */
   async sendResetPasswordMail(payload: OtpEmailPayload): Promise<void> {

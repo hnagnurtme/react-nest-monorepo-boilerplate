@@ -27,9 +27,6 @@ import {
   ApiForgotPasswordResponse,
   ApiMessageResponse,
   ApiPublicUserResponse,
-  ApiRegisterResponse,
-  ApiResendOtpResponse,
-  ApiVerifyEmailResponse,
 } from './auth.openapi.js';
 import { AuthService } from './auth.service.js';
 import type {
@@ -38,20 +35,14 @@ import type {
   ChangePasswordResponse,
   ForgotPasswordResponse,
   PublicUser,
-  RegisterResponse,
-  ResendOtpResponse,
   ResetPasswordResponse,
-  VerifyEmailResponse,
 } from './auth.types.js';
 import {
   ChangePasswordDto,
   ForgotPasswordDto,
   LoginDto,
   RefreshDto,
-  RegisterDto,
-  ResendOtpDto,
   ResetPasswordDto,
-  VerifyEmailDto,
 } from './dto/index.js';
 import { RefreshCookie } from './refresh-token.decorator.js';
 
@@ -59,17 +50,9 @@ const LOGIN_LIMIT = 5;
 const REFRESH_LIMIT = 30;
 const WINDOW_SECONDS = 60;
 const OTP_LIMIT = 5;
-const REGISTER_LIMIT = 5;
 
-const {
-  UNAUTHORIZED,
-  FORBIDDEN,
-  UNPROCESSABLE_ENTITY,
-  TOO_MANY_REQUESTS,
-  CONFLICT,
-  BAD_REQUEST,
-  NOT_FOUND,
-} = HttpStatus;
+const { UNAUTHORIZED, FORBIDDEN, UNPROCESSABLE_ENTITY, TOO_MANY_REQUESTS, BAD_REQUEST, NOT_FOUND } =
+  HttpStatus;
 
 @ApiTags('auth')
 @Controller({ path: 'auth', version: '1' })
@@ -92,32 +75,6 @@ export class AuthController {
     return this.auth.login(dto, client);
   }
 
-  @Post('register')
-  @Public()
-  @HttpCode(HttpStatus.CREATED)
-  @Throttle({ default: { limit: REGISTER_LIMIT, ttl: seconds(WINDOW_SECONDS) } })
-  @ApiOperation({
-    summary: 'Register a new account (creates its tenant) and send verification OTP email',
-  })
-  @ApiBody({ type: RegisterDto })
-  @ApiRegisterResponse('OTP verification code sent to email')
-  @ApiProblemResponses(CONFLICT, UNPROCESSABLE_ENTITY, TOO_MANY_REQUESTS)
-  register(@Body() dto: RegisterDto): Promise<RegisterResponse> {
-    return this.auth.register(dto);
-  }
-
-  @Post('verify-email')
-  @Public()
-  @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: OTP_LIMIT, ttl: seconds(WINDOW_SECONDS) } })
-  @ApiOperation({ summary: 'Verify 6-digit OTP code and activate account' })
-  @ApiBody({ type: VerifyEmailDto })
-  @ApiVerifyEmailResponse('Account activated successfully')
-  @ApiProblemResponses(BAD_REQUEST, CONFLICT, UNPROCESSABLE_ENTITY, TOO_MANY_REQUESTS)
-  verifyEmail(@Body() dto: VerifyEmailDto): Promise<VerifyEmailResponse> {
-    return this.auth.verifyEmail(dto);
-  }
-
   @Post('refresh')
   @Public()
   @HttpCode(HttpStatus.OK)
@@ -132,18 +89,6 @@ export class AuthController {
     @ClientInfoParam() client: ClientInfo,
   ): Promise<AuthResult<AuthBody>> {
     return this.auth.refresh(dto.refreshToken ?? cookieToken, client);
-  }
-
-  @Post('resend-otp')
-  @Public()
-  @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: OTP_LIMIT, ttl: seconds(WINDOW_SECONDS) } })
-  @ApiOperation({ summary: 'Resend verification OTP email (subject to 60s cooldown)' })
-  @ApiBody({ type: ResendOtpDto })
-  @ApiResendOtpResponse('New OTP sent to email')
-  @ApiProblemResponses(NOT_FOUND, CONFLICT, UNPROCESSABLE_ENTITY, TOO_MANY_REQUESTS)
-  resendOtp(@Body() dto: ResendOtpDto): Promise<ResendOtpResponse> {
-    return this.auth.resendOtp(dto);
   }
 
   @Post('forgot-password')

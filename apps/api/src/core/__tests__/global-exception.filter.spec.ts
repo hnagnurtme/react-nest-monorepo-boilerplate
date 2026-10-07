@@ -61,6 +61,17 @@ describe('GlobalExceptionFilter', () => {
     });
   });
 
+  it('maps a Postgres unique violation wrapped by Drizzle to 409', () => {
+    const { host, status } = makeHost();
+    const wrapped = Object.assign(new Error('Failed query'), {
+      cause: Object.assign(new Error('duplicate key'), { code: '23505' }),
+    });
+
+    filter.catch(wrapped, host);
+
+    expect(status()).toBe(HttpStatus.CONFLICT);
+  });
+
   it('turns a validation failure into 422 with invalidParams', () => {
     const { host, sent, status } = makeHost();
 

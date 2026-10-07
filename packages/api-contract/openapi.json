@@ -145,186 +145,6 @@
         ]
       }
     },
-    "/api/v1/auth/register": {
-      "post": {
-        "operationId": "AuthController_register_v1",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RegisterDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "OTP verification code sent to email",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "data"
-                  ],
-                  "properties": {
-                    "data": {
-                      "type": "object",
-                      "required": [
-                        "email",
-                        "message",
-                        "expiresInSeconds"
-                      ],
-                      "properties": {
-                        "email": {
-                          "type": "string",
-                          "format": "email"
-                        },
-                        "message": {
-                          "type": "string"
-                        },
-                        "expiresInSeconds": {
-                          "type": "integer"
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "The resource is in a state that forbids this change",
-            "content": {
-              "application/problem+json": {}
-            }
-          },
-          "422": {
-            "description": "The payload failed validation",
-            "content": {
-              "application/problem+json": {}
-            }
-          },
-          "429": {
-            "description": "Rate limit exceeded; see Retry-After",
-            "content": {
-              "application/problem+json": {}
-            }
-          }
-        },
-        "summary": "Register a new account (creates its tenant) and send verification OTP email",
-        "tags": [
-          "auth"
-        ]
-      }
-    },
-    "/api/v1/auth/verify-email": {
-      "post": {
-        "operationId": "AuthController_verifyEmail_v1",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/VerifyEmailDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Account activated successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "data"
-                  ],
-                  "properties": {
-                    "data": {
-                      "type": "object",
-                      "required": [
-                        "user",
-                        "message"
-                      ],
-                      "properties": {
-                        "user": {
-                          "type": "object",
-                          "required": [
-                            "id",
-                            "email",
-                            "fullName",
-                            "role"
-                          ],
-                          "properties": {
-                            "id": {
-                              "type": "string"
-                            },
-                            "email": {
-                              "type": "string",
-                              "format": "email"
-                            },
-                            "fullName": {
-                              "type": "string"
-                            },
-                            "role": {
-                              "type": "string",
-                              "enum": [
-                                "PLATFORM_ADMIN",
-                                "TENANT_ADMIN",
-                                "TENANT_MEMBER"
-                              ]
-                            },
-                            "tenantId": {
-                              "type": "string"
-                            }
-                          }
-                        },
-                        "message": {
-                          "type": "string"
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Malformed request",
-            "content": {
-              "application/problem+json": {}
-            }
-          },
-          "409": {
-            "description": "The resource is in a state that forbids this change",
-            "content": {
-              "application/problem+json": {}
-            }
-          },
-          "422": {
-            "description": "The payload failed validation",
-            "content": {
-              "application/problem+json": {}
-            }
-          },
-          "429": {
-            "description": "Rate limit exceeded; see Retry-After",
-            "content": {
-              "application/problem+json": {}
-            }
-          }
-        },
-        "summary": "Verify 6-digit OTP code and activate account",
-        "tags": [
-          "auth"
-        ]
-      }
-    },
     "/api/v1/auth/refresh": {
       "post": {
         "operationId": "AuthController_refresh_v1",
@@ -431,87 +251,6 @@
           }
         },
         "summary": "Rotate a refresh token for a new pair",
-        "tags": [
-          "auth"
-        ]
-      }
-    },
-    "/api/v1/auth/resend-otp": {
-      "post": {
-        "operationId": "AuthController_resendOtp_v1",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ResendOtpDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "New OTP sent to email",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "data"
-                  ],
-                  "properties": {
-                    "data": {
-                      "type": "object",
-                      "required": [
-                        "email",
-                        "message",
-                        "cooldownSeconds"
-                      ],
-                      "properties": {
-                        "email": {
-                          "type": "string",
-                          "format": "email"
-                        },
-                        "message": {
-                          "type": "string"
-                        },
-                        "cooldownSeconds": {
-                          "type": "integer"
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "No such resource, or the caller may not know it exists",
-            "content": {
-              "application/problem+json": {}
-            }
-          },
-          "409": {
-            "description": "The resource is in a state that forbids this change",
-            "content": {
-              "application/problem+json": {}
-            }
-          },
-          "422": {
-            "description": "The payload failed validation",
-            "content": {
-              "application/problem+json": {}
-            }
-          },
-          "429": {
-            "description": "Rate limit exceeded; see Retry-After",
-            "content": {
-              "application/problem+json": {}
-            }
-          }
-        },
-        "summary": "Resend verification OTP email (subject to 60s cooldown)",
         "tags": [
           "auth"
         ]
@@ -867,6 +606,357 @@
         ]
       }
     },
+    "/api/v1/tenants": {
+      "get": {
+        "operationId": "TenantsController_list_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "A page of tenants",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "id",
+                          "name",
+                          "slug",
+                          "isActive",
+                          "createdAt"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "slug": {
+                            "type": "string"
+                          },
+                          "isActive": {
+                            "type": "boolean"
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        }
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "required": [
+                        "page",
+                        "limit",
+                        "total",
+                        "totalPages"
+                      ],
+                      "properties": {
+                        "page": {
+                          "type": "integer"
+                        },
+                        "limit": {
+                          "type": "integer"
+                        },
+                        "total": {
+                          "type": "integer"
+                        },
+                        "totalPages": {
+                          "type": "integer"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated, or the token is invalid or expired",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "403": {
+            "description": "Authenticated, but not allowed to do this",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "422": {
+            "description": "The payload failed validation",
+            "content": {
+              "application/problem+json": {}
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "List tenants visible to the caller (own tenant; all for platform admin)",
+        "tags": [
+          "tenants"
+        ]
+      },
+      "post": {
+        "operationId": "TenantsController_create_v1",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "The created tenant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "name",
+                        "slug",
+                        "isActive",
+                        "createdAt"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "slug": {
+                          "type": "string"
+                        },
+                        "isActive": {
+                          "type": "boolean"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated, or the token is invalid or expired",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "403": {
+            "description": "Authenticated, but not allowed to do this",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "409": {
+            "description": "The resource is in a state that forbids this change",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "422": {
+            "description": "The payload failed validation",
+            "content": {
+              "application/problem+json": {}
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Create a tenant (platform admin only)",
+        "tags": [
+          "tenants"
+        ]
+      }
+    },
+    "/api/v1/tenants/{id}": {
+      "get": {
+        "operationId": "TenantsController_get_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "The tenant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "name",
+                        "slug",
+                        "isActive",
+                        "createdAt"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "slug": {
+                          "type": "string"
+                        },
+                        "isActive": {
+                          "type": "boolean"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated, or the token is invalid or expired",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "403": {
+            "description": "Authenticated, but not allowed to do this",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "404": {
+            "description": "No such resource, or the caller may not know it exists",
+            "content": {
+              "application/problem+json": {}
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Get one tenant",
+        "tags": [
+          "tenants"
+        ]
+      },
+      "patch": {
+        "operationId": "TenantsController_update_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "The updated tenant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "name",
+                        "slug",
+                        "isActive",
+                        "createdAt"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "slug": {
+                          "type": "string"
+                        },
+                        "isActive": {
+                          "type": "boolean"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated, or the token is invalid or expired",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "403": {
+            "description": "Authenticated, but not allowed to do this",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "404": {
+            "description": "No such resource, or the caller may not know it exists",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "422": {
+            "description": "The payload failed validation",
+            "content": {
+              "application/problem+json": {}
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Update a tenant (platform admin may also activate or deactivate)",
+        "tags": [
+          "tenants"
+        ]
+      }
+    },
     "/api/v1/users": {
       "get": {
         "operationId": "UsersController_list_v1",
@@ -989,6 +1079,110 @@
           }
         ],
         "summary": "List users visible to the caller (own tenant; all for platform admin)",
+        "tags": [
+          "users"
+        ]
+      },
+      "post": {
+        "operationId": "UsersController_create_v1",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "The created user",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "id",
+                        "email",
+                        "fullName",
+                        "phoneNumber",
+                        "role",
+                        "tenantId",
+                        "isActive",
+                        "createdAt"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "email": {
+                          "type": "string",
+                          "format": "email"
+                        },
+                        "fullName": {
+                          "type": "string"
+                        },
+                        "phoneNumber": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "role": {
+                          "type": "string",
+                          "enum": [
+                            "PLATFORM_ADMIN",
+                            "TENANT_ADMIN",
+                            "TENANT_MEMBER"
+                          ]
+                        },
+                        "tenantId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "nullable": true
+                        },
+                        "isActive": {
+                          "type": "boolean"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated, or the token is invalid or expired",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "403": {
+            "description": "Authenticated, but not allowed to do this",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "409": {
+            "description": "The resource is in a state that forbids this change",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "422": {
+            "description": "The payload failed validation",
+            "content": {
+              "application/problem+json": {}
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Create a user (admins only; there is no self sign-up)",
         "tags": [
           "users"
         ]
@@ -1269,56 +1463,6 @@
           "password"
         ]
       },
-      "RegisterDto": {
-        "type": "object",
-        "properties": {
-          "fullName": {
-            "type": "string",
-            "minLength": 2,
-            "maxLength": 100
-          },
-          "email": {
-            "type": "string",
-            "format": "email",
-            "maxLength": 256
-          },
-          "phoneNumber": {
-            "type": "string",
-            "pattern": "^(0|\\+84)[3|5|7|8|9][0-9]{8}$"
-          },
-          "password": {
-            "type": "string",
-            "minLength": 8,
-            "maxLength": 256
-          },
-          "agreeTerms": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "fullName",
-          "email",
-          "password",
-          "agreeTerms"
-        ]
-      },
-      "VerifyEmailDto": {
-        "type": "object",
-        "properties": {
-          "email": {
-            "type": "string",
-            "format": "email"
-          },
-          "otp": {
-            "type": "string",
-            "pattern": "^\\d{6}$"
-          }
-        },
-        "required": [
-          "email",
-          "otp"
-        ]
-      },
       "RefreshDto": {
         "type": "object",
         "properties": {
@@ -1327,18 +1471,6 @@
             "minLength": 1
           }
         }
-      },
-      "ResendOtpDto": {
-        "type": "object",
-        "properties": {
-          "email": {
-            "type": "string",
-            "format": "email"
-          }
-        },
-        "required": [
-          "email"
-        ]
       },
       "ForgotPasswordDto": {
         "type": "object",

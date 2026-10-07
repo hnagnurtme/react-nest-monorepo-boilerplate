@@ -31,37 +31,6 @@ const AUTH_BODY_SCHEMA = {
   },
 } as const satisfies OpenApiSchema;
 
-const REGISTER_RESPONSE_SCHEMA = {
-  type: 'object',
-  required: ['email', 'message', 'expiresInSeconds'],
-  properties: {
-    email: { type: 'string', format: 'email' },
-    message: { type: 'string' },
-    expiresInSeconds: { type: 'integer' },
-  },
-} as const satisfies OpenApiSchema;
-
-const VERIFY_EMAIL_RESPONSE_SCHEMA = {
-  type: 'object',
-  required: ['user', 'message'],
-  properties: {
-    user: PUBLIC_USER_SCHEMA,
-    message: {
-      type: 'string',
-    },
-  },
-} as const satisfies OpenApiSchema;
-
-const RESEND_OTP_RESPONSE_SCHEMA = {
-  type: 'object',
-  required: ['email', 'message', 'cooldownSeconds'],
-  properties: {
-    email: { type: 'string', format: 'email' },
-    message: { type: 'string' },
-    cooldownSeconds: { type: 'integer' },
-  },
-} as const satisfies OpenApiSchema;
-
 function dataEnvelope(schema: OpenApiSchema): OpenApiSchema {
   return {
     type: 'object',
@@ -84,27 +53,6 @@ export const ApiPublicUserResponse = (description: string): MethodDecorator =>
     status: HttpStatus.OK,
     description,
     schema: dataEnvelope(PUBLIC_USER_SCHEMA),
-  });
-
-export const ApiRegisterResponse = (description: string): MethodDecorator =>
-  ApiResponse({
-    status: HttpStatus.CREATED,
-    description,
-    schema: dataEnvelope(REGISTER_RESPONSE_SCHEMA),
-  });
-
-export const ApiVerifyEmailResponse = (description: string): MethodDecorator =>
-  ApiResponse({
-    status: HttpStatus.OK,
-    description,
-    schema: dataEnvelope(VERIFY_EMAIL_RESPONSE_SCHEMA),
-  });
-
-export const ApiResendOtpResponse = (description: string): MethodDecorator =>
-  ApiResponse({
-    status: HttpStatus.OK,
-    description,
-    schema: dataEnvelope(RESEND_OTP_RESPONSE_SCHEMA),
   });
 
 const FORGOT_PASSWORD_SCHEMA = {

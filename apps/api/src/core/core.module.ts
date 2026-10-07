@@ -8,6 +8,7 @@ import { ClsMiddleware, ClsModule } from 'nestjs-cls';
 
 import { AppConfig } from '@/config/index.js';
 
+import { AuditService } from './audit/audit.service.js';
 import { AccessTokenService } from './auth/access-token.service.js';
 import { DrizzleModule } from './database/drizzle.module.js';
 import { CLS_KEYS } from './database/request-context.js';
@@ -75,6 +76,7 @@ const DEFAULT_THROTTLE_LIMIT = 120;
   providers: [
     AppConfig,
     AccessTokenService,
+    AuditService,
     TransactionManager,
     GlobalExceptionFilter,
     TransformInterceptor,
@@ -85,6 +87,7 @@ const DEFAULT_THROTTLE_LIMIT = 120;
   exports: [
     AppConfig,
     AccessTokenService,
+    AuditService,
     TransactionManager,
     GlobalExceptionFilter,
     TransformInterceptor,

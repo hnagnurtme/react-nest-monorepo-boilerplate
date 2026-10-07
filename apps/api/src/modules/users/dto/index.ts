@@ -1,1 +1,7 @@
-export { ListUsersDto, UpdateUserDto, updateUserSchema } from './user.dto.js';
+export {
+  CreateUserDto,
+  createUserSchema,
+  ListUsersDto,
+  UpdateUserDto,
+  updateUserSchema,
+} from './user.dto.js';

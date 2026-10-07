@@ -159,13 +159,8 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       };
     }
 
-    if (
-      typeof exception === 'object' &&
-      exception !== null &&
-      'code' in exception &&
-      typeof exception.code === 'string'
-    ) {
-      const code = (exception as { code: string }).code;
+    const code = errorCodeOf(exception);
+    if (code !== undefined) {
       const pg = PG_ERROR_MAP[code];
       if (pg !== undefined) return pg;
 
@@ -241,4 +236,24 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       ...(invalidParams !== undefined ? { invalidParams } : {}),
     };
   }
+}
+
+const MAX_CAUSE_DEPTH = 3;
+
+/**
+ * The string `code` of an error or of the error that caused it.
+ *
+ * Drizzle wraps the driver's error in a `DrizzleQueryError` and keeps the
+ * Postgres SQLSTATE (23505, ...) on `cause`, so reading only the top-level
+ * `code` turned every unique-violation into a 500.
+ */
+function errorCodeOf(exception: unknown): string | undefined {
+  let current: unknown = exception;
+  for (let depth = 0; depth <= MAX_CAUSE_DEPTH; depth += 1) {
+    if (typeof current !== 'object' || current === null) return undefined;
+    const candidate = (current as { code?: unknown }).code;
+    if (typeof candidate === 'string') return candidate;
+    current = (current as { cause?: unknown }).cause;
+  }
+  return undefined;
 }

@@ -9,10 +9,13 @@ import {
   Param,
   ParseUUIDPipe,
   Patch,
+  Post,
   Query,
+  Res,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import type { Response } from 'express';
 
 import {
   ApiProblemResponses,
@@ -23,12 +26,12 @@ import {
 import { CheckPolicies, PoliciesGuard } from '@/core/guards/index.js';
 import { ACCESS_TOKEN_SECURITY_SCHEME } from '@/modules/auth/index.js';
 
-import { ListUsersDto, UpdateUserDto } from './dto/index.js';
+import { CreateUserDto, ListUsersDto, UpdateUserDto } from './dto/index.js';
 import { ApiUserListResponse, ApiUserResponse } from './users.openapi.js';
 import { UsersService } from './users.service.js';
 import type { UserResponse } from './users.types.js';
 
-const { UNAUTHORIZED, FORBIDDEN, NOT_FOUND, UNPROCESSABLE_ENTITY } = HttpStatus;
+const { UNAUTHORIZED, FORBIDDEN, NOT_FOUND, CONFLICT, UNPROCESSABLE_ENTITY } = HttpStatus;
 
 @ApiTags('users')
 @ApiBearerAuth(ACCESS_TOKEN_SECURITY_SCHEME)
@@ -46,6 +49,26 @@ export class UsersController {
   @ApiProblemResponses(UNAUTHORIZED, FORBIDDEN, UNPROCESSABLE_ENTITY)
   list(@Query() query: ListUsersDto): Promise<{ items: UserResponse[]; meta: PaginationMeta }> {
     return this.users.list(query);
+  }
+
+  @Post()
+  @HttpCode(HttpStatus.CREATED)
+  @CheckPolicies((ability) => ability.can('create', 'User'))
+  @ApiOperation({
+    summary: 'Create a user (admins only; there is no self sign-up)',
+  })
+  @ApiUserResponse('The created user', HttpStatus.CREATED)
+  @ApiProblemResponses(UNAUTHORIZED, FORBIDDEN, CONFLICT, UNPROCESSABLE_ENTITY)
+  async create(
+    @CurrentUser() actor: AuthContext,
+    @Body() dto: CreateUserDto,
+    // Only the Location header is set here; the body still flows through the
+    // global envelope interceptor.
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<UserResponse> {
+    const created = await this.users.create(actor, dto);
+    response.setHeader('Location', `/api/v1/users/${created.id}`);
+    return created;
   }
 
   @Get(':id')

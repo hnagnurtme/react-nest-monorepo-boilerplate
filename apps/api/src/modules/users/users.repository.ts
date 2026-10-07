@@ -3,7 +3,7 @@ import { and, asc, count, desc, eq, isNull, sql } from 'drizzle-orm';
 
 import type { SortSpec } from '@/common/index.js';
 import type { Tx } from '@/core/database/drizzle.module.js';
-import { users, type User } from '@/core/database/schema/index.js';
+import { users, type NewUser, type User } from '@/core/database/schema/index.js';
 
 export const USER_SORT_FIELDS = ['createdAt', 'fullName', 'email'] as const;
 export type UserSortField = (typeof USER_SORT_FIELDS)[number];
@@ -50,6 +50,12 @@ export class UsersRepository {
       .where(and(eq(users.id, id), isNull(users.deletedAt)))
       .limit(1);
 
+    return row;
+  }
+
+  async create(tx: Tx, values: NewUser): Promise<User> {
+    const [row] = await tx.insert(users).values(values).returning();
+    if (row === undefined) throw new Error('user insert returned no row');
     return row;
   }
 

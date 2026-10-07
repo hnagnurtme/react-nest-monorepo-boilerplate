@@ -11,8 +11,6 @@ import type { UserDirectory } from '@/modules/auth/user-directory.service.js';
 
 interface MockUsers {
   authenticate: Mock;
-  registerUser: Mock;
-  activateEmail: Mock;
   findByEmail: Mock;
   findActive: Mock;
   resetPassword: Mock;
@@ -29,15 +27,11 @@ interface MockSessions {
 }
 
 interface MockOtpService {
-  generateAndStoreOtp: Mock;
-  verifyOtp: Mock;
-  assertCanResend: Mock;
   generateResetPasswordOtp: Mock;
   verifyResetPasswordOtp: Mock;
 }
 
 interface MockMailService {
-  sendOtpMail: Mock;
   sendResetPasswordMail: Mock;
   sendMail: Mock;
 }
@@ -60,8 +54,6 @@ describe('AuthService', () => {
   beforeEach(() => {
     mockUsers = {
       authenticate: vi.fn(),
-      registerUser: vi.fn(),
-      activateEmail: vi.fn(),
       findByEmail: vi.fn(),
       findActive: vi.fn(),
       resetPassword: vi.fn(),
@@ -78,15 +70,11 @@ describe('AuthService', () => {
     };
 
     mockOtpService = {
-      generateAndStoreOtp: vi.fn(),
-      verifyOtp: vi.fn(),
-      assertCanResend: vi.fn(),
       generateResetPasswordOtp: vi.fn(),
       verifyResetPasswordOtp: vi.fn(),
     };
 
     mockMailService = {
-      sendOtpMail: vi.fn(),
       sendResetPasswordMail: vi.fn(),
       sendMail: vi.fn(),
     };
