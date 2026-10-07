@@ -63,9 +63,9 @@ export const reactConfig = tseslint.config(
 
       'react/react-in-jsx-scope': 'off',
       'react/prop-types': 'off',
-      'react/no-array-index-key': 'error',                                  // B5
+      'react/no-array-index-key': 'error', // B5
       'react/jsx-no-useless-fragment': 'warn',
-      'react-hooks/exhaustive-deps': 'error',                               // rules 00, section C3
+      'react-hooks/exhaustive-deps': 'error', // rules 00, section C3
       'max-lines': 'off', // B2
     },
   },
@@ -81,7 +81,10 @@ export const reactConfig = tseslint.config(
     rules: {
       'no-restricted-globals': [
         'error',
-        { name: 'fetch', message: 'Use the client in @/lib/http so auth headers and token refresh are applied.' },
+        {
+          name: 'fetch',
+          message: 'Use the client in @/lib/http so auth headers and token refresh are applied.',
+        },
       ],
       'no-restricted-imports': [
         'error',
@@ -104,7 +107,8 @@ export const reactConfig = tseslint.config(
             { group: ['../*', '../../*'], message: 'Use a path alias (@/...).' },
             {
               group: ['@/features/*', '@/entities/*'],
-              message: 'shared/ must not know about the domain. See docs/rules/04-frontend-react.md section A4.',
+              message:
+                'shared/ must not know about the domain. See docs/rules/04-frontend-react.md section A4.',
             },
           ],
         },

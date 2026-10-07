@@ -1,14 +1,14 @@
-import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
 import { cn } from '@/lib/utils';
+import { useBrand } from '@/shared/hooks';
 
 interface HeaderBrandProps {
   className?: string;
 }
 
 export function HeaderBrand({ className }: HeaderBrandProps) {
-  const { t } = useTranslation('auth');
+  const brand = useBrand();
 
   return (
     <Link
@@ -17,9 +17,9 @@ export function HeaderBrand({ className }: HeaderBrandProps) {
         'focus-visible:outline-hidden focus-visible:ring-ring text-foreground inline-flex items-center gap-2 rounded-md text-xl font-bold tracking-tight transition-opacity hover:opacity-90 focus-visible:ring-2',
         className,
       )}
-      aria-label={t('header.brandAlt')}
+      aria-label={brand.name}
     >
-      {t('header.brandName')}
+      {brand.name}
     </Link>
   );
 }

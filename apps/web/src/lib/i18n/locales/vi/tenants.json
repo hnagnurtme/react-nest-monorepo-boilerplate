@@ -1,0 +1,44 @@
+{
+  "title": "Tenant",
+  "subtitle": "Các tổ chức trên nền tảng.",
+  "back": "Trang chủ",
+  "loading": "Đang tải danh sách tenant...",
+  "error": "Không thể tải danh sách tenant.",
+  "empty": "Không có tenant.",
+  "columns": {
+    "name": "Tên",
+    "slug": "Slug",
+    "status": "Trạng thái",
+    "actions": "Thao tác"
+  },
+  "status": {
+    "active": "Hoạt động",
+    "inactive": "Ngưng hoạt động"
+  },
+  "toggle": {
+    "activate": "Kích hoạt",
+    "deactivate": "Vô hiệu hóa",
+    "success": "Đã cập nhật tenant.",
+    "error": "Không thể cập nhật tenant."
+  },
+  "pagination": {
+    "previous": "Trước",
+    "next": "Sau",
+    "summary": "Trang {{page}} / {{totalPages}} ({{total}} tenant)"
+  },
+  "create": {
+    "name": "Tên",
+    "slug": "Slug (tùy chọn)",
+    "slugPlaceholder": "tự tạo từ tên",
+    "submit": "Tạo tenant",
+    "success": "Đã tạo tenant.",
+    "duplicate": "Tên hoặc slug của tenant đã tồn tại.",
+    "error": "Không thể tạo tenant.",
+    "validation": {
+      "nameMin": "Tên phải có ít nhất 2 ký tự",
+      "nameMax": "Tên tối đa 100 ký tự",
+      "slugMax": "Slug tối đa 60 ký tự",
+      "slugFormat": "Chỉ dùng chữ thường, chữ số và dấu gạch ngang"
+    }
+  }
+}

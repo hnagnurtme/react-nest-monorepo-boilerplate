@@ -17,7 +17,7 @@
 
 ## Quyết định
 
-Giữ **SPA thuần (React 19 + Vite)** cho toàn bộ `apps/web`, triển khai trên Cloudflare Pages.
+Giữ **SPA thuần (React 19 + Vite)** cho toàn bộ `apps/web`, build ra file tĩnh, host ở đâu tùy bạn (repo không có workflow deploy).
 
 Lý do: boilerplate chưa có trang công khai nào cần SEO. Dựng thêm một app Next.js bây giờ là trả chi phí cho thứ chưa dùng tới, trong khi ràng buộc SEO thật sự sẽ rõ hơn khi nghiệp vụ định hình.
 

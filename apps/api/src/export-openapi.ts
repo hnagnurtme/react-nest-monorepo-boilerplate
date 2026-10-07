@@ -34,7 +34,7 @@ async function exportOpenApi(): Promise<void> {
   app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
 
   const options = new DocumentBuilder()
-    .setTitle('API')
+    .setTitle(`${process.env['APP_NAME'] ?? 'Starter App'} API`)
     .setDescription(
       'Success responses are wrapped in `{ data, meta? }`; errors follow RFC 9457 Problem Details with `application/problem+json`.',
     )

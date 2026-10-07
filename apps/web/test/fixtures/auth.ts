@@ -1,4 +1,4 @@
-import type { PublicUser } from '@/entities/session';
+import { useAuthStore, type PublicUser } from '@/entities/session';
 
 export interface AuthBody {
   accessToken: string;
@@ -50,4 +50,8 @@ export function problem(
     detail: detail ?? `Error: ${code}`,
     traceId: 'trace-123',
   };
+}
+
+export function setSessionUser(user: PublicUser): void {
+  useAuthStore.setState({ status: 'authenticated', accessToken: 'token', user });
 }

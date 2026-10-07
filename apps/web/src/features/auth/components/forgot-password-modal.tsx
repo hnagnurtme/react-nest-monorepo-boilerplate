@@ -10,6 +10,7 @@ import {
   X,
 } from 'lucide-react';
 import { useCallback, useEffect, useState, type ChangeEvent, type SyntheticEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
 import { useForgotPassword } from '@/features/auth/api/use-forgot-password';
@@ -29,6 +30,7 @@ const OTP_LENGTH = 6;
 const MIN_PASSWORD_LENGTH = 8;
 
 export function ForgotPasswordModal({ isOpen, onClose, onSuccess }: ForgotPasswordModalProps) {
+  const { t } = useTranslation('auth');
   const navigate = useNavigate();
   const { showToast } = useToast();
 
@@ -114,11 +116,11 @@ export function ForgotPasswordModal({ isOpen, onClose, onSuccess }: ForgotPasswo
       const trimmedEmail = email.trim();
 
       if (!trimmedEmail) {
-        setEmailError('Vui lòng nhập email');
+        setEmailError(t('validation.emailRequired'));
         return;
       }
       if (!EMAIL_REGEX.test(trimmedEmail)) {
-        setEmailError('Email không hợp lệ');
+        setEmailError(t('validation.emailInvalid'));
         return;
       }
 
@@ -128,7 +130,7 @@ export function ForgotPasswordModal({ isOpen, onClose, onSuccess }: ForgotPasswo
           onSuccess: () => {
             showToast({
               type: 'success',
-              message: 'Mã xác thực đã được gửi tới email của bạn.',
+              message: t('forgotPasswordModal.codeSent'),
             });
             setStep('otp');
             setCountdown(60);
@@ -136,13 +138,13 @@ export function ForgotPasswordModal({ isOpen, onClose, onSuccess }: ForgotPasswo
           onError: (err) => {
             showToast({
               type: 'error',
-              message: err.message || 'Không tìm thấy tài khoản với email này.',
+              message: err.message || t('forgotPasswordModal.notFound'),
             });
           },
         },
       );
     },
-    [email, forgotPasswordMutation, showToast],
+    [email, forgotPasswordMutation, showToast, t],
   );
 
   // Resend OTP in Step 2
@@ -155,7 +157,7 @@ export function ForgotPasswordModal({ isOpen, onClose, onSuccess }: ForgotPasswo
         onSuccess: () => {
           showToast({
             type: 'success',
-            message: 'Đã gửi lại mã mới thành công.',
+            message: t('forgotPasswordModal.resendSuccess'),
           });
           setCountdown(60);
           setOtp('');
@@ -163,12 +165,12 @@ export function ForgotPasswordModal({ isOpen, onClose, onSuccess }: ForgotPasswo
         onError: (err) => {
           showToast({
             type: 'error',
-            message: err.message || 'Không thể gửi lại mã OTP. Vui lòng thử lại.',
+            message: err.message || t('forgotPasswordModal.resendFailed'),
           });
         },
       },
     );
-  }, [countdown, email, forgotPasswordMutation, showToast]);
+  }, [countdown, email, forgotPasswordMutation, showToast, t]);
 
   // Step 2: Reset password submission
   const handleResetSubmit = useCallback(
@@ -177,26 +179,26 @@ export function ForgotPasswordModal({ isOpen, onClose, onSuccess }: ForgotPasswo
       let hasError = false;
 
       if (!otp.trim()) {
-        setOtpError('Vui lòng nhập mã OTP');
+        setOtpError(t('validation.otpRequired'));
         hasError = true;
       } else if (otp.trim().length !== OTP_LENGTH) {
-        setOtpError('Mã OTP phải gồm 6 chữ số');
+        setOtpError(t('validation.otpLength'));
         hasError = true;
       }
 
       if (!newPassword) {
-        setPasswordError('Vui lòng nhập mật khẩu mới');
+        setPasswordError(t('validation.newPasswordRequired'));
         hasError = true;
       } else if (newPassword.length < MIN_PASSWORD_LENGTH) {
-        setPasswordError(`Mật khẩu mới phải có ít nhất ${String(MIN_PASSWORD_LENGTH)} ký tự`);
+        setPasswordError(t('validation.newPasswordMin'));
         hasError = true;
       }
 
       if (!confirmPassword) {
-        setConfirmError('Vui lòng xác nhận mật khẩu');
+        setConfirmError(t('validation.confirmPasswordRequired'));
         hasError = true;
       } else if (newPassword !== confirmPassword) {
-        setConfirmError('Mật khẩu xác nhận không khớp');
+        setConfirmError(t('validation.passwordMismatch'));
         hasError = true;
       }
 
@@ -212,7 +214,7 @@ export function ForgotPasswordModal({ isOpen, onClose, onSuccess }: ForgotPasswo
           onSuccess: () => {
             showToast({
               type: 'success',
-              message: 'Đặt lại mật khẩu thành công!',
+              message: t('forgotPasswordModal.resetSuccessTitle'),
             });
             onSuccess?.();
             setStep('success');
@@ -220,14 +222,13 @@ export function ForgotPasswordModal({ isOpen, onClose, onSuccess }: ForgotPasswo
           onError: (err) => {
             showToast({
               type: 'error',
-              message:
-                err.message || 'Đặt lại mật khẩu thất bại. Mã OTP không hợp lệ hoặc đã hết hạn.',
+              message: err.message || t('forgotPasswordModal.resetFailed'),
             });
           },
         },
       );
     },
-    [confirmPassword, email, newPassword, onSuccess, otp, resetPasswordMutation, showToast],
+    [confirmPassword, email, newPassword, onSuccess, otp, resetPasswordMutation, showToast, t],
   );
 
   const handleLoginNavigate = useCallback(() => {
@@ -242,7 +243,7 @@ export function ForgotPasswordModal({ isOpen, onClose, onSuccess }: ForgotPasswo
       {/* Click outside backdrop */}
       <button
         type="button"
-        aria-label="Đóng modal"
+        aria-label={t('forgotPasswordModal.closeModal')}
         className="fixed inset-0 cursor-default"
         onClick={handleClose}
         tabIndex={-1}
@@ -256,12 +257,12 @@ export function ForgotPasswordModal({ isOpen, onClose, onSuccess }: ForgotPasswo
             <div className="bg-primary-light text-primary flex h-9 w-9 items-center justify-center rounded-lg">
               <KeyRound className="h-5 w-5" />
             </div>
-            <h3 className="text-foreground text-lg font-bold">Quên mật khẩu</h3>
+            <h3 className="text-foreground text-lg font-bold">{t('forgotPasswordModal.title')}</h3>
           </div>
           <button
             type="button"
             onClick={handleClose}
-            aria-label="Đóng"
+            aria-label={t('forgotPasswordModal.close')}
             className="text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer rounded-lg p-1.5 transition-colors"
           >
             <X className="h-5 w-5" />
@@ -272,12 +273,12 @@ export function ForgotPasswordModal({ isOpen, onClose, onSuccess }: ForgotPasswo
         {step === 'email' && (
           <form onSubmit={handleEmailSubmit} noValidate className="mt-4 flex flex-col gap-4">
             <p className="text-muted-foreground text-sm leading-relaxed">
-              Vui lòng nhập email đã đăng ký. Chúng tôi sẽ gửi mã xác thực để đặt lại mật khẩu.
+              {t('forgotPasswordModal.description')}
             </p>
 
             <div className="space-y-1.5">
               <label htmlFor="forgot-email" className="text-foreground block text-xs font-semibold">
-                Email
+                {t('forgotPasswordModal.emailLabel')}
               </label>
               <div className="relative">
                 <span className="text-muted-foreground pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
@@ -288,7 +289,7 @@ export function ForgotPasswordModal({ isOpen, onClose, onSuccess }: ForgotPasswo
                   type="email"
                   autoComplete="email"
                   required
-                  placeholder="Nhập email của bạn..."
+                  placeholder={t('forgotPasswordModal.inputPlaceholder')}
                   value={email}
                   onChange={(e: ChangeEvent<HTMLInputElement>) => {
                     setEmail(e.target.value);
@@ -307,7 +308,7 @@ export function ForgotPasswordModal({ isOpen, onClose, onSuccess }: ForgotPasswo
               isLoading={forgotPasswordMutation.isPending}
               className="mt-2 w-full gap-2"
             >
-              <span>Gửi mã xác thực</span>
+              <span>{t('forgotPasswordModal.submit')}</span>
               <ArrowRight className="h-4 w-4" />
             </Button>
           </form>
@@ -320,7 +321,7 @@ export function ForgotPasswordModal({ isOpen, onClose, onSuccess }: ForgotPasswo
             <div className="flex items-start gap-2.5 rounded-xl border border-[#DCFCE7] bg-[#F0FDF4] p-3.5 text-[#15803D]">
               <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
               <p className="text-xs leading-relaxed sm:text-sm">
-                Mã xác thực đã được gửi tới{' '}
+                {t('forgotPasswordModal.codeSentTo')}{' '}
                 <strong className="font-semibold text-emerald-950">{email}</strong>
               </p>
             </div>
@@ -328,7 +329,7 @@ export function ForgotPasswordModal({ isOpen, onClose, onSuccess }: ForgotPasswo
             {/* OTP Input */}
             <div className="space-y-1.5">
               <label htmlFor="reset-otp" className="text-foreground block text-xs font-semibold">
-                Mã xác thực OTP
+                {t('forgotPasswordModal.otpLabel')}
               </label>
               <div className="relative">
                 <span className="text-muted-foreground pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
@@ -340,7 +341,7 @@ export function ForgotPasswordModal({ isOpen, onClose, onSuccess }: ForgotPasswo
                   inputMode="numeric"
                   autoComplete="one-time-code"
                   maxLength={6}
-                  placeholder="Nhập 6 số OTP..."
+                  placeholder={t('forgotPasswordModal.otpInputPlaceholder')}
                   value={otp}
                   onChange={(e: ChangeEvent<HTMLInputElement>) => {
                     const digits = e.target.value.replace(/\D/g, '').slice(0, OTP_LENGTH);
@@ -359,7 +360,7 @@ export function ForgotPasswordModal({ isOpen, onClose, onSuccess }: ForgotPasswo
                 htmlFor="reset-new-password"
                 className="text-foreground block text-xs font-semibold"
               >
-                Mật khẩu mới
+                {t('forgotPasswordModal.newPasswordLabel')}
               </label>
               <div className="relative">
                 <span className="text-muted-foreground pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
@@ -369,7 +370,7 @@ export function ForgotPasswordModal({ isOpen, onClose, onSuccess }: ForgotPasswo
                   id="reset-new-password"
                   type={showNewPassword ? 'text' : 'password'}
                   autoComplete="new-password"
-                  placeholder="Tối thiểu 8 ký tự"
+                  placeholder={t('forgotPasswordModal.newPasswordPlaceholder')}
                   value={newPassword}
                   onChange={(e: ChangeEvent<HTMLInputElement>) => {
                     setNewPassword(e.target.value);
@@ -380,7 +381,7 @@ export function ForgotPasswordModal({ isOpen, onClose, onSuccess }: ForgotPasswo
                 />
                 <button
                   type="button"
-                  aria-label={showNewPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                  aria-label={showNewPassword ? t('form.hidePassword') : t('form.showPassword')}
                   onClick={() => {
                     setShowNewPassword((prev) => !prev);
                   }}
@@ -398,7 +399,7 @@ export function ForgotPasswordModal({ isOpen, onClose, onSuccess }: ForgotPasswo
                 htmlFor="reset-confirm-password"
                 className="text-foreground block text-xs font-semibold"
               >
-                Xác nhận mật khẩu
+                {t('forgotPasswordModal.confirmPasswordLabel')}
               </label>
               <div className="relative">
                 <span className="text-muted-foreground pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
@@ -408,7 +409,7 @@ export function ForgotPasswordModal({ isOpen, onClose, onSuccess }: ForgotPasswo
                   id="reset-confirm-password"
                   type={showConfirmPassword ? 'text' : 'password'}
                   autoComplete="new-password"
-                  placeholder="Nhập lại mật khẩu mới"
+                  placeholder={t('forgotPasswordModal.retypePasswordPlaceholder')}
                   value={confirmPassword}
                   onChange={(e: ChangeEvent<HTMLInputElement>) => {
                     setConfirmPassword(e.target.value);
@@ -419,7 +420,7 @@ export function ForgotPasswordModal({ isOpen, onClose, onSuccess }: ForgotPasswo
                 />
                 <button
                   type="button"
-                  aria-label={showConfirmPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                  aria-label={showConfirmPassword ? t('form.hidePassword') : t('form.showPassword')}
                   onClick={() => {
                     setShowConfirmPassword((prev) => !prev);
                   }}
@@ -441,20 +442,22 @@ export function ForgotPasswordModal({ isOpen, onClose, onSuccess }: ForgotPasswo
                 <span className="inline-flex items-center gap-1.5">
                   <Clock className="h-4 w-4" />
                   <span>
-                    Chưa nhận được mã? Gửi lại sau{' '}
+                    {t('forgotPasswordModal.resendAfter')}{' '}
                     <strong className="text-foreground font-semibold">{countdown}s</strong>
                   </span>
                 </span>
               ) : (
                 <span>
-                  Chưa nhận được mã?{' '}
+                  {t('forgotPasswordModal.resendPrompt')}{' '}
                   <button
                     type="button"
                     onClick={handleResendOtp}
                     disabled={forgotPasswordMutation.isPending}
                     className="text-primary hover:text-primary-hover cursor-pointer font-semibold transition-colors disabled:opacity-50"
                   >
-                    {forgotPasswordMutation.isPending ? 'Đang gửi...' : 'Gửi lại mã'}
+                    {forgotPasswordMutation.isPending
+                      ? t('forgotPasswordModal.resending')
+                      : t('forgotPasswordModal.resend')}
                   </button>
                 </span>
               )}
@@ -474,7 +477,7 @@ export function ForgotPasswordModal({ isOpen, onClose, onSuccess }: ForgotPasswo
               isLoading={resetPasswordMutation.isPending}
               className="mt-2 w-full gap-2"
             >
-              <span>Đặt lại mật khẩu</span>
+              <span>{t('forgotPasswordModal.resetSubmit')}</span>
               <ArrowRight className="h-4 w-4" />
             </Button>
           </form>
@@ -486,9 +489,11 @@ export function ForgotPasswordModal({ isOpen, onClose, onSuccess }: ForgotPasswo
             <div className="bg-primary-light text-primary flex h-16 w-16 items-center justify-center rounded-full">
               <CheckCircle2 className="text-primary h-10 w-10" />
             </div>
-            <h4 className="text-foreground mt-4 text-lg font-bold">Đặt lại mật khẩu thành công!</h4>
+            <h4 className="text-foreground mt-4 text-lg font-bold">
+              {t('forgotPasswordModal.resetSuccessTitle')}
+            </h4>
             <p className="text-muted-foreground mt-1.5 text-sm leading-relaxed">
-              Mật khẩu của bạn đã được cập nhật thành công. Vui lòng đăng nhập bằng mật khẩu mới.
+              {t('forgotPasswordModal.resetSuccessDescription')}
             </p>
             <Button
               type="button"
@@ -497,7 +502,7 @@ export function ForgotPasswordModal({ isOpen, onClose, onSuccess }: ForgotPasswo
               onClick={handleLoginNavigate}
               className="mt-6 w-full"
             >
-              Đăng nhập ngay
+              {t('forgotPasswordModal.loginNow')}
             </Button>
           </div>
         )}

@@ -23,7 +23,6 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   public override componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    // eslint-disable-next-line no-console
     console.error('Uncaught error in React Component:', error, errorInfo);
   }
 
@@ -43,10 +42,9 @@ export class ErrorBoundary extends Component<Props, State> {
             <div className="bg-destructive/10 text-destructive mx-auto flex h-12 w-12 items-center justify-center rounded-full">
               <AlertTriangle className="h-6 w-6" />
             </div>
-            <h2 className="text-foreground text-xl font-bold">Đã xảy ra lỗi không mong muốn</h2>
+            <h2 className="text-foreground text-xl font-bold">Something went wrong</h2>
             <p className="text-muted-foreground text-xs sm:text-sm">
-              Ứng dụng vừa gặp sự cố gián đoạn. Vui lòng thử tải lại trang hoặc bấm nút thử lại bên
-              dưới.
+              The app hit an unexpected error. Try reloading the page or press the button below.
             </p>
             {this.state.error && (
               <pre className="text-2xs bg-muted text-muted-foreground max-h-32 overflow-auto rounded-lg p-2 text-left">
@@ -55,7 +53,7 @@ export class ErrorBoundary extends Component<Props, State> {
             )}
             <Button type="button" onClick={this.handleReset} size="xs" className="w-full">
               <RefreshCw className="h-4 w-4" />
-              Thử lại
+              Try again
             </Button>
           </div>
         </div>

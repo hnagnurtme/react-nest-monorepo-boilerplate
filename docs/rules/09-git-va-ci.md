@@ -12,7 +12,7 @@ owner: Platform Team
 
 ## Phần A. Branch
 
-### A1. Quy ước đặt tên 🤖
+### A1. Quy ước đặt tên 👀
 
 ```
 <loại>/<mã-issue>-<mô-tả-ngắn>
@@ -24,9 +24,9 @@ chore/161-bump-turbo
 
 Loại: `feat` · `fix` · `chore` · `refactor` · `docs` · `test` · `perf`.
 
-### A2. Không push thẳng vào `main` 🤖
+### A2. Không push thẳng vào `main` 👀
 
-Branch protection: bắt buộc PR, bắt buộc CI xanh, bắt buộc 1 approval.
+Cấu hình branch protection trên GitHub (không nằm trong repo, không kiểm chứng được từ code): bắt buộc PR, check `CI Gate` xanh, 1 approval.
 
 ### A3. Branch sống ngắn 👀
 
@@ -48,7 +48,7 @@ refactor(auth): tách logic rotation ra khỏi AuthService
 
 **Cưỡng chế:** 🤖 `commitlint` trong `commit-msg` hook + kiểm tra lại trong CI.
 
-### B2. Mô tả ở thể mệnh lệnh, không viết hoa, không dấu chấm cuối 🤖
+### B2. Mô tả ở thể mệnh lệnh, không viết hoa, không dấu chấm cuối 🤖 (commitlint: `subject-case`, `subject-full-stop`)
 
 ```
 ✅ feat(auth): thêm phát hiện tái sử dụng refresh token
@@ -85,7 +85,7 @@ Dưới **400 dòng** thay đổi (không tính file sinh tự động và lockf
 ## Rủi ro & cách rollback
 ```
 
-### C3. Checklist bắt buộc trong template 👀
+### C3. Checklist bắt buộc (repo chưa có PR template; dán vào mô tả PR) 👀
 
 - [ ] Tự review diff của chính mình trước khi mở PR.
 - [ ] Đã thêm/cập nhật test.
@@ -142,6 +142,7 @@ jobs:
   test-unit: # Vitest unit test + pnpm audit:ci (chạy song song)
   integration: # Postgres 16 + Redis test RLS & migrations
   openapi-drift: # Sinh lại OpenAPI spec, kiểm tra không có git diff
+  conventions: # grep: timestamp thiếu withTimezone, pgEnum, axios trong modules
   ci-gate: # Cổng tổng hợp trạng thái cho GitHub Branch Protection
 ```
 
@@ -168,7 +169,7 @@ jobs:
 
 `v1.4.0`. Breaking change ➔ major.
 
-### F2. CHANGELOG sinh từ conventional commit 🤖
+### F2. CHANGELOG sinh từ conventional commit 💡 (chưa có tooling)
 
 ### F3. Deploy được thì rollback được 👀
 

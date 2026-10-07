@@ -13,7 +13,7 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 
 import {
@@ -55,6 +55,7 @@ export class TenantsController {
   @CheckPolicies((ability) => ability.can('create', 'Tenant'))
   @ApiOperation({ summary: 'Create a tenant (platform admin only)' })
   @ApiTenantResponse('The created tenant', HttpStatus.CREATED)
+  @ApiBody({ type: CreateTenantDto })
   @ApiProblemResponses(UNAUTHORIZED, FORBIDDEN, CONFLICT, UNPROCESSABLE_ENTITY)
   async create(
     @CurrentUser() actor: AuthContext,
@@ -80,6 +81,7 @@ export class TenantsController {
   @Patch(':id')
   @ApiOperation({ summary: 'Update a tenant (platform admin may also activate or deactivate)' })
   @ApiTenantResponse('The updated tenant')
+  @ApiBody({ type: UpdateTenantDto })
   @ApiProblemResponses(UNAUTHORIZED, FORBIDDEN, NOT_FOUND, UNPROCESSABLE_ENTITY)
   update(
     @CurrentUser() actor: AuthContext,

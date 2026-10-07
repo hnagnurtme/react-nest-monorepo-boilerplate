@@ -21,7 +21,7 @@ Mỗi quy tắc được trình bày theo đúng 4 phần:
 
 | Mức             | Ký hiệu | Nghĩa                                                     |
 | :-------------- | :------ | :-------------------------------------------------------- |
-| **Tự động**     | 🤖      | ESLint / tsc / CI chặn. Vi phạm không merge được.         |
+| **Tự động**     | 🤖      | ESLint / tsc / test / CI chặn. Vi phạm không merge được.  |
 | **Review**      | 👀      | Người review chịu trách nhiệm phát hiện.                  |
 | **Khuyến nghị** | 💡      | Mặc định nên theo, được phép lệch nếu nêu lý do trong PR. |
 
@@ -41,6 +41,8 @@ Mỗi quy tắc được trình bày theo đúng 4 phần:
 | 08  | [Testing](08-testing.md)                     | Toàn bộ codebase                              |
 | 09  | [Git & CI](09-git-va-ci.md)                  | Quy trình làm việc                            |
 | 10  | [Infra & DevOps](10-infra-devops.md)         | Hạ tầng, triển khai                           |
+
+> Không có file `05` (từng dành cho mobile, nay không còn trong repo) và không có ADR-0005; số cũ không được tái sử dụng.
 
 ## Khi quy tắc cản trở công việc
 

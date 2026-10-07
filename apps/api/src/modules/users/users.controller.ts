@@ -14,7 +14,7 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 
 import {
@@ -58,6 +58,7 @@ export class UsersController {
     summary: 'Create a user (admins only; there is no self sign-up)',
   })
   @ApiUserResponse('The created user', HttpStatus.CREATED)
+  @ApiBody({ type: CreateUserDto })
   @ApiProblemResponses(UNAUTHORIZED, FORBIDDEN, CONFLICT, UNPROCESSABLE_ENTITY)
   async create(
     @CurrentUser() actor: AuthContext,
@@ -85,6 +86,7 @@ export class UsersController {
   @Patch(':id')
   @ApiOperation({ summary: 'Update a user profile (admins may also activate or deactivate)' })
   @ApiUserResponse('The updated user')
+  @ApiBody({ type: UpdateUserDto })
   @ApiProblemResponses(UNAUTHORIZED, FORBIDDEN, NOT_FOUND, UNPROCESSABLE_ENTITY)
   update(
     @CurrentUser() actor: AuthContext,

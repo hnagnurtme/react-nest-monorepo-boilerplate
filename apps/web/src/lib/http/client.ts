@@ -2,6 +2,13 @@ import type { paths } from '@repo/api-contract';
 
 import { env } from '@/config/env';
 
+import {
+  CSRF_COOKIE_NAME,
+  CSRF_HEADER_NAME,
+  expireCsrfCookie,
+  isCsrfFailure,
+  isCsrfRecoverableEndpoint,
+} from './csrf';
 import { refreshSession, resetRefreshForTests } from './refresh';
 import type {
   ApiRequestBody,
@@ -15,8 +22,6 @@ let tokenProvider: (() => string | null) | null = null;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 let unauthorizedHandler: (() => void) | null = null;
 
-const CSRF_COOKIE_NAME = 'csrf_token';
-const CSRF_HEADER_NAME = 'x-csrf-token';
 const UNSAFE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
 export function setTokenProvider(provider: () => string | null): void {
@@ -42,6 +47,7 @@ export interface RequestOptions extends RequestInit {
   params?: Record<string, string | number | boolean | undefined>;
   skipAuthRefresh?: boolean;
   isRetry?: boolean;
+  isCsrfRetry?: boolean;
 }
 
 export interface ApiErrorOptions {
@@ -165,7 +171,7 @@ function handleError(status: number, payload: unknown): never {
  * @throws {ApiError} on non-2xx responses
  */
 async function requestPayload(endpoint: string, options: RequestOptions = {}): Promise<unknown> {
-  const { params, headers, body, skipAuthRefresh, isRetry, ...restOptions } = options;
+  const { params, headers, body, skipAuthRefresh, isRetry, isCsrfRetry, ...restOptions } = options;
   const url = buildUrl(endpoint, params);
   const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
   const requestHeaders = buildHeaders(headers, isFormData, restOptions.method);
@@ -180,6 +186,12 @@ async function requestPayload(endpoint: string, options: RequestOptions = {}): P
   }
 
   const response = await fetch(url, fetchOptions);
+
+  // Stale CSRF cookie from an earlier session: expire it and retry login/refresh once.
+  if (!isCsrfRetry && isCsrfRecoverableEndpoint(endpoint) && (await isCsrfFailure(response))) {
+    expireCsrfCookie();
+    return requestPayload(endpoint, { ...options, isCsrfRetry: true });
+  }
 
   // 401 Interceptor: attempt refresh and retry once
   if (response.status === HTTP_STATUS.UNAUTHORIZED && !skipAuthRefresh && !isRetry) {

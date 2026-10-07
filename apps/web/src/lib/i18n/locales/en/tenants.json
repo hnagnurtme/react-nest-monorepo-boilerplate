@@ -1,0 +1,44 @@
+{
+  "title": "Tenants",
+  "subtitle": "Organizations on the platform.",
+  "back": "Home",
+  "loading": "Loading tenants...",
+  "error": "Could not load tenants.",
+  "empty": "No tenants found.",
+  "columns": {
+    "name": "Name",
+    "slug": "Slug",
+    "status": "Status",
+    "actions": "Actions"
+  },
+  "status": {
+    "active": "Active",
+    "inactive": "Inactive"
+  },
+  "toggle": {
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "success": "Tenant updated.",
+    "error": "Could not update the tenant."
+  },
+  "pagination": {
+    "previous": "Previous",
+    "next": "Next",
+    "summary": "Page {{page}} of {{totalPages}} ({{total}} tenants)"
+  },
+  "create": {
+    "name": "Name",
+    "slug": "Slug (optional)",
+    "slugPlaceholder": "derived from the name",
+    "submit": "Create tenant",
+    "success": "Tenant created.",
+    "duplicate": "A tenant with this name or slug already exists.",
+    "error": "Could not create the tenant.",
+    "validation": {
+      "nameMin": "Name must be at least 2 characters",
+      "nameMax": "Name must be at most 100 characters",
+      "slugMax": "Slug must be at most 60 characters",
+      "slugFormat": "Use lowercase letters, digits and hyphens"
+    }
+  }
+}

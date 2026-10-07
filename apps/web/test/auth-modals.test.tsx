@@ -57,35 +57,35 @@ describe('ForgotPasswordModal', () => {
   it('does not render when isOpen is false', () => {
     renderWithProviders(<ForgotPasswordModal isOpen={false} onClose={vi.fn()} />);
 
-    expect(screen.queryByText('Quên mật khẩu')).not.toBeInTheDocument();
+    expect(screen.queryByText('Forgot password')).not.toBeInTheDocument();
   });
 
   it('renders Step 1 (email entry) when open', () => {
     renderWithProviders(<ForgotPasswordModal isOpen={true} onClose={vi.fn()} />);
 
-    expect(screen.getByText('Quên mật khẩu')).toBeInTheDocument();
-    expect(screen.getByText(/Vui lòng nhập email đã đăng ký/)).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Nhập email của bạn...')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Gửi mã xác thực/ })).toBeInTheDocument();
+    expect(screen.getByText('Forgot password')).toBeInTheDocument();
+    expect(screen.getByText(/Please enter your registered email/)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Enter your email...')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Send verification code/ })).toBeInTheDocument();
   });
 
   it('calls onClose when close button is clicked in Step 1', () => {
     const handleClose = vi.fn();
     renderWithProviders(<ForgotPasswordModal isOpen={true} onClose={handleClose} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Đóng' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
     expect(handleClose).toHaveBeenCalledTimes(1);
   });
 
   it('validates email format before submitting', async () => {
     renderWithProviders(<ForgotPasswordModal isOpen={true} onClose={vi.fn()} />);
 
-    const input = screen.getByPlaceholderText('Nhập email của bạn...');
+    const input = screen.getByPlaceholderText('Enter your email...');
     fireEvent.change(input, { target: { value: 'invalid-email' } });
-    fireEvent.click(screen.getByRole('button', { name: /Gửi mã xác thực/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Send verification code/ }));
 
     await waitFor(() => {
-      expect(screen.getByText('Email không hợp lệ')).toBeInTheDocument();
+      expect(screen.getByText('Invalid email address')).toBeInTheDocument();
     });
   });
 
@@ -98,40 +98,40 @@ describe('ForgotPasswordModal', () => {
     );
 
     // Step 1: Submit email
-    const emailInput = screen.getByPlaceholderText('Nhập email của bạn...');
+    const emailInput = screen.getByPlaceholderText('Enter your email...');
     fireEvent.change(emailInput, { target: { value: 'user@example.com' } });
-    fireEvent.click(screen.getByRole('button', { name: /Gửi mã xác thực/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Send verification code/ }));
 
     // Step 2: Now in OTP and password step
     await waitFor(() => {
-      expect(screen.getByPlaceholderText('Nhập 6 số OTP...')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Enter the 6-digit code...')).toBeInTheDocument();
     });
 
     // Enter OTP, new password, confirm password
-    fireEvent.change(screen.getByPlaceholderText('Nhập 6 số OTP...'), {
+    fireEvent.change(screen.getByPlaceholderText('Enter the 6-digit code...'), {
       target: { value: '123456' },
     });
-    fireEvent.change(screen.getByPlaceholderText('Tối thiểu 8 ký tự'), {
+    fireEvent.change(screen.getByPlaceholderText('Minimum 8 characters'), {
       target: { value: 'newpassword123' },
     });
-    fireEvent.change(screen.getByPlaceholderText('Nhập lại mật khẩu mới'), {
+    fireEvent.change(screen.getByPlaceholderText('Re-enter your new password'), {
       target: { value: 'newpassword123' },
     });
 
     // Submit reset password
-    fireEvent.click(screen.getByRole('button', { name: /Đặt lại mật khẩu/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Reset password/ }));
 
     // Step 3: Success step
     await waitFor(() => {
       expect(
-        screen.getByRole('heading', { name: 'Đặt lại mật khẩu thành công!' }),
+        screen.getByRole('heading', { name: 'Password reset successful!' }),
       ).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Đăng nhập ngay' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Sign in now' })).toBeInTheDocument();
       expect(handleSuccess).toHaveBeenCalledTimes(1);
     });
 
     // Click Login now
-    fireEvent.click(screen.getByRole('button', { name: 'Đăng nhập ngay' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in now' }));
     expect(handleClose).toHaveBeenCalledTimes(1);
   });
 });

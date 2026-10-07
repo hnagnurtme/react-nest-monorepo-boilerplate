@@ -6,6 +6,10 @@
  * avoiding TOKEN_REUSE_DETECTED from backend.
  */
 
+import { env } from '@/config/env';
+
+import { CSRF_HEADER_NAME, expireCsrfCookie, isCsrfFailure } from './csrf';
+
 export type RefreshOutcome =
   | { kind: 'refreshed'; accessToken: string; user: unknown; csrfToken?: string }
   | { kind: 'unauthenticated' } // 401 UNAUTHENTICATED: not logged in / expired
@@ -18,7 +22,7 @@ let refreshHandler: RefreshHandler | null = null;
 let inFlight: Promise<RefreshOutcome> | null = null;
 
 const REFRESH_LOCK_NAME = 'app-refresh';
-const REFRESH_ENDPOINT = '/api/v1/auth/refresh';
+const REFRESH_ENDPOINT = `${env.VITE_API_URL.replace(/\/$/, '')}/api/v1/auth/refresh`;
 
 /**
  * Get CSRF token from cookie.
@@ -65,7 +69,7 @@ async function executeRefresh(): Promise<RefreshOutcome> {
   return performRefresh();
 }
 
-async function performRefresh(): Promise<RefreshOutcome> {
+async function performRefresh(isCsrfRetry = false): Promise<RefreshOutcome> {
   const csrfToken = getCsrfToken();
 
   try {
@@ -74,7 +78,7 @@ async function performRefresh(): Promise<RefreshOutcome> {
       credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
-        ...(csrfToken && { 'x-csrf-token': csrfToken }),
+        ...(csrfToken && { [CSRF_HEADER_NAME]: csrfToken }),
       },
     });
 
@@ -91,6 +95,12 @@ async function performRefresh(): Promise<RefreshOutcome> {
         result.csrfToken = body.data.csrfToken;
       }
       return result;
+    }
+
+    // Stale CSRF cookie: expire it and retry once
+    if (!isCsrfRetry && (await isCsrfFailure(response))) {
+      expireCsrfCookie();
+      return await performRefresh(true);
     }
 
     // Handle error responses

@@ -1,18 +1,16 @@
 # Local Setup Guide
 
-This guide explains how to run the multi-tenant auth boilerplate monorepo locally and how to verify backend and frontend changes safely.
+This guide explains how to run the multi-tenant auth boilerplate locally and how to verify backend and frontend changes.
 
 ## Requirements
 
-Install these tools before starting:
-
-| Tool     | Required Version | Purpose                   |
-| :------- | :--------------- | :------------------------ |
-| Node.js  | `>=20.18.0`      | JavaScript runtime        |
-| pnpm     | `9.15.4`         | Workspace package manager |
-| just     | latest stable    | Repository command runner |
-| Docker   | latest stable    | Local Postgres and Redis  |
-| gitleaks | latest stable    | Secret scanning           |
+| Tool     | Required Version | Purpose                                    |
+| :------- | :--------------- | :----------------------------------------- |
+| Node.js  | `>=20.18.0`      | JavaScript runtime                         |
+| pnpm     | `9.15.4`         | Workspace package manager                  |
+| just     | latest stable    | Repository command runner                  |
+| Docker   | latest stable    | Local Postgres and Redis                   |
+| gitleaks | latest stable    | Secret scanning (`just secrets`, git hook) |
 
 Recommended installs on macOS:
 
@@ -33,123 +31,106 @@ just install
 Create local environment files:
 
 ```bash
-cp .env.example .env
+cp .env.example .env                   # optional: only docker-compose host ports (POSTGRES_PORT, REDIS_PORT)
 cp apps/api/.env.example apps/api/.env
 cp apps/web/.env.example apps/web/.env
 ```
 
-The API reads `apps/api/.env`. The web app reads `apps/web/.env`.
+The API reads `apps/api/.env` (it loads `.env` from its working directory). The web app reads `apps/web/.env`. The defaults in the `.env.example` files work with `just up` unchanged.
 
 ## Local Infrastructure
 
-Start Postgres and Redis:
+Start Postgres 16 and Redis 7:
 
 ```bash
 just up
 ```
 
-Check containers:
+Check containers (`boilerplate-postgres`, `boilerplate-redis`):
 
 ```bash
 docker compose ps
 ```
 
-Expected services:
+Defaults: Postgres on `localhost:5432` (user `postgres`, database `boilerplate_dev`), Redis on `localhost:6379`.
 
-- Postgres on `localhost:5432`
-- Redis on `localhost:6379`
-
-Stop infrastructure:
-
-```bash
-just down
-```
-
-Stop dev servers and containers:
-
-```bash
-just stop
-```
+Stop infrastructure with `just down`. `just stop` also stops the containers and kills anything listening on ports 3000 and 5173.
 
 ## Environment Variables
 
-### API
-
-`apps/api/.env` must contain:
+Every API variable is declared in `apps/api/src/config/env.schema.ts` and listed in `apps/api/.env.example`. The app validates them at startup and exits with a table of problems if something is missing or malformed. The ones you are most likely to touch:
 
 ```env
-NODE_ENV=development
 PORT=3000
 DATABASE_URL=postgres://boilerplate_app:app@localhost:5432/boilerplate_dev
 MIGRATION_DATABASE_URL=postgres://postgres:postgres@localhost:5432/boilerplate_dev
 REDIS_URL=redis://localhost:6379
 CORS_ORIGINS=http://localhost:5173,http://localhost:4173
-WEB_ORIGIN=http://localhost:4173
+WEB_ORIGIN=http://localhost:5173
 COOKIE_SECURE=false
+SMTP_USER=            # leave empty to skip real email (OTP goes to the API log)
 ```
 
-Use `WEB_ORIGIN=http://localhost:5173` if the web app runs through Vite dev server. Use `WEB_ORIGIN=http://localhost:4173` if the web app runs through Vite preview. The CSRF middleware checks this value exactly.
+- `DATABASE_URL` (role `boilerplate_app`, no RLS bypass) and `MIGRATION_DATABASE_URL` (superuser, used by `db:migrate`, `db:seed`, and drizzle-kit) must differ; the env schema rejects equal values. Never swap them.
+- `WEB_ORIGIN` must equal the origin the browser loads the web app from: `http://localhost:5173` for `just web` (Vite dev server), `http://localhost:4173` for Vite preview. The CSRF middleware compares it exactly.
+- Password-reset OTPs are emailed over SMTP (`SMTP_*`). With `SMTP_USER` / `SMTP_PASS` empty no mail is sent, and the OTP is printed in the API log instead (`MailService` logs it at debug level, only in this no-SMTP mode), which is enough for local testing of `forgot-password` and `reset-password`.
 
-### Web
-
-`apps/web/.env` must contain:
+Web (`apps/web/.env`):
 
 ```env
 VITE_API_URL=http://localhost:3000
+
+# Branding: sign-in page, home page and browser tab title
+VITE_APP_NAME=Starter App
+VITE_APP_SLOGAN=            # empty = translated default tagline
+VITE_APP_THUMBNAIL_URL=     # absolute URL or a path under apps/web/public; empty = no image
 ```
 
-The web client uses this value for typed API calls through `@/lib/http`.
+API (`apps/api/.env`) has a matching `APP_NAME`, used in password-reset emails and the Swagger title.
+
+`VITE_*` values are embedded in the build output; never put secrets there.
 
 ## Database Setup
 
-Start infrastructure first:
-
-```bash
-just up
-```
-
-Apply migrations:
+Start infrastructure first (`just up`), then apply migrations:
 
 ```bash
 just db-migrate
 ```
 
-Seed development data (two tenants, `Acme Inc.` and `Globex Corp.`, plus one platform admin; every seeded account uses the password printed by the seed script):
+This runs `apps/api/src/core/database/migrate.ts`, which connects with `MIGRATION_DATABASE_URL`, creates the roles (`sql/00-roles.sql`), switches to `boilerplate_owner`, applies the Drizzle migrations (RLS policies are inside them), then runs `sql/99-grants.sql`. It is idempotent.
+
+Seed development data (idempotent):
 
 ```bash
 just db-seed
 ```
 
-Seeded accounts: `admin@example.com` (`PLATFORM_ADMIN`), `admin-a@example.com` / `member-a@example.com` (Acme), `admin-b@example.com` (Globex).
+| Email                  | Role             | Tenant       | Password       |
+| :--------------------- | :--------------- | :----------- | :------------- |
+| `admin@example.com`    | `PLATFORM_ADMIN` | none         | `Password123!` |
+| `admin-a@example.com`  | `TENANT_ADMIN`   | Acme Inc.    | `Password123!` |
+| `member-a@example.com` | `TENANT_MEMBER`  | Acme Inc.    | `Password123!` |
+| `admin-b@example.com`  | `TENANT_ADMIN`   | Globex Corp. | `Password123!` |
 
-Open Drizzle Studio:
+There is no sign-up. Log in as `admin@example.com` to create tenants and users in any tenant, or as a tenant admin to create users in that tenant. New users are active and email-verified with the password you choose.
+
+Other database commands:
 
 ```bash
-just db-studio
+just db-studio      # Drizzle Studio
+just db-generate    # generate a migration after editing schema files
 ```
 
-Generate a migration after schema changes:
-
-```bash
-just db-generate
-```
+Edit `apps/api/src/core/database/schema/*.ts`, never the generated SQL in `apps/api/drizzle/` once it is merged to `main`; fix forward with a new migration. RLS policies are hand-written below the generated DDL in the migration file.
 
 ## Running the Apps
 
-Run everything:
-
 ```bash
-just dev
+just dev      # api and web together (turbo)
+just api      # NestJS only
+just web      # Vite only
 ```
-
-Run one service:
-
-```bash
-just api
-just web
-```
-
-Typical local URLs:
 
 | App         | URL                              |
 | :---------- | :------------------------------- |
@@ -158,337 +139,130 @@ Typical local URLs:
 | Web dev     | `http://localhost:5173`          |
 | Web preview | `http://localhost:4173`          |
 
+The API dev server runs through swc (`node --watch --import @swc-node/register/esm-register src/main.ts`). Do not switch it to `tsx`/esbuild: they do not emit decorator metadata, so `ZodValidationPipe` silently skips validation of request bodies in dev. `nest start --watch` is not an option either: it fails on the ESM `@/` aliases unless built with `tsc-alias`.
+
 ## Contract Generation
 
-When an API route, DTO, response schema, status code, or OpenAPI decorator changes, regenerate the contract:
+When an API route, DTO, response schema, status code, or OpenAPI decorator changes:
 
 ```bash
 just contract
 ```
 
-Commit the generated files:
+Commit both generated files (never edit them by hand):
 
 ```text
 packages/api-contract/openapi.json
 packages/api-contract/src/generated.ts
 ```
 
-Add or update tests in `packages/api-contract/test/` for important contract behavior.
+CI regenerates them and fails if `git diff` is not empty. Add or update tests in `packages/api-contract/test/` for important contract behavior.
 
 ## Implementing a New Backend Feature
 
-Use this sequence for a new backend capability. The `users` module (`apps/api/src/modules/users/`) is the reference implementation of a tenant-scoped slice.
+Use the `users` module (`apps/api/src/modules/users/`) as the reference. The sequence mirrors "Feature Implementation Workflow" in the README.
 
-### 1. Create the Module
-
-Add a feature module under:
-
-```text
-apps/api/src/modules/<feature>/
-```
-
-Recommended files:
-
-```text
-dto/
-  create-<feature>.dto.ts
-  update-<feature>.dto.ts
-  index.ts
-<feature>.controller.ts
-<feature>.module.ts
-<feature>.openapi.ts
-<feature>.repository.ts
-<feature>.service.ts
-<feature>.types.ts
-index.ts
-```
-
-Export only the public module surface from `index.ts`.
-
-### 2. Add Storage
-
-If the feature needs persistence:
-
-1. Add Drizzle schema under `apps/api/src/core/database/schema/`.
-2. Export it from the schema index.
-3. Add indexes for common filters and joins.
-4. Add `tenant_id` and a single RLS policy (`ENABLE` + `FORCE`) when rows are tenant scoped. See `docs/02-backend-core-va-drizzle-rls.md`, section 9, for the full checklist.
-5. Run `just db-generate`.
-6. Run `just db-migrate`.
-
-Do not rely on application-only filtering for authorization-sensitive data.
-
-### 3. Add DTOs
-
-Use Zod DTOs with `nestjs-zod`.
-
-Rules:
-
-- Validate all external input.
-- Keep DTOs close to the module.
-- Do not use `any`.
-- Use explicit types at exported `.ts` boundaries.
-- Map validation failures into the existing problem response flow.
-
-### 4. Add Repository Logic
-
-Repositories own database access.
-
-Rules:
-
-- Select only required columns.
-- Avoid N+1 queries.
-- Keep filters explicit.
-- Use transactions through existing transaction infrastructure when multiple writes must commit together.
-- Never bypass RLS unless the code has a documented admin-mode reason.
-
-### 5. Add Service Logic
-
-Services own business rules.
-
-Rules:
-
-- Keep controllers thin.
-- Keep repository methods data-focused.
-- Put cross-entity decisions in services.
-- Throw domain errors, not anonymous strings.
-- Keep methods small and testable.
-
-### 6. Add Controller Routes
-
-Controllers own HTTP concerns.
-
-Rules:
-
-- Use resource-based URLs.
-- Use correct status codes.
-- Add `@ApiOperation`, success responses, and problem responses.
-- Use `@Public()` only when the endpoint is intentionally public.
-- Use guards and policies for protected routes.
-- Add throttling when abuse is plausible.
-
-### 7. Update Contracts and Tests
-
-Run:
-
-```bash
-just contract
-just test
-```
-
-Add tests for:
-
-- service business rules
-- repository behavior when risk is high
-- OpenAPI contract guarantees
-- RLS or authorization-sensitive behavior
+1. **Storage.** Add a Drizzle schema under `apps/api/src/core/database/schema/`, export it from `index.ts`, add indexes (at least on `tenant_id`), run `just db-generate`, then add `ENABLE` + `FORCE ROW LEVEL SECURITY` and one policy to the generated migration and run `just db-migrate`. Full checklist: `docs/02-backend-core-va-drizzle-rls.md`, section 7.
+2. **Isolation test.** Extend or add an integration test connected as `boilerplate_app` with two tenants.
+3. **Module** under `apps/api/src/modules/<feature>/`: `dto/`, `<feature>.controller.ts`, `.module.ts`, `.openapi.ts`, `.repository.ts`, `.service.ts`, `.types.ts`, `index.ts`. Export only the module surface from `index.ts`.
+4. **DTOs** are Zod schemas via `nestjs-zod`. Use `.strict()` so unknown fields are rejected. Do not put `tenantId` in a DTO unless a platform admin legitimately chooses the tenant (the only case today is `POST /users`).
+5. **Repository** receives a `tx` and never filters `tenant_id` by hand; RLS does it.
+6. **Service** runs every query through `TransactionManager.runInRequestContext`, checks permissions on the loaded record with `subject('Name', entity)`, writes an audit row with `AuditService` for sensitive changes, and throws domain errors.
+7. **Controller** adds `@CheckPolicies(...)` (role-level), OpenAPI decorators for success and problem responses, `201` plus `Location` for `POST`, and `@Public()` only when intentionally public.
+8. Run `just contract` and `just test`.
 
 ## Implementing a New Frontend Feature
 
-Use this sequence for a new web capability.
+Use `apps/web/src/features/auth` and `features/users` as references.
 
-### 1. Create the Feature Slice
+1. **Slice** under `apps/web/src/features/<feature>/` with `api/`, `components/`, `hooks/`, `pages/`, `schemas/`, `types.ts`, `index.ts` as needed.
+2. **Types** come from the generated contract through `@/lib/http/types`, never hand-written:
 
-Add the feature under:
+   ```typescript
+   import type { ApiRequestBody, ApiResponseData } from '@/lib/http/types';
 
-```text
-apps/web/src/features/<feature>/
-```
+   export type CreateUserBody = ApiRequestBody<'/api/v1/users', 'post'>;
+   export type UserResponse = ApiResponseData<'/api/v1/users/{id}', 'get'>;
+   ```
 
-Recommended files:
-
-```text
-api/
-  use-<feature>.ts
-components/
-  <feature>-form.tsx
-  <feature>-table.tsx
-hooks/
-  use-<feature>-form.ts
-pages/
-  <feature>-page.tsx
-schemas/
-  <feature>.schema.ts
-endpoints.ts
-index.ts
-types.ts
-```
-
-### 2. Define Endpoints and Types
-
-Use generated API contract types. Do not duplicate DTOs by hand.
-
-Example:
-
-```typescript
-import type { ApiRequestBody, ApiResponseData } from '@/lib/http/types';
-
-import type { USER_ENDPOINTS } from './endpoints';
-
-export type CreateUserDto = ApiRequestBody<typeof USER_ENDPOINTS.CREATE>;
-export type UserResponse = ApiResponseData<typeof USER_ENDPOINTS.DETAIL>;
-```
-
-### 3. Add API Hooks
-
-Use TanStack Query for server state.
-
-Rules:
-
-- Use `apiClient` from `@/lib/http/client`.
-- Keep query keys stable and specific.
-- Invalidate the narrowest useful query after mutations.
-- Handle mutation errors with toasts or field errors.
-- Do not call `fetch` inside components.
-
-### 4. Add Forms
-
-Use React Hook Form and Zod.
-
-Rules:
-
-- Put form schemas in `schemas/`.
-- Put form state and submit logic in `hooks/` when JSX would become noisy.
-- Map `invalidParams` from API errors into field errors.
-- Disable submit buttons while a mutation is pending.
-
-### 5. Add Components
-
-Rules:
-
-- Use one meaningful component per file.
-- Keep reusable UI primitives in `shared/ui`.
-- Keep domain-specific components in the feature.
-- Move repeated icons or brand assets to `shared/icons`.
-- Do not use `React.FC`.
-- Let TypeScript infer component return types in `.tsx`.
-- Use `useTranslation` inside feature-local components that own their copy.
-- Pass business data and callbacks through props, not translation functions.
-
-### 6. Add Page and Routing
-
-Add page components under `pages/`.
-
-Wire routes in:
-
-```text
-apps/web/src/app/router.tsx
-```
-
-Rules:
-
-- Add route guards for protected views.
-- Handle loading, empty, error, and success states.
-- Lazy-load feature pages when appropriate.
-- Keep app-level wiring in `app/`, not inside feature internals.
-
-### 7. Add Tests
-
-Add tests for:
-
-- shared UI primitives
-- page loading, empty, error, and success states
-- critical mutation behavior
-- API client behavior that protects auth, CSRF, or error handling
+3. **API hooks** use TanStack Query and the client in `@/lib/http/client` (`apiClient` for single resources, `rawPagedRequest` for lists so `meta` is kept). No raw `fetch` or `axios` in components.
+4. **Forms** use React Hook Form with a Zod schema; map `invalidParams` from API errors to field errors; disable submit while pending.
+5. **Components**: one meaningful component per file, shared primitives in `shared/ui`, no `React.FC`.
+6. **Route** in `apps/web/src/app/router.tsx` last, lazy-loaded and wrapped in `RouteGuard` when protected.
+7. **Tests** in `apps/web/test/` for page states and risky behavior.
 
 ## Verification Before Commit
 
-For TypeScript changes:
-
 ```bash
-just typecheck
-just lint
-just test
+just typecheck && just lint && just test    # any TS change
+just contract                               # any API shape change
+just verify                                 # non-trivial changes
 ```
 
-For API contract changes:
-
-```bash
-just contract
-just test
-```
-
-For non-trivial features:
-
-```bash
-just verify
-```
+Integration tests (`pnpm test:integration` inside `apps/api`) need `just up` and `just db-migrate` first. CI also runs a `conventions` job of grep checks (no bare `timestamp()` or `pgEnum` in the schema, no `axios` import under `modules/`); `just lint` already covers the axios rule.
 
 ## Troubleshooting
 
 ### CORS Fails From the Web App
 
-Check `apps/api/.env`:
+`CORS_ORIGINS` in `apps/api/.env` controls browser CORS and must contain the web origin (`http://localhost:5173`). Restart the API after changing env values.
 
-```env
-CORS_ORIGINS=http://localhost:5173,http://localhost:4173
-WEB_ORIGIN=http://localhost:4173
-```
+### CSRF Validation Fails (403 `CSRF_VALIDATION_FAILED`)
 
-`CORS_ORIGINS` controls browser CORS. `WEB_ORIGIN` controls the CSRF origin check and must exactly match the web app origin.
+Login works but a later POST, PATCH, or DELETE returns 403. How the check works: the API sets a readable `csrf_token` cookie on login and refresh. Once that cookie exists, every unsafe request must send the same value in `x-csrf-token`, and its `Origin` header must equal `WEB_ORIGIN` exactly. The web client does this automatically.
 
-Restart the API after changing env values.
+Common causes:
 
-### CSRF Validation Fails
+1. **`WEB_ORIGIN` does not match the dev server.** It must be `http://localhost:5173` for `just web`. A value of `http://localhost:4173` (Vite preview) lets login succeed because no csrf cookie exists yet, then rejects every later write.
+2. **Stale `csrf_token` cookie from another project on `localhost`.** Cookies are shared across ports on the same host, so another app that also uses a `csrf_token` cookie overwrites yours with a value this API never issued. The web client expires the cookie and retries once for login and refresh; for anything else, delete the `csrf_token` cookie for `localhost` in DevTools (Application, Cookies) and log in again.
+3. The request has no `x-csrf-token` header (custom `fetch`, curl with cookies). Bearer-only requests without cookies are not affected.
 
-The web client reads the `csrf_token` cookie and sends it as `x-csrf-token` on unsafe requests.
+Restart the API after env changes.
 
-If a request fails:
+### Port Clashes and Container Names
 
-1. Confirm the browser has a readable `csrf_token` cookie.
-2. Confirm the request includes `x-csrf-token`.
-3. Confirm `WEB_ORIGIN` matches the browser origin exactly.
-4. Restart the API after env changes.
+`just up` fails with "port is already allocated" or "container name already in use" when another project holds `5432` or `6379`, or already has containers named `boilerplate-postgres` / `boilerplate-redis`.
+
+- Change the host ports in the root `.env` (used by docker-compose): `POSTGRES_PORT=5433` and/or `REDIS_PORT=6380`.
+- Then update `apps/api/.env` to match: `REDIS_URL=redis://localhost:6380`, and the port inside `DATABASE_URL` and `MIGRATION_DATABASE_URL` (`...@localhost:5433/...`).
+- If containers with the same names exist from another checkout, run `docker compose down` there or remove them with `docker rm`.
+- `just stop` kills whatever listens on 3000 and 5173; check for stray dev servers if the API or Vite say the port is busy.
 
 ### Redis Throttling Fails
 
-Check Redis:
+Rate limits are stored in Redis, so a dead Redis breaks login. Check it:
 
 ```bash
 docker compose ps
-nc -zv localhost 6379
+nc -zv localhost 6379     # use your REDIS_PORT
 ```
 
-Restart infrastructure if needed:
-
-```bash
-just down
-just up
-```
+Then `just down && just up`.
 
 ### Database Connection Fails
 
-Check Postgres:
-
 ```bash
 docker compose ps
-nc -zv localhost 5432
-```
-
-Then rerun migrations:
-
-```bash
+nc -zv localhost 5432     # use your POSTGRES_PORT
 just db-migrate
 ```
 
+If queries return no rows while the data is there, the session is missing its RLS context: the code is querying outside `TransactionManager`, or `DATABASE_URL` points at the wrong role.
+
+### Request Validation Seems To Be Skipped
+
+You are running the API with `tsx` or another runner that does not emit decorator metadata. Use `just api` (swc runner).
+
 ### Generated Contract Looks Stale
 
-Run:
-
-```bash
-just contract
-```
-
-Then restart the web dev server if TypeScript or Vite still sees old generated types.
+Run `just contract`, then restart the web dev server if Vite or TypeScript still sees old types.
 
 ## Commit Checklist
 
-Before committing:
-
 ```text
-- Related files are grouped into coherent commits.
-- Generated contract files are included when API shape changed.
-- Migrations are included when schema changed.
+- Related files are grouped into coherent commits (Conventional Commits, see commitlint.config.mjs).
+- Generated contract files are included when the API shape changed.
+- Migrations are included when the schema changed.
 - Documentation is updated when behavior changed.
 - No secrets are staged.
 - `just typecheck`, `just lint`, and `just test` pass.

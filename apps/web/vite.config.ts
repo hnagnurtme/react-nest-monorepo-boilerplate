@@ -1,10 +1,26 @@
 import { fileURLToPath, URL } from 'node:url';
 import react from '@vitejs/plugin-react';
+import { loadEnv } from 'vite';
 import { defineConfig } from 'vitest/config';
 import tailwindcss from '@tailwindcss/vite';
 
-export default defineConfig({
-  plugins: [react(), tailwindcss()],
+/** Fills `<title>` from VITE_APP_NAME, with the same default the app uses at runtime. */
+function appTitle(appName: string) {
+  return {
+    name: 'app-title',
+    transformIndexHtml: {
+      order: 'pre' as const,
+      handler: (html: string) => html.replaceAll('%APP_TITLE%', appName),
+    },
+  };
+}
+
+export default defineConfig(({ mode }) => ({
+  plugins: [
+    react(),
+    tailwindcss(),
+    appTitle(loadEnv(mode, process.cwd(), 'VITE_')['VITE_APP_NAME']?.trim() || 'Starter App'),
+  ],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
@@ -52,4 +68,4 @@ export default defineConfig({
       },
     },
   },
-});
+}));

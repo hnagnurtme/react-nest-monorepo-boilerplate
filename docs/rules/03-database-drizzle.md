@@ -12,7 +12,7 @@ owner: Platform Team
 
 ## Phần A. Đặt tên
 
-### A1. Quy ước 🤖
+### A1. Quy ước 👀
 
 | Đối tượng  | Quy ước                    | Ví dụ                            |
 | :--------- | :------------------------- | :------------------------------- |
@@ -30,7 +30,7 @@ owner: Platform Team
 
 `created_at`, `archived_at`, `deleted_at` · `is_active`, `has_members`.
 
-### A3. Tên TS suy ra được từ tên DB 🤖
+### A3. Tên TS suy ra được từ tên DB 👀
 
 ```typescript
 export const projectMembers = pgTable('project_members', {
@@ -44,7 +44,7 @@ Không đổi nghĩa giữa hai phía. `tenantId` trỏ tới `tenant_id`, khôn
 
 ## Phần B. Kiểu dữ liệu
 
-### B1. Bảng nào cũng có 3 cột này 🤖
+### B1. Bảng nào cũng có 3 cột này 👀
 
 ```typescript
 id:        uuid('id').primaryKey().defaultRandom(),
@@ -56,9 +56,9 @@ updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(
 
 **Vì sao:** `timestamp` không mang múi giờ. Server đổi TZ, hoặc có người dùng ở múi giờ khác, là dữ liệu sai lặng lẽ. Luôn lưu UTC, quy đổi ở tầng hiển thị.
 
-**Cưỡng chế:** 🤖 CI grep cấm `timestamp('...')` thiếu `withTimezone: true`.
+**Cưỡng chế:** 🤖 job `conventions` của CI grep `timestamp(` thiếu `withTimezone` trong `schema/*.ts`.
 
-### B3. Tiền: `bigint` đơn vị nhỏ nhất, kèm mã tiền tệ 🤖
+### B3. Tiền: `bigint` đơn vị nhỏ nhất, kèm mã tiền tệ 👀 (chưa có cột tiền nào trong boilerplate)
 
 ```typescript
 // ❌ price: numeric('price', { precision: 12, scale: 2 })  // JS đọc ra thành string hoặc float
@@ -77,11 +77,13 @@ currencyCode: char('currency_code', { length: 3 }).notNull().default('VND'),
 
 Postgres không thu lợi gì từ giới hạn độ dài. Ràng buộc độ dài thuộc về Zod ở tầng ứng dụng — nơi sửa được mà không cần migration.
 
-### B6. Enum: cột `text` + `CHECK`, không dùng `pgEnum` 💡
+### B6. Enum: cột `text` + `CHECK`, không dùng `pgEnum` 🤖
+
+**Cưỡng chế:** job `conventions` của CI grep `pgEnum(` trong `schema/*.ts`.
 
 **Vì sao:** `ALTER TYPE ... ADD VALUE` của Postgres không chạy được trong transaction và không thể rollback. Sửa `CHECK` constraint thì dễ hơn nhiều.
 
-### B7. Soft delete dùng `deleted_at`, không dùng `is_deleted` 🤖
+### B7. Soft delete dùng `deleted_at`, không dùng `is_deleted` 👀
 
 Giữ được **thời điểm** xóa. Kèm partial index: `WHERE deleted_at IS NULL`.
 
@@ -97,7 +99,7 @@ ALTER TABLE projects ADD CONSTRAINT ck_projects_price_non_negative CHECK (price_
 
 **Vì sao:** code ứng dụng không phải con đường duy nhất ghi vào DB — còn migration, script sửa dữ liệu, và tay người trong `psql`. DB là nơi cuối cùng bảo vệ tính đúng đắn.
 
-### C2. Khóa ngoại luôn khai `ON DELETE` tường minh 🤖
+### C2. Khóa ngoại luôn khai `ON DELETE` tường minh 👀
 
 ```typescript
 tenantId: uuid('tenant_id').notNull().references(() => tenants.id, { onDelete: 'restrict' }),
@@ -120,9 +122,9 @@ ALTER TABLE "<table>" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "<table>" FORCE ROW LEVEL SECURITY;
 ```
 
-**Cưỡng chế:** 🤖 test CI quét `pg_class` (xem [02-backend-core-va-drizzle-rls.md](../02-backend-core-va-drizzle-rls.md) mục 2.6).
+**Cưỡng chế:** 🤖 test `coverage` trong `rls-isolation.integration.spec.ts` (xem [02-backend-core-va-drizzle-rls.md](../02-backend-core-va-drizzle-rls.md) mục 2.6); quét mọi bảng `public`.
 
-### D2. Đúng **một** policy mỗi bảng 🤖
+### D2. Đúng **một** policy mỗi bảng 🤖 (cùng test `coverage`)
 
 **Vì sao:** PostgreSQL **OR** các policy PERMISSIVE lại với nhau. Hai policy riêng biệt (ví dụ một cho `tenant`, một cho `admin`) sẽ bị gộp, nên policy thừa mở rộng quyền thay vì thu hẹp và có thể cho tenant này đọc dữ liệu của tenant khác. Đây là lỗi đã từng gây sự cố (xem [ADR-0003](../adr/0003-rls-thay-vi-loc-o-tang-ung-dung.md)) — đừng tái lập.
 
@@ -134,15 +136,15 @@ Không thêm chế độ `public`/`customer`: nếu cần đọc công khai, hã
 
 Policy chạy trên **mọi** truy vấn tới bảng đó. Thiếu index trên `tenant_id` là seq scan toàn bảng ở mọi request.
 
-### D5. Mỗi bảng có RLS phải có integration test cách ly 🤖
+### D5. Mỗi bảng có RLS phải có integration test cách ly 👀
 
-Seed 2 tenant, assert tenant A không đọc/ghi được dữ liệu B ở cả 3 access mode. Xem [08-testing.md](08-testing.md).
+Seed 2 tenant, assert tenant A không đọc/ghi được dữ liệu B, và `admin` mode thấy cả hai. Xem [08-testing.md](08-testing.md).
 
 ---
 
 ## Phần E. Index
 
-### E1. Mọi khóa ngoại có index 🤖
+### E1. Mọi khóa ngoại có index 👀
 
 Postgres **không** tự tạo index cho khóa ngoại (khác MySQL). Thiếu nó thì mọi `JOIN` và mọi lần xóa bản ghi cha đều quét toàn bảng.
 
@@ -168,7 +170,7 @@ CREATE INDEX idx_projects_tenant_created ON projects (tenant_id, created_at DESC
 
 Sinh bằng `pnpm db:generate`. Được phép sửa file SQL để thêm RLS policy, `CHECK`, backfill — nhưng **luôn đọc lại toàn bộ** file trước khi commit.
 
-### F2. Migration đã merge là bất biến 🤖
+### F2. Migration đã merge là bất biến 👀
 
 Không bao giờ sửa migration đã lên `main`. Sai ➔ viết migration mới sửa đè.
 

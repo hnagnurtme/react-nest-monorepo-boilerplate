@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "nest build && tsc-alias -p tsconfig.build.json",
-    "dev": "nest start --watch",
+    "dev": "node --watch --import @swc-node/register/esm-register src/main.ts",
     "start": "node dist/main.js",
     "lint": "eslint src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -56,6 +56,8 @@
     "@nestjs/testing": "^11.0.11",
     "@repo/eslint-config": "workspace:*",
     "@repo/tsconfig": "workspace:*",
+    "@swc-node/register": "^1.12.1",
+    "@swc/core": "^1.16.13",
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.6",
     "@types/node": "^22.13.10",

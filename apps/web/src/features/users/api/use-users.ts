@@ -6,6 +6,7 @@ import { rawPagedRequest, type ApiError } from '@/lib/http/client';
 export const USERS_ENDPOINT = '/api/v1/users';
 
 export const usersKeys = {
+  all: ['users'] as const,
   list: (page: number, limit: number) => ['users', 'list', page, limit] as const,
 };
 

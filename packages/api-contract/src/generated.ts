@@ -256,6 +256,7 @@ export interface components {
             email: string;
             password: string;
         };
+        /** @default {} */
         RefreshDto: {
             refreshToken?: string;
         };
@@ -272,6 +273,30 @@ export interface components {
         ChangePasswordDto: {
             currentPassword: string;
             newPassword: string;
+        };
+        CreateTenantDto: {
+            name: string;
+            slug?: string;
+        };
+        UpdateTenantDto: {
+            name?: string;
+            isActive?: boolean;
+        };
+        CreateUserDto: {
+            /** Format: email */
+            email: string;
+            fullName: string;
+            phoneNumber?: string;
+            password: string;
+            /** @enum {string} */
+            role: "PLATFORM_ADMIN" | "TENANT_ADMIN" | "TENANT_MEMBER";
+            /** Format: uuid */
+            tenantId?: string;
+        };
+        UpdateUserDto: {
+            fullName?: string;
+            phoneNumber?: string | null;
+            isActive?: boolean;
         };
     };
     responses: never;
@@ -830,7 +855,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateTenantDto"];
+            };
+        };
         responses: {
             /** @description The created tenant */
             201: {
@@ -953,7 +982,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateTenantDto"];
+            };
+        };
         responses: {
             /** @description The updated tenant */
             200: {
@@ -1088,7 +1121,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateUserDto"];
+            };
+        };
         responses: {
             /** @description The created user */
             201: {
@@ -1261,7 +1298,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateUserDto"];
+            };
+        };
         responses: {
             /** @description The updated user */
             200: {

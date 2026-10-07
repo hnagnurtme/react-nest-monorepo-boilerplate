@@ -17,8 +17,8 @@ export function createForgotPasswordSchema(
     email: z
       .string()
       .trim()
-      .min(1, getMessage('validation.emailRequired', 'Vui lòng nhập địa chỉ email'))
-      .email(getMessage('validation.emailInvalid', 'Địa chỉ email không hợp lệ')),
+      .min(1, getMessage('validation.emailRequired', 'Please enter your email address'))
+      .email(getMessage('validation.emailInvalid', 'Invalid email address')),
   });
 }
 
@@ -34,24 +34,33 @@ export function createResetPasswordSchema(
       email: z
         .string()
         .trim()
-        .min(1, getMessage('validation.emailRequired', 'Vui lòng nhập địa chỉ email'))
-        .email(getMessage('validation.emailInvalid', 'Địa chỉ email không hợp lệ')),
+        .min(1, getMessage('validation.emailRequired', 'Please enter your email address'))
+        .email(getMessage('validation.emailInvalid', 'Invalid email address')),
       otp: z
         .string()
         .trim()
-        .min(1, getMessage('validation.otpRequired', 'Vui lòng nhập mã OTP'))
-        .length(6, getMessage('validation.otpLength', 'Mã OTP phải gồm 6 chữ số'))
-        .regex(OTP_REGEX, getMessage('validation.otpDigitsOnly', 'Mã OTP chỉ bao gồm chữ số')),
+        .min(1, getMessage('validation.otpRequired', 'Please enter the OTP code'))
+        .length(6, getMessage('validation.otpLength', 'OTP code must be 6 digits'))
+        .regex(
+          OTP_REGEX,
+          getMessage('validation.otpDigitsOnly', 'OTP code must contain only digits'),
+        ),
       newPassword: z
         .string()
         .min(1, getMessage('validation.newPasswordRequired', 'Vui lòng nhập mật khẩu mới'))
-        .min(8, getMessage('validation.newPasswordMin', 'Mật khẩu mới phải có ít nhất 8 ký tự')),
+        .min(
+          8,
+          getMessage('validation.newPasswordMin', 'New password must be at least 8 characters'),
+        ),
       confirmPassword: z
         .string()
-        .min(1, getMessage('validation.confirmPasswordRequired', 'Vui lòng xác nhận mật khẩu mới')),
+        .min(
+          1,
+          getMessage('validation.confirmPasswordRequired', 'Please confirm your new password'),
+        ),
     })
     .refine((data) => data.newPassword === data.confirmPassword, {
-      message: getMessage('validation.passwordMismatch', 'Mật khẩu xác nhận không khớp'),
+      message: getMessage('validation.passwordMismatch', 'Passwords do not match'),
       path: ['confirmPassword'],
     });
 }
@@ -69,18 +78,24 @@ export function createChangePasswordSchema(
         .string()
         .min(
           1,
-          getMessage('validation.currentPasswordRequired', 'Vui lòng nhập mật khẩu hiện tại'),
+          getMessage('validation.currentPasswordRequired', 'Please enter your current password'),
         ),
       newPassword: z
         .string()
         .min(1, getMessage('validation.newPasswordRequired', 'Vui lòng nhập mật khẩu mới'))
-        .min(8, getMessage('validation.newPasswordMin', 'Mật khẩu mới phải có ít nhất 8 ký tự')),
+        .min(
+          8,
+          getMessage('validation.newPasswordMin', 'New password must be at least 8 characters'),
+        ),
       confirmPassword: z
         .string()
-        .min(1, getMessage('validation.confirmPasswordRequired', 'Vui lòng xác nhận mật khẩu mới')),
+        .min(
+          1,
+          getMessage('validation.confirmPasswordRequired', 'Please confirm your new password'),
+        ),
     })
     .refine((data) => data.newPassword === data.confirmPassword, {
-      message: getMessage('validation.passwordMismatch', 'Mật khẩu xác nhận không khớp'),
+      message: getMessage('validation.passwordMismatch', 'Passwords do not match'),
       path: ['confirmPassword'],
     });
 }

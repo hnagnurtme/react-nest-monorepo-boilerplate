@@ -12,7 +12,7 @@ owner: Platform Team
 
 ## Phần A. URL & Method
 
-### A1. Tài nguyên là danh từ số nhiều, `kebab-case` 🤖
+### A1. Tài nguyên là danh từ số nhiều, `kebab-case` 👀
 
 ```
 ❌ POST /api/v1/createProject        ❌ GET /api/v1/getProjectById/:id
@@ -50,25 +50,25 @@ Hành động nằm ở HTTP method, không nằm trong URL.
 ❌ POST /api/v1/orders/:id/doCancel
 ```
 
-### A5. Version trong path, bắt buộc 🤖
+### A5. Version trong path, bắt buộc 👀
 
-Mọi endpoint bắt đầu bằng `/api/v1`. Không có endpoint không version.
+Mọi endpoint bắt đầu bằng `/api/v1` (trừ `/healthz`, `/readyz`).
 
 ---
 
 ## Phần B. Request
 
-### B1. Query param `camelCase` 🤖
+### B1. Query param `camelCase` 👀
 
-`?pageSize=20&sortBy=createdAt&status=...`
+`?page=1&limit=20&sortBy=createdAt&sortOrder=desc`
 
-### B2. Body là JSON, `camelCase` 🤖
+### B2. Body là JSON, `camelCase` 👀
 
 `multipart/form-data` chỉ dùng cho upload file.
 
 ### B3. Client không được gửi trường do server quyết định 🤖
 
-`id`, `tenantId`, `createdAt`, `updatedAt`, `status` (khi có state machine). `ValidationPipe` với `forbidNonWhitelisted: true` sẽ từ chối.
+`id`, `createdAt`, `updatedAt`, `status` (khi có state machine) và `tenantId` (ngoại lệ: `POST /users`, xem 02-backend-nestjs E3). DTO Zod `.strict()` từ chối trường lạ bằng `422`.
 
 ### B4. Upload file đi qua presigned URL, không qua API 👀
 
@@ -78,7 +78,7 @@ Mọi endpoint bắt đầu bằng `/api/v1`. Không có endpoint không version
 
 ## Phần C. Response
 
-### C1. Thành công luôn bọc envelope 🤖
+### C1. Thành công luôn bọc envelope 🤖 (`TransformInterceptor`)
 
 ```json
 { "data": { "id": "...", "title": "..." } }
@@ -95,7 +95,7 @@ Mọi endpoint bắt đầu bằng `/api/v1`. Không có endpoint không version
 
 **Vì sao trả mảng trần là sai:** không còn chỗ nào để thêm `meta` về sau mà không phá vỡ client hiện có.
 
-### C2. Lỗi luôn theo RFC 9457 🤖
+### C2. Lỗi luôn theo RFC 9457 🤖 (`GlobalExceptionFilter`)
 
 ```json
 {
@@ -142,7 +142,7 @@ Trả `403` khi truy cập tài nguyên của tenant khác là **xác nhận tà
 
 Quy ước: `403` cho lỗi **vai trò** (TENANT_MEMBER gọi endpoint của admin), `404` cho lỗi **quyền sở hữu** (tenant A chạm dữ liệu tenant B).
 
-### C6. Không rò rỉ trường nội bộ 🤖
+### C6. Không rò rỉ trường nội bộ 👀
 
 `passwordHash`, `internalNote`, `deletedAt`, cột dùng cho debug. Whitelist ở tầng serialize, không blacklist.
 
@@ -158,7 +158,7 @@ Quy ước: `403` cho lỗi **vai trò** (TENANT_MEMBER gọi endpoint của adm
 
 `?cursor=<opaque>&limit=20`, trả `meta.nextCursor`. Cursor là **chuỗi opaque** — client không được phép hiểu hay tự dựng.
 
-### D3. Sắp xếp qua `sortBy` + `sortOrder`, whitelist cột 🤖
+### D3. Sắp xếp qua `sortBy` + `sortOrder`, whitelist cột 🤖 (`parseSort`)
 
 ```
 ✅ ?sortBy=createdAt&sortOrder=desc
@@ -174,17 +174,17 @@ Cột sắp xếp **phải** nằm trong danh sách cho phép — nhận chuỗi
 
 ## Phần E. Idempotency & thao tác ghi
 
-### E1. Thao tác ghi tốn kém phải nhận `Idempotency-Key` 🤖
+### E1. Thao tác ghi tốn kém phải nhận `Idempotency-Key` 👀
 
-Bắt buộc với: thanh toán, hoàn tiền, gửi thông báo hàng loạt và mọi thao tác ghi tốn kém bạn thêm vào.
+Boilerplate chưa có thao tác nào cần (chưa cài đặt cơ chế này). Bắt buộc với thanh toán, hoàn tiền, gửi hàng loạt và mọi thao tác ghi tốn kém bạn thêm vào.
 
 **Vì sao:** mạng di động timeout rồi người dùng bấm lại. Không có idempotency = hai bản ghi, hai lần trừ tiền.
 
-### E2. Webhook phải idempotent 🤖
+### E2. Webhook phải idempotent 👀 (chưa có webhook)
 
 Cổng thanh toán **sẽ** gửi lặp. Lưu `provider_event_id` với ràng buộc unique; gặp lại ➔ trả `200` và bỏ qua.
 
-### E3. Webhook verify chữ ký trước khi parse body 🤖
+### E3. Webhook verify chữ ký trước khi parse body 👀 (chưa có webhook)
 
 Xem [07-security.md](07-security.md).
 
@@ -192,7 +192,7 @@ Xem [07-security.md](07-security.md).
 
 ## Phần F. Tài liệu API
 
-### F1. Mọi endpoint có OpenAPI decorator 🤖
+### F1. Mọi endpoint có OpenAPI decorator 👀
 
 `@ApiTags`, `@ApiOperation({ summary })`, `@ApiResponse` cho **mọi** mã trạng thái có thể trả.
 

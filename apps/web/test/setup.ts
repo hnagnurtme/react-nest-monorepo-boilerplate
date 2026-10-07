@@ -2,6 +2,7 @@ import '@testing-library/jest-dom/vitest';
 
 import { afterEach, vi } from 'vitest';
 
+import '@/lib/i18n';
 import { useAuthStore } from '@/entities/session/store';
 import { resetHttpClientForTests } from '@/lib/http/client';
 

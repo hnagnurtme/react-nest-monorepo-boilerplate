@@ -1,7 +1,7 @@
 ---
 title: Infra & DevOps
 description: Quy tắc Docker, cấu hình môi trường, triển khai, migration và vận hành
-status: draft
+status: stable
 updated: 2026-10-07
 owner: Platform Team
 ---
@@ -12,7 +12,7 @@ owner: Platform Team
 
 ## Phần A. Cấu hình
 
-### A1. Cấu hình đến từ biến môi trường, không từ file được commit 🤖
+### A1. Cấu hình đến từ biến môi trường, không từ file được commit 👀
 
 Nguyên tắc 12-factor. Một artifact build chạy được ở mọi môi trường.
 
@@ -20,16 +20,16 @@ Nguyên tắc 12-factor. Một artifact build chạy được ở mọi môi tr�
 
 Thiếu biến ➔ `process.exit(1)` kèm bảng lỗi rõ ràng. **Không** chạy nửa vời rồi hỏng lúc 3 giờ sáng.
 
-### A3. Cấm giá trị mặc định cho biến bảo mật 🤖
+### A3. Cấm giá trị mặc định cho biến bảo mật 👀 (JWT secret, DB URL không có `.default()`)
 
 ```typescript
 // ❌ JWT_SECRET: z.string().default('dev-secret')   // sẽ theo lên production
 // ✅ JWT_SECRET: z.string().min(32)                 // thiếu là crash
 ```
 
-### A4. `.env.example` luôn đồng bộ với schema 🤖
+### A4. `.env.example` luôn đồng bộ với schema 👀
 
-Thêm biến vào Zod schema ➔ thêm vào `.env.example` trong cùng PR. CI kiểm tra hai bên khớp nhau.
+Thêm biến vào Zod schema ➔ thêm vào `apps/api/.env.example` trong cùng PR. Chưa có bước CI so khớp hai bên.
 
 ---
 
@@ -39,24 +39,21 @@ Thêm biến vào Zod schema ➔ thêm vào `.env.example` trong cùng PR. CI ki
 
 Image production không chứa devDependencies, source TS, hay công cụ build.
 
-### B2. Không chạy bằng `root` 🤖
+### B2. Không chạy bằng `root` 👀
 
-```dockerfile
-RUN addgroup -S app && adduser -S app -G app
-USER app
-```
+`apps/api/Dockerfile` tạo `appuser` (uid 10001) và `USER appuser`.
 
 ### B3. Pin base image theo digest 👀
 
-`node:20-alpine` thay đổi theo thời gian ➔ build không tái lập được.
+`node:24-alpine` (Dockerfile hiện dùng tag, chưa pin digest) thay đổi theo thời gian ➔ build không tái lập được.
 
-### B4. Không có secret trong image 🤖
+### B4. Không có secret trong image 👀
 
 `ARG` và `ENV` lúc build đều nằm trong lịch sử layer, ai kéo image về cũng đọc được.
 
-### B5. Có `HEALTHCHECK` 👀
+### B5. Có `HEALTHCHECK` 👀 (Dockerfile gọi `/healthz`)
 
-### B6. `.dockerignore` đầy đủ 🤖
+### B6. `.dockerignore` đầy đủ 👀
 
 `node_modules`, `.git`, `.env`, `dist`, `coverage`.
 
@@ -81,7 +78,7 @@ Không chạy migration trong lệnh khởi động container — nhiều replic
 
 "Deploy lại phiên bản cũ" chỉ hợp lệ nếu schema DB vẫn tương thích ngược.
 
-### C5. Graceful shutdown 🤖
+### C5. Graceful shutdown 👀 (`app.enableShutdownHooks()`)
 
 Nhận `SIGTERM` ➔ ngừng nhận request mới, hoàn tất request đang chạy, đóng pool DB, rồi thoát. Thiếu bước này, mỗi lần deploy là một số người dùng nhận lỗi.
 
@@ -89,7 +86,7 @@ Nhận `SIGTERM` ➔ ngừng nhận request mới, hoàn tất request đang ch�
 
 ## Phần D. Vận hành
 
-### D1. `/healthz` và `/readyz` là hai thứ khác nhau 🤖
+### D1. `/healthz` và `/readyz` là hai thứ khác nhau 👀
 
 | Endpoint   | Trả lời                         | Ai dùng                                        |
 | :--------- | :------------------------------ | :--------------------------------------------- |
@@ -120,7 +117,7 @@ Cảnh báo không kèm hướng dẫn xử lý thì người trực chỉ biế
 
 ### E2. Point-in-time recovery cho production 👀
 
-### E3. Không dùng dữ liệu production cho môi trường dev 🤖
+### E3. Không dùng dữ liệu production cho môi trường dev 👀
 
 Cần dữ liệu thật ➔ ẩn danh trước (email, số điện thoại, địa chỉ, thông tin thanh toán).
 
@@ -132,7 +129,7 @@ Không ai dùng role `owner` cho công việc hàng ngày. Truy vấn phân tíc
 
 ## Phần F. Mạng
 
-### F1. Chỉ mở port thực sự cần 🤖
+### F1. Chỉ mở port thực sự cần 👀
 
 Mặc định `deny incoming`. Postgres và Redis **không bao giờ** lộ ra Internet.
 
@@ -140,7 +137,7 @@ Mặc định `deny incoming`. Postgres và Redis **không bao giờ** lộ ra I
 
 Đặt API sau reverse proxy / tunnel của hạ tầng bạn dùng, để không cần mở port inbound trực tiếp.
 
-### F3. TLS ở mọi nơi, kể cả giữa các service nội bộ 🤖
+### F3. TLS ở mọi nơi, kể cả giữa các service nội bộ 👀
 
 ### F4. Chứng chỉ tự động gia hạn, kèm cảnh báo sắp hết hạn 👀
 
@@ -152,6 +149,6 @@ Chứng chỉ hết hạn là nguyên nhân downtime phổ biến và hoàn toà
 
 ### G1. Mọi tài nguyên có tag `env` và `project` 💡
 
-### G2. Đặt hạn mức chi tiêu cho dịch vụ trả phí theo mức dùng 🤖
+### G2. Đặt hạn mức chi tiêu cho dịch vụ trả phí theo mức dùng 👀
 
 Một vòng lặp retry hỏng có thể đốt hết ngân sách trong một đêm. Đặt hạn mức cứng ở phía provider, không chỉ cảnh báo.

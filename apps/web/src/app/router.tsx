@@ -21,6 +21,10 @@ const UsersPage = lazy(() =>
   import('@/features/users').then((module) => ({ default: module.UsersPage })),
 );
 
+const TenantsPage = lazy(() =>
+  import('@/features/tenants').then((module) => ({ default: module.TenantsPage })),
+);
+
 export function AppRouter() {
   return (
     <ErrorBoundary>
@@ -34,6 +38,14 @@ export function AppRouter() {
             element={
               <RouteGuard allowedRoles={['PLATFORM_ADMIN', 'TENANT_ADMIN', 'TENANT_MEMBER']}>
                 <UsersPage />
+              </RouteGuard>
+            }
+          />
+          <Route
+            path="/tenants"
+            element={
+              <RouteGuard allowedRoles={['PLATFORM_ADMIN']}>
+                <TenantsPage />
               </RouteGuard>
             }
           />

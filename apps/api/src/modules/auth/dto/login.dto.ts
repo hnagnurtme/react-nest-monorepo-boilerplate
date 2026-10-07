@@ -20,6 +20,11 @@ export const loginSchema = z
 export class LoginDto extends createZodDto(loginSchema) {}
 
 /** Mobile clients have no cookie jar, so they hand the token back in the body. */
-export const refreshSchema = z.object({ refreshToken: z.string().min(1).optional() }).strict();
+export const refreshSchema = z
+  .object({ refreshToken: z.string().min(1).optional() })
+  .strict()
+  // A browser sends no body at all (the token rides in the cookie), and Express 5
+  // leaves `req.body` undefined then — without this default that is a 422.
+  .default({});
 
 export class RefreshDto extends createZodDto(refreshSchema) {}

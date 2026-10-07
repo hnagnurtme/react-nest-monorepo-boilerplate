@@ -5,7 +5,8 @@
     "fullName": "Họ tên",
     "email": "Email",
     "role": "Vai trò",
-    "status": "Trạng thái"
+    "status": "Trạng thái",
+    "actions": "Thao tác"
   },
   "status": {
     "active": "Hoạt động",
@@ -19,5 +20,47 @@
     "next": "Sau",
     "summary": "Trang {{page}} / {{totalPages}} ({{total}} người dùng)"
   },
-  "back": "Trang chủ"
+  "back": "Trang chủ",
+  "roles": {
+    "PLATFORM_ADMIN": "Quản trị nền tảng",
+    "TENANT_ADMIN": "Quản trị tenant",
+    "TENANT_MEMBER": "Thành viên tenant"
+  },
+  "actions": {
+    "activate": "Kích hoạt",
+    "deactivate": "Vô hiệu hóa",
+    "delete": "Xóa",
+    "confirmDelete": "Xóa người dùng {{email}}? Hành động này không thể hoàn tác.",
+    "updateSuccess": "Đã cập nhật người dùng.",
+    "updateError": "Không thể cập nhật người dùng.",
+    "deleteSuccess": "Đã xóa người dùng.",
+    "deleteError": "Không thể xóa người dùng."
+  },
+  "create": {
+    "open": "Tạo người dùng",
+    "title": "Tạo người dùng",
+    "fullName": "Họ tên",
+    "email": "Email",
+    "phone": "Số điện thoại (tùy chọn)",
+    "phonePlaceholder": "+84901234567",
+    "password": "Mật khẩu",
+    "role": "Vai trò",
+    "tenant": "Tenant",
+    "tenantPlaceholder": "Chọn tenant",
+    "cancel": "Hủy",
+    "submit": "Tạo người dùng",
+    "success": "Đã tạo người dùng.",
+    "duplicateEmail": "Email này đã được sử dụng.",
+    "error": "Không thể tạo người dùng.",
+    "validation": {
+      "fullNameMin": "Họ tên phải có ít nhất 2 ký tự",
+      "fullNameMax": "Họ tên tối đa 100 ký tự",
+      "emailRequired": "Vui lòng nhập email",
+      "emailInvalid": "Địa chỉ email không hợp lệ",
+      "phone": "Số điện thoại không hợp lệ",
+      "passwordMin": "Mật khẩu phải có ít nhất 8 ký tự",
+      "roleNotAllowed": "Bạn không thể gán vai trò này",
+      "tenantRequired": "Vui lòng chọn tenant"
+    }
+  }
 }

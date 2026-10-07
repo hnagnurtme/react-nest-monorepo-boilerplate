@@ -714,6 +714,16 @@
       "post": {
         "operationId": "TenantsController_create_v1",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTenantDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "The created tenant",
@@ -876,6 +886,16 @@
       "patch": {
         "operationId": "TenantsController_update_v1",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTenantDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "The updated tenant",
@@ -1086,6 +1106,16 @@
       "post": {
         "operationId": "UsersController_create_v1",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "The created user",
@@ -1290,6 +1320,16 @@
       "patch": {
         "operationId": "UsersController_update_v1",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "The updated user",
@@ -1427,7 +1467,7 @@
     }
   },
   "info": {
-    "title": "API",
+    "title": "Starter App API",
     "description": "Success responses are wrapped in `{ data, meta? }`; errors follow RFC 9457 Problem Details with `application/problem+json`.",
     "version": "1.0.0",
     "contact": {}
@@ -1470,7 +1510,8 @@
             "type": "string",
             "minLength": 1
           }
-        }
+        },
+        "default": {}
       },
       "ForgotPasswordDto": {
         "type": "object",
@@ -1524,6 +1565,97 @@
           "currentPassword",
           "newPassword"
         ]
+      },
+      "CreateTenantDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100
+          },
+          "slug": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            "maxLength": 60
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "UpdateTenantDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CreateUserDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 256
+          },
+          "fullName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100
+          },
+          "phoneNumber": {
+            "type": "string",
+            "pattern": "^\\+?[0-9]{7,15}$"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 256
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "PLATFORM_ADMIN",
+              "TENANT_ADMIN",
+              "TENANT_MEMBER"
+            ]
+          },
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "email",
+          "fullName",
+          "password",
+          "role"
+        ]
+      },
+      "UpdateUserDto": {
+        "type": "object",
+        "properties": {
+          "fullName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100
+          },
+          "phoneNumber": {
+            "type": "string",
+            "pattern": "^\\+?[0-9]{7,15}$",
+            "nullable": true
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
       }
     }
   }

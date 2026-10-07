@@ -8,9 +8,9 @@ owner: Platform Team
 
 # Tài liệu Kỹ thuật
 
-Tài liệu chia làm ba nhóm, đọc theo thứ tự khi onboard:
+Tài liệu viết bằng tiếng Việt (README, `setup.md` và `AGENTS.md` ở thư mục gốc viết bằng tiếng Anh). Ba nhóm, đọc theo thứ tự khi onboard:
 
-1. **Thiết kế** (`00`–`06`) — kiến trúc hệ thống hoạt động _như thế nào_.
+1. **Thiết kế** (`00`–`06`, không có `05`) — kiến trúc hệ thống hoạt động _như thế nào_.
 2. **Quy tắc** ([`rules/`](rules/)) — code phải viết _ra sao_. Bắt buộc đọc trước PR đầu tiên.
 3. **Quyết định** ([`adr/`](adr/)) — _vì sao_ chọn phương án này thay vì phương án khác.
 
@@ -24,8 +24,8 @@ Tài liệu chia làm ba nhóm, đọc theo thứ tự khi onboard:
 | 01  | [Monorepo & Tooling](01-monorepo-va-tooling.md)         | Turborepo, pnpm, tsconfig, ESLint boundaries             | ✅ stable  |
 | 02  | [Backend Core & RLS](02-backend-core-va-drizzle-rls.md) | 5 tầng NestJS, Drizzle, Postgres RLS, envelope, RFC 9457 | ✅ stable  |
 | 03  | [Auth & Phân quyền](03-auth-flow-va-casl-abac.md)       | Xác thực, token rotation, CASL ABAC multi-tenant         | ✅ stable  |
-| 04  | [Frontend Web](04-frontend-react-va-shadcn.md)          | React 19, Vite, Tailwind v4, shadcn/ui, TanStack Query   | ✅ stable  |
-| 06  | [Observability & CI/CD](06-observability-va-ci-cd.md)   | Pino, OpenTelemetry, GitHub Actions                      | 🚧 draft   |
+| 04  | [Frontend Web](04-frontend-react-va-shadcn.md)          | React 19, Vite, Tailwind v4, HTTP client, TanStack Query | ✅ stable  |
+| 06  | [Observability & CI](06-observability-va-ci-cd.md)      | Pino, OpenTelemetry, GitHub Actions (repo chỉ có CI)     | ✅ stable  |
 
 ## 2. Quy tắc Code — [`rules/`](rules/)
 

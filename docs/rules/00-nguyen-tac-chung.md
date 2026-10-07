@@ -42,7 +42,7 @@ class ProjectService {
 
 **Dấu hiệu vi phạm:** mô tả class phải dùng chữ "và"; file service vượt ~300 dòng; import cả `MailerService` lẫn `BillingService` lẫn `ReportService`.
 
-**Cưỡng chế:** 👀 review. Cảnh báo mềm: `max-lines` ESLint ở ngưỡng 300.
+**Cưỡng chế:** 👀 review. (ESLint `max-lines` được cố ý tắt trong `packages/eslint-config`.)
 
 ### A2. Open/Closed — mở rộng bằng adapter mới, không sửa code cũ 🤖
 
@@ -68,7 +68,7 @@ export interface PaymentProvider {
 // Thêm nhà cung cấp = thêm 1 file + đăng ký vào module. Không chạm code cũ.
 ```
 
-**Cưỡng chế:** 🤖 gián tiếp — `eslint-plugin-boundaries` cấm `modules/` biết tới chi tiết nhà cung cấp, buộc phải đi qua interface ở `integrations/`.
+**Cưỡng chế:** 🤖 gián tiếp — ESLint cấm `modules/` import `axios`, `node-fetch`, `stripe`, SDK bên thứ ba và `fetch`, buộc phải đi qua adapter ở `integrations/` (job `conventions` của CI cũng grep `axios` trong `modules/`).
 
 ### A3. Liskov — implement rồi thì đừng ném "chưa hỗ trợ" 👀
 
@@ -112,7 +112,7 @@ class ProjectService {
 }
 ```
 
-**Cưỡng chế:** 🤖 `eslint-plugin-boundaries` + `no-restricted-imports` cấm import `axios` ngoài `integrations/`.
+**Cưỡng chế:** 🤖 `no-restricted-imports` cấm import `axios` và SDK bên thứ ba trong `modules/` (xem A2); việc inject qua constructor là 👀.
 
 ---
 
@@ -163,7 +163,7 @@ const displayName = name;
 
 ## Phần C. Viết code dễ đọc
 
-### C1. Early return, không lồng sâu 🤖
+### C1. Early return, không lồng sâu 👀
 
 **Quy tắc:** độ sâu lồng tối đa **3**. Vượt quá ➔ tách hàm hoặc dùng early return.
 
@@ -186,22 +186,23 @@ function process(order: Order) {
 }
 ```
 
-**Cưỡng chế:** 🤖 `max-depth: ['error', 3]`, `complexity: ['warn', 12]`.
+**Cưỡng chế:** 👀 review (`max-depth` và `complexity` được cố ý tắt trong ESLint config).
 
-### C2. Cấm magic number và magic string 🤖
+### C2. Cấm magic number và magic string 👀
 
 ```typescript
 // ❌
-if (user.role === 'TENANT_ADMIN') { ... }
+if (attempts > 5) { ... }
 setTimeout(fn, 86400000);
 // ✅
-if (user.role === UserRole.TENANT_ADMIN) { ... }
+const MAX_LOGIN_ATTEMPTS = 5;
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+if (attempts > MAX_LOGIN_ATTEMPTS) { ... }
 ```
 
-**Ngoại lệ được phép:** `0`, `1`, `-1`, và `2` trong ngữ cảnh toán học hiển nhiên.
+**Ngoại lệ được phép:** `0`, `1`, `-1`, và `2` trong ngữ cảnh toán học hiển nhiên; chuỗi thuộc một union literal có kiểu (ví dụ `user.role === 'TENANT_ADMIN'` với `UserRole` từ `@repo/shared-types`) vì compiler đã kiểm tra.
 
-**Cưỡng chế:** 🤖 `no-magic-numbers` với `ignore: [0, 1, -1, 2]`.
+**Cưỡng chế:** 👀 review (`no-magic-numbers` được cố ý tắt trong ESLint config).
 
 ### C3. Immutability mặc định 🤖
 
@@ -227,7 +228,7 @@ function withTax(order: Order): Order {
 
 Không trộn lời gọi nghiệp vụ cấp cao với thao tác chuỗi/byte cấp thấp trong cùng một hàm.
 
-### C5. Giới hạn tham số 🤖
+### C5. Giới hạn tham số 👀
 
 Quá **3** tham số ➔ gom thành object có tên.
 
@@ -236,7 +237,7 @@ Quá **3** tham số ➔ gom thành object có tên.
 // ✅ createOrder(input: CreateOrderInput)
 ```
 
-**Cưỡng chế:** 🤖 `max-params: ['error', 3]`.
+**Cưỡng chế:** 👀 review (`max-params` được cố ý tắt trong ESLint config).
 
 ---
 
@@ -259,15 +260,15 @@ const amountVnd = payload.vnp_Amount / 100;
 1. Đoạn code trông như thừa/sai nhưng cố ý (workaround, thứ tự bắt buộc).
 2. Công thức nghiệp vụ (làm tròn, tính thuế, tỉ giá).
 3. Mọi `eslint-disable` — bắt buộc có `-- lý do`.
-4. Mọi `TODO` — bắt buộc kèm tên người và issue: `// TODO(anh): xử lý refund một phần — #142`.
+4. Việc tồn đọng ghi thành issue, không để `TODO` trong code. Nếu buộc phải để, kèm tên người và issue: `// TODO(anh): xử lý refund một phần — #142`.
 
-**Cưỡng chế:** 🤖 `no-warning-comments` cấm `TODO` không có định dạng trên.
+**Cưỡng chế:** 🤖 `no-warning-comments` cảnh báo mọi comment bắt đầu bằng `todo`/`fixme`; vì CI chạy lint với `--max-warnings=0`, nó thực tế chặn merge.
 
-### D3. Cấm code chết 🤖
+### D3. Cấm code chết 👀
 
 Code bị comment lại **phải xóa**. Git nhớ hộ rồi.
 
-**Cưỡng chế:** 🤖 `no-commented-out-code` qua `eslint-plugin-unused-imports` + review.
+**Cưỡng chế:** 👀 review (`no-unused-vars`/`@typescript-eslint` bắt biến và import thừa, không bắt code bị comment).
 
 ---
 
@@ -324,16 +325,16 @@ Tên file khớp export chính. `project.service.ts` export `ProjectService`.
 
 `import` ➔ `type`/`interface` ➔ hằng số ➔ export chính ➔ hàm phụ.
 
-### F3. Barrel file chỉ ở ranh giới public 🤖
+### F3. Barrel file chỉ ở ranh giới public 👀
 
 `index.ts` chỉ tồn tại ở ranh giới module/feature để khai báo API công khai. **Cấm** barrel trong thư mục nội bộ — nó tạo import vòng và phá tree-shaking.
 
-**Cưỡng chế:** 🤖 `import/no-cycle`, `boundaries/entry-point`.
+**Cưỡng chế:** 🤖 `import/no-cycle` và `boundaries/entry-point` (module/feature khác chỉ import qua `index.ts`); việc không tạo barrel nội bộ là 👀.
 
-### F4. Giới hạn kích thước 🤖
+### F4. Giới hạn kích thước 👀
 
-- File: cảnh báo ở 300 dòng, lỗi ở 500.
-- Hàm: cảnh báo ở 50 dòng.
-- Component React: lỗi ở 200 dòng ➔ tách.
+- File: nên dưới ~300 dòng.
+- Hàm: nên dưới ~50 dòng.
+- Component React: quá 200 dòng ➔ tách.
 
-**Cưỡng chế:** 🤖 `max-lines`, `max-lines-per-function`.
+**Cưỡng chế:** 👀 review (`max-lines` và `max-lines-per-function` được cố ý tắt trong ESLint config).

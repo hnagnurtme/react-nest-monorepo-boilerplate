@@ -1,18 +1,17 @@
-import type { operations } from '@repo/api-contract';
+import type { components, operations } from '@repo/api-contract';
 
 import type { PageMeta } from '@/lib/http/types';
 
-type AuthUser = NonNullable<
-  operations['AuthController_login_v1']['responses'][200]['content']['application/json']['data']
->['user'];
+type UserListBody =
+  operations['UsersController_list_v1']['responses'][200]['content']['application/json'];
 
-/** User row as returned by GET /api/v1/users (public fields from the contract's user shape). */
-export type UserListItem = AuthUser & {
-  phoneNumber?: string | null;
-  isActive?: boolean;
-};
+/** User row as returned by the users endpoints (typed by the API contract). */
+export type UserListItem = UserListBody['data'][number];
 
 export interface UsersPage {
   items: UserListItem[];
   meta: PageMeta;
 }
+
+export type CreateUserBody = components['schemas']['CreateUserDto'];
+export type UpdateUserBody = components['schemas']['UpdateUserDto'];

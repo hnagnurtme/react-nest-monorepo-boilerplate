@@ -8,7 +8,7 @@ export const ACCESS_TOKEN_SECURITY_SCHEME = 'access-token';
 
 type OpenApiSchema = Record<string, unknown>;
 
-const PUBLIC_USER_SCHEMA = {
+const PUBLIC_USER_SCHEMA: OpenApiSchema = {
   type: 'object',
   required: ['id', 'email', 'fullName', 'role'],
   properties: {
@@ -18,9 +18,9 @@ const PUBLIC_USER_SCHEMA = {
     role: { type: 'string', enum: USER_ROLES },
     tenantId: { type: 'string' },
   },
-} as const satisfies OpenApiSchema;
+};
 
-const AUTH_BODY_SCHEMA = {
+const AUTH_BODY_SCHEMA: OpenApiSchema = {
   type: 'object',
   required: ['accessToken', 'user'],
   properties: {
@@ -29,7 +29,7 @@ const AUTH_BODY_SCHEMA = {
     refreshToken: { type: 'string' },
     csrfToken: { type: 'string' },
   },
-} as const satisfies OpenApiSchema;
+};
 
 function dataEnvelope(schema: OpenApiSchema): OpenApiSchema {
   return {
@@ -55,7 +55,7 @@ export const ApiPublicUserResponse = (description: string): MethodDecorator =>
     schema: dataEnvelope(PUBLIC_USER_SCHEMA),
   });
 
-const FORGOT_PASSWORD_SCHEMA = {
+const FORGOT_PASSWORD_SCHEMA: OpenApiSchema = {
   type: 'object',
   required: ['message', 'expiresInSeconds'],
   properties: {
@@ -65,15 +65,15 @@ const FORGOT_PASSWORD_SCHEMA = {
     },
     expiresInSeconds: { type: 'integer', example: 300 },
   },
-} as const satisfies OpenApiSchema;
+};
 
-const MESSAGE_ONLY_SCHEMA = {
+const MESSAGE_ONLY_SCHEMA: OpenApiSchema = {
   type: 'object',
   required: ['message'],
   properties: {
     message: { type: 'string', example: 'Operation completed successfully.' },
   },
-} as const satisfies OpenApiSchema;
+};
 
 export const ApiForgotPasswordResponse = (description: string): MethodDecorator =>
   ApiResponse({

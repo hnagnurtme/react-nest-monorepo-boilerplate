@@ -23,6 +23,8 @@ const csvToArray = (value: string): string[] =>
 export const envSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+    /** Product name shown in emails and the API docs. */
+    APP_NAME: z.string().trim().min(1).default('Starter App'),
     PORT: z.coerce.number().int().positive().default(DEFAULT_PORT),
     API_PREFIX: z.string().min(1).default('api'),
     LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
@@ -78,7 +80,7 @@ export const envSchema = z
       .transform((value) => value === 'true'),
     SMTP_USER: z.string().default(''),
     SMTP_PASS: z.string().default(''),
-    SMTP_FROM: z.string().default('App <no-reply@example.com>'),
+    SMTP_FROM: z.string().default('Starter App <no-reply@example.com>'),
   })
   .superRefine((env, ctx) => {
     if (env.JWT_ACCESS_SECRET === env.JWT_REFRESH_SECRET) {

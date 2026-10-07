@@ -32,4 +32,4 @@ Phân quyền ở tầng ứng dụng (CASL) vẫn tồn tại — nhưng vai tr
 
 **Đánh đổi chấp nhận:** nhận thêm độ phức tạp vận hành và một lớp debug khó hơn, để đổi lấy việc loại bỏ hoàn toàn cả một nhóm lỗi bảo mật. Với hệ thống multi-tenant, đây là đánh đổi đúng.
 
-**Rủi ro đã gặp:** bản thiết kế đầu tiên dùng **hai** policy PERMISSIVE (tenant + public) và bị thủng, vì Postgres OR chúng lại. Đó là lý do quy tắc "một policy mỗi bảng" được ghi thành luật cứng ở [rules/03-database-drizzle.md](../rules/03-database-drizzle.md).
+**Rủi ro cần tránh:** hai policy PERMISSIVE trên cùng một bảng bị Postgres OR lại với nhau và làm thủng cách ly. Vì vậy "một policy mỗi bảng" là luật cứng, được test `coverage` kiểm tra và ghi ở [rules/03-database-drizzle.md](../rules/03-database-drizzle.md).

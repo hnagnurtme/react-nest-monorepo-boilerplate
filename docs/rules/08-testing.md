@@ -14,13 +14,13 @@ owner: Platform Team
 
 ### A1. Kim tự tháp test 👀
 
-| Loại        | Tỉ lệ | Công cụ                 | Chạy khi                               |
-| :---------- | :---- | :---------------------- | :------------------------------------- |
-| Unit        | ~60%  | Vitest                  | Mỗi lần lưu file                       |
-| Integration | ~30%  | Vitest + Testcontainers | Mỗi PR                                 |
-| E2E         | ~10%  | Playwright              | Mỗi PR (luồng chính), nightly (đầy đủ) |
+| Loại        | Tỉ lệ | Công cụ                                                                  | Chạy khi         |
+| :---------- | :---- | :----------------------------------------------------------------------- | :--------------- |
+| Unit        | ~60%  | Vitest                                                                   | Mỗi lần lưu file |
+| Integration | ~30%  | Vitest + Postgres/Redis thật (service container ở CI, `just up` ở local) | Mỗi PR           |
+| E2E         | ~10%  | Chưa có (nếu thêm: Playwright)                                           | —                |
 
-### A2. Cái gì bắt buộc phải có test 🤖
+### A2. Cái gì bắt buộc phải có test 👀
 
 - **Mọi RLS policy** — không có ngoại lệ (mục C).
 - Mọi hàm tính toán tiền, thuế, hoa hồng, làm tròn.
@@ -36,12 +36,11 @@ Getter/setter thuần, code chỉ gọi thẳng thư viện, DTO chỉ khai báo
 
 ### A4. Ngưỡng coverage 🤖
 
-| Phạm vi                        | Ngưỡng |
-| :----------------------------- | :----- |
-| `apps/api/src/modules/**`      | 80%    |
-| `apps/api/src/common/utils/**` | 95%    |
-| `packages/shared-types/**`     | 90%    |
-| Toàn repo                      | 70%    |
+| Phạm vi                                                             | Ngưỡng                        |
+| :------------------------------------------------------------------ | :---------------------------- |
+| `apps/api/src/modules/**`                                           | 80%                           |
+| `apps/api/src/common/utils/**`                                      | 95%                           |
+| `apps/web` `lib/http/**`, `route-guard.tsx`, `features/auth/api/**` | xem `apps/web/vite.config.ts` |
 
 Coverage là **sàn**, không phải mục tiêu. 100% coverage với `expect(true).toBe(true)` là vô giá trị.
 
@@ -69,7 +68,7 @@ Nhiều `expect` là được, nhưng chỉ một hành động. Test hỏng ph�
 
 Mỗi test tự dựng dữ liệu của nó. Chạy `--shuffle` phải vẫn xanh.
 
-**Cưỡng chế:** 🤖 CI chạy Vitest với `--sequence.shuffle`.
+**Cưỡng chế:** 🤖 `vitest.config.ts` của API bật `sequence.shuffle`.
 
 ### B5. Không mock cái mình đang test 👀
 
@@ -82,11 +81,11 @@ Mock ranh giới (HTTP ngoài, đồng hồ, random), không mock nội bộ. Ph
 const project = makeProject({ priceMinor: -1n });
 ```
 
-### B7. Thời gian và ngẫu nhiên phải kiểm soát được 🤖
+### B7. Thời gian và ngẫu nhiên phải kiểm soát được 👀
 
 `vi.useFakeTimers()`, seed cho random. Test phụ thuộc `Date.now()` thật sẽ đỏ lúc nửa đêm hoặc vào ngày 29/2.
 
-### B8. Cấm `sleep` trong test 🤖
+### B8. Cấm `sleep` trong test 👀
 
 Chờ điều kiện (`waitFor`), không chờ thời gian. `sleep` là nguồn gốc của test flaky.
 
@@ -94,7 +93,7 @@ Chờ điều kiện (`waitFor`), không chờ thời gian. `sleep` là nguồn 
 
 ## Phần C. Test RLS — bắt buộc
 
-### C1. Mỗi bảng có RLS phải có test cách ly 🤖
+### C1. Mỗi bảng có RLS phải có test cách ly 👀 (mẫu thật: `rls-isolation.integration.spec.ts`)
 
 RLS là **ranh giới bảo mật**. Không thể review bằng mắt, chỉ có thể kiểm chứng bằng test.
 
@@ -139,7 +138,7 @@ describe('RLS: projects', () => {
 
 **Vì sao:** role owner bỏ qua RLS. Test chạy bằng owner sẽ **xanh trong khi policy hoàn toàn không hoạt động** — tệ hơn là không có test, vì nó tạo cảm giác an toàn giả.
 
-### C3. Test quét bảng quên bật RLS chạy trong mọi lần CI 🤖
+### C3. Test quét bảng quên bật RLS chạy trong job `integration` 🤖
 
 Xem [02-backend-core-va-drizzle-rls.md](../02-backend-core-va-drizzle-rls.md) mục 2.6.
 
@@ -147,15 +146,15 @@ Xem [02-backend-core-va-drizzle-rls.md](../02-backend-core-va-drizzle-rls.md) m�
 
 ## Phần D. Integration test
 
-### D1. Dùng Testcontainers, không dùng DB dùng chung 🤖
+### D1. Dùng Postgres thật, không mock/SQLite 🤖
 
-**Vì sao:** DB dùng chung làm test phụ thuộc nhau, không chạy song song được, và đỏ ngẫu nhiên khi hai nhánh CI chạy cùng lúc. Postgres thật trong container mới kiểm chứng được RLS — SQLite in-memory thì không.
+CI dùng service container Postgres 16 + Redis 7 riêng cho mỗi run; local dùng `just up`. Vì dùng chung một DB, integration spec chạy tuần tự (`fileParallelism: false`) và mỗi test dùng dữ liệu riêng hoặc rollback. Chỉ Postgres thật mới kiểm chứng được RLS.
 
 ### D2. Migration chạy trên container, không seed schema bằng tay 👀
 
 Test luôn chạy trên đúng schema mà projection sẽ có.
 
-### D3. Mỗi test tự dọn dẹp 🤖
+### D3. Mỗi test tự dọn dẹp 👀
 
 Truncate trong `afterEach`, hoặc bọc mỗi test trong transaction rồi rollback.
 
@@ -165,11 +164,11 @@ Truncate trong `afterEach`, hoặc bọc mỗi test trong transaction rồi roll
 
 ### E1. Chỉ test luồng người dùng thật sự quan trọng 👀
 
-Đăng ký, đăng nhập, quản lý user trong tenant. Không E2E cho mọi ô input.
+Đăng nhập, quản lý user/tenant bởi admin. Không E2E cho mọi ô input.
 
 ### E2. Page Object Model 👀
 
-### E3. Selector dùng `data-testid`, không dùng class hay text 🤖
+### E3. Selector dùng `data-testid`, không dùng class hay text 👀
 
 Class CSS và text hiển thị thay đổi liên tục.
 

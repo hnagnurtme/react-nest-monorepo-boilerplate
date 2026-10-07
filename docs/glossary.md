@@ -14,33 +14,34 @@ owner: Platform Team
 
 ## 1. Chủ thể
 
-| Dùng            | Không dùng                       | Nghĩa                                                                                 |
-| :-------------- | :------------------------------- | :------------------------------------------------------------------------------------ |
-| `Tenant`        | Organization, Workspace, Account | Một không gian làm việc độc lập; đơn vị cách ly dữ liệu. Mỗi user thuộc đúng 1 tenant |
-| `PlatformAdmin` | SuperAdmin, Root, Owner          | Quản trị viên nền tảng (`PLATFORM_ADMIN`), không thuộc tenant nào, thấy mọi tenant    |
-| `TenantAdmin`   | Owner, Manager                   | Quản trị viên của một tenant (`TENANT_ADMIN`); người đăng ký đầu tiên của tenant      |
-| `TenantMember`  | Employee, Staff                  | Thành viên thường của tenant (`TENANT_MEMBER`)                                        |
-| `User`          | Account, Profile                 | Bản ghi danh tính gốc; mọi vai trò trên đều là `User` có `role` khác nhau             |
+| Dùng            | Không dùng                       | Nghĩa                                                                                                        |
+| :-------------- | :------------------------------- | :----------------------------------------------------------------------------------------------------------- |
+| `Tenant`        | Organization, Workspace, Account | Một không gian làm việc độc lập; đơn vị cách ly dữ liệu. Mỗi user (trừ `PLATFORM_ADMIN`) thuộc đúng 1 tenant |
+| `PlatformAdmin` | SuperAdmin, Root, Owner          | Quản trị viên nền tảng (`PLATFORM_ADMIN`), không thuộc tenant nào, thấy mọi tenant                           |
+| `TenantAdmin`   | Owner, Manager                   | Quản trị viên của một tenant (`TENANT_ADMIN`); do `PLATFORM_ADMIN` tạo cùng tenant                           |
+| `TenantMember`  | Employee, Staff                  | Thành viên thường của tenant (`TENANT_MEMBER`)                                                               |
+| `User`          | Account, Profile                 | Bản ghi danh tính gốc; mọi vai trò trên đều là `User` có `role` khác nhau                                    |
 
 > Thuật ngữ nghiệp vụ riêng của dự án (ví dụ `Project`, `Invoice`) được thêm vào bảng này khi bạn thêm entity mới, kèm cột "Không dùng".
 
 ## 2. Trạng thái & Ngữ cảnh truy cập
 
-| Dùng          | Nghĩa                                                                |
-| :------------ | :------------------------------------------------------------------- |
-| `access_mode` | Biến session Postgres điều khiển RLS. Hai giá trị: `tenant`, `admin` |
-| `tenant_id`   | Cột (và biến session `app.tenant_id`) xác định tenant sở hữu bản ghi |
-| `isActive`    | Bản ghi còn hiệu lực (đối lập với bị đình chỉ/vô hiệu hóa)           |
-| `deletedAt`   | Soft delete. **Không** dùng cột `isDeleted`                          |
+| Dùng          | Nghĩa                                                                          |
+| :------------ | :----------------------------------------------------------------------------- |
+| `access_mode` | Biến session Postgres điều khiển RLS. Hai giá trị: `tenant`, `admin`           |
+| `tenant_id`   | Cột (và biến session `app.tenant_id`) xác định tenant sở hữu bản ghi           |
+| `isActive`    | Bản ghi còn hiệu lực (đối lập với bị đình chỉ/vô hiệu hóa)                     |
+| `deletedAt`   | Soft delete. **Không** dùng cột `isDeleted`                                    |
+| `audit_logs`  | Bảng ghi ai làm gì (`user.create`, `tenant.update`, ...), ghi cùng transaction |
 
 ## 3. Hạ tầng
 
-| Dùng           | Nghĩa                                                     |
-| :------------- | :-------------------------------------------------------- |
-| `apps/api`     | NestJS backend                                            |
-| `apps/web`     | React SPA                                                 |
-| `integrations` | Tầng outbound adapter gọi hệ thống bên ngoài (hiện trống) |
-| `modules`      | Tầng lát cắt nghiệp vụ (`auth`, `users`, `health`)        |
+| Dùng           | Nghĩa                                                         |
+| :------------- | :------------------------------------------------------------ |
+| `apps/api`     | NestJS backend                                                |
+| `apps/web`     | React SPA                                                     |
+| `integrations` | Tầng outbound adapter gọi hệ thống bên ngoài (hiện trống)     |
+| `modules`      | Tầng lát cắt nghiệp vụ (`auth`, `users`, `tenants`, `health`) |
 
 ## 4. Quy ước đặt tên theo ngữ cảnh
 

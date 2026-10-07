@@ -26,7 +26,7 @@ config ◀── common ◀── core ◀── integrations ◀── modules
 | `integrations` | `config`, `common`, `core`        | Outbound adapter (email, thanh toán, lưu trữ... khi bạn thêm) | Quy tắc nghiệp vụ           |
 | `modules`      | tất cả tầng trên + `modules` khác | Lát cắt nghiệp vụ                                             | Lời gọi HTTP trực tiếp      |
 
-**Vì sao:** `common` lỡ import `core` là kéo theo cả Drizzle vào mọi unit test của hàm `formatMoney`. Một mũi tên sai chiều làm sập toàn bộ lợi ích của phân tầng.
+**Vì sao:** `common` lỡ import `core` là kéo theo cả Drizzle vào mọi unit test của một hàm tiện ích thuần. Một mũi tên sai chiều làm sập toàn bộ lợi ích của phân tầng.
 
 **Cưỡng chế:** 🤖 `eslint-plugin-boundaries` (xem [01-monorepo-va-tooling.md](../01-monorepo-va-tooling.md)). Vi phạm = CI đỏ.
 
@@ -79,9 +79,9 @@ async create(@Body() dto: CreateProjectDto, @CurrentUser() user: UserContext) {
 }
 ```
 
-**Cưỡng chế:** 🤖 `max-lines-per-function: 15` cho file `*.controller.ts`.
+**Cưỡng chế:** 👀 review.
 
-### B2. Controller không biết tới `Request` / `Response` 🤖
+### B2. Controller không biết tới `Request` / `Response` 👀
 
 ```typescript
 // ❌ Buộc phải dựng cả HTTP server mới test được
@@ -90,13 +90,13 @@ async find(@Req() req: Request, @Res() res: Response) { res.json(...); }
 async find(@CurrentUser() user: UserContext) { return this.service.find(user); }
 ```
 
-**Ngoại lệ:** webhook cần raw body để verify chữ ký — phải kèm comment giải thích.
+**Ngoại lệ:** `@Res({ passthrough: true })` chỉ để set header `Location` cho `201` (xem `UsersController.create`); webhook cần raw body để verify chữ ký — phải kèm comment giải thích.
 
-### B3. Mọi endpoint khai báo OpenAPI 🤖
+### B3. Mọi endpoint khai báo OpenAPI 👀
 
 `@ApiOperation`, `@ApiResponse`, `@ApiTags`. `packages/api-contract` sinh từ spec này; endpoint thiếu decorator ➔ frontend mất type.
 
-**Cưỡng chế:** 🤖 CI kiểm tra spec sinh ra không có `unknown` response.
+**Cưỡng chế:** 👀 review; job `openapi-drift` chỉ bắt spec lệch với code.
 
 ---
 
@@ -170,15 +170,15 @@ Dùng `with` của Drizzle hoặc gom thành một truy vấn `inArray`. Vòng l
 
 ### E1. Validate **mọi** input từ ngoài 🤖
 
-`ValidationPipe` bật `whitelist: true` và `forbidNonWhitelisted: true` ở cấp global — trường không khai báo trong DTO bị loại bỏ, không âm thầm đi tiếp.
+`ZodValidationPipe` (`nestjs-zod`) bật ở cấp global và DTO dùng `.strict()` — trường không khai báo bị từ chối bằng `422`, không âm thầm đi tiếp. Dev runner phải giữ decorator metadata, nếu không pipe bị bỏ qua (xem AGENTS.md).
 
 ### E2. DTO đầu vào ≠ schema DB 👀
 
 Không dùng type suy từ Drizzle làm DTO request. Client không được phép gửi `id`, `tenantId`, `createdAt` — những trường này do server quyết định.
 
-### E3. Không bao giờ tin `tenantId` do client gửi 🤖
+### E3. Không bao giờ tin `tenantId` do client gửi 👀
 
-**Quy tắc:** `tenantId` **luôn** lấy từ JWT qua `@CurrentUser()`, không bao giờ từ body hay query.
+**Quy tắc:** `tenantId` **luôn** lấy từ JWT qua `@CurrentUser()`, không bao giờ từ body hay query. **Ngoại lệ duy nhất:** `POST /users` nhận `tenantId` tùy chọn vì `PLATFORM_ADMIN` chọn tenant; với `TENANT_ADMIN` giá trị khác tenant trong token bị `403`, vắng thì lấy từ token.
 
 ```typescript
 // ❌ Tenant A gửi tenantId của B ➔ ghi đè dữ liệu người khác
@@ -189,9 +189,9 @@ async create(@Body() dto: CreateProjectDto, @CurrentUser() user: UserContext) {
 }
 ```
 
-**Cưỡng chế:** 🤖 CI grep cấm trường tên `tenantId` xuất hiện trong file `*.dto.ts` của request.
+**Cưỡng chế:** 👀 review; không có CI grep cho việc này.
 
-### E4. Tiền tệ là số nguyên đơn vị nhỏ nhất 🤖
+### E4. Tiền tệ là số nguyên đơn vị nhỏ nhất 👀
 
 ```typescript
 // ❌ price: z.number()              // 0.1 + 0.2 = 0.30000000000000004
@@ -221,7 +221,7 @@ modules/projects/
 
 Chỉ export thứ module khác thực sự cần. Repository **không bao giờ** được export.
 
-### F3. Cấm inject bằng string token trần 🤖
+### F3. Cấm inject bằng string token trần 👀
 
 Dùng `Symbol` hoặc hằng số có kiểu, để đổi tên là lỗi compile chứ không phải lỗi runtime.
 

@@ -68,7 +68,7 @@ export async function setupSwagger(app: INestApplication, env: EnvConfig): Promi
     });
 
     const options = new DocumentBuilder()
-      .setTitle('API')
+      .setTitle(`${env.APP_NAME} API`)
       .setDescription('API documentation.')
       .setVersion('1.0.0')
       .addBearerAuth(

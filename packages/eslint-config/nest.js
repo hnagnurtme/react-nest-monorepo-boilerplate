@@ -61,20 +61,32 @@ export const nest = tseslint.config(
         'error',
         {
           paths: [
-            { name: 'axios', message: 'External systems must be called through an adapter in src/integrations/.' },
-            { name: 'node-fetch', message: 'External systems must be called through an adapter in src/integrations/.' },
+            {
+              name: 'axios',
+              message: 'External systems must be called through an adapter in src/integrations/.',
+            },
+            {
+              name: 'node-fetch',
+              message: 'External systems must be called through an adapter in src/integrations/.',
+            },
             { name: 'stripe', message: 'Use an adapter in src/integrations/.' },
             { name: 'ioredis', message: 'Use RedisService from src/core/.' },
           ],
           patterns: [
-            { group: ['@aws-sdk/*', 'openai', '@anthropic-ai/*'], message: 'Third-party SDKs may only be used in src/integrations/.' },
+            {
+              group: ['@aws-sdk/*', 'openai', '@anthropic-ai/*'],
+              message: 'Third-party SDKs may only be used in src/integrations/.',
+            },
             { group: ['../*', '../../*'], message: 'Use a path alias (@/...).' },
           ],
         },
       ],
       'no-restricted-globals': [
         'error',
-        { name: 'fetch', message: 'External systems must be called through an adapter in src/integrations/.' },
+        {
+          name: 'fetch',
+          message: 'External systems must be called through an adapter in src/integrations/.',
+        },
       ],
       // ---- D1: no database queries outside TransactionManager ----
       'no-restricted-syntax': [
@@ -86,9 +98,10 @@ export const nest = tseslint.config(
         },
         {
           // 07-security.md C2: no string concatenation into SQL
-          selector: "CallExpression[callee.property.name='execute'] > TemplateLiteral[expressions.length>0]",
+          selector:
+            "CallExpression[callee.property.name='execute'] > TemplateLiteral[expressions.length>0]",
           message:
-            'No interpolation into SQL. Use Drizzle\'s `sql` tagged template to parameterise. See docs/rules/07-security.md section C2.',
+            "No interpolation into SQL. Use Drizzle's `sql` tagged template to parameterise. See docs/rules/07-security.md section C2.",
         },
       ],
     },

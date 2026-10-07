@@ -84,20 +84,25 @@ export class MailService {
   async sendResetPasswordMail(payload: OtpEmailPayload): Promise<void> {
     const { toEmail, recipientName, otp, ttlMinutes = 5 } = payload;
 
-    this.logger.log(
-      `[MailService RESET-PASSWORD] >>> Reset-password OTP for [${toEmail}]: ${otp} (expires in ${String(ttlMinutes)} min) <<<`,
-    );
+    // The code is logged only when no SMTP transport is configured (local
+    // development); in any environment that really sends mail it is a secret.
+    if (!this.transporter) {
+      this.logger.debug(
+        `[Mail DEV MOCK] Reset-password OTP for [${toEmail}]: ${otp} (expires in ${String(ttlMinutes)} min)`,
+      );
+    }
 
     const renderedHtml = this.renderTemplateFromFile('reset-password.html', {
       recipientName,
       otp,
       ttlMinutes: ttlMinutes.toString(),
       year: new Date().getFullYear().toString(),
+      appName: this.config.appName,
     });
 
     await this.sendMail({
       to: toEmail,
-      subject: `Your password reset code: ${otp}`,
+      subject: `[${this.config.appName}] Your password reset code`,
       html: renderedHtml,
     });
   }

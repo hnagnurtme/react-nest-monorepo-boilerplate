@@ -17,17 +17,30 @@ owner: Platform Team
 ### 1.1 Lưu trữ Token ở Web (`apps/web`)
 
 - Access Token lưu trong bộ nhớ RAM (`Zustand store`, không persist).
-- Refresh Token lưu trong **`httpOnly`, `Secure`, `SameSite=Lax` Cookie** (xem mục 1.4) để triệt tiêu nguy cơ XSS trộm token.
+- Refresh Token lưu trong cookie **`refresh_token`** với `HttpOnly`, `SameSite=Lax`, `Secure` (bật theo `COOKIE_SECURE`; bắt buộc `true` ở production) (xem mục 1.4) để triệt tiêu nguy cơ XSS trộm token.
 - Access token mang các claim: `sub`, `email`, `role`, `tenantId?` (vắng với `PLATFORM_ADMIN`), `jti`. Không có danh sách membership hay cơ chế chuyển tenant: **1 user = 1 tenant**.
 
-### 1.2 Luồng Đăng ký, Đăng nhập & Làm mới Token (`apps/api`)
+### 1.2 Luồng Đăng nhập, Làm mới Token & Quản lý Tài khoản (`apps/api`)
 
-Các endpoint dưới `/api/v1/auth`: `register`, `verify-email`, `resend-otp`, `login`, `refresh`, `forgot-password`, `reset-password`, `change-password`, `logout`, `logout-all`, `me`.
+Các endpoint dưới `/api/v1/auth`: `login`, `refresh`, `logout`, `logout-all`, `me`, `forgot-password`, `reset-password`, `change-password`.
 
-1. **Đăng ký** (`POST /auth/register`): tạo một tenant tên `"<name>'s workspace"` và user đầu tiên với role `TENANT_ADMIN`, sau đó xác minh email bằng OTP. Việc này chạy trong transaction `admin` mode có `reason` (chưa có tenant context nào để dùng).
-2. **Đăng nhập:** backend set cookie `refreshToken=...; HttpOnly; Secure; SameSite=Lax; Path=/api/v1/auth` và trả body `{ data: { accessToken, user } }`. Refresh token không xuất hiện trong body.
-3. **Single-flight Refresh Token Lock (Phía Client):**
-   - Khi có nhiều request đồng thời bị `401 Unauthorized`, chỉ cho phép đúng **1 request refresh duy nhất** được gọi lên backend.
+**Không có tự đăng ký.** Không có `register`, `verify-email`, `resend-otp`; web không có trang đăng ký hay đăng nhập mạng xã hội. Tài khoản chỉ được tạo bởi admin, qua `POST /tenants` (chỉ `PLATFORM_ADMIN`) và `POST /users`:
+
+| Người gọi        | Tạo được                                                            | `tenantId` trong body                                           |
+| :--------------- | :------------------------------------------------------------------ | :-------------------------------------------------------------- |
+| `PLATFORM_ADMIN` | `PLATFORM_ADMIN` (không tenant), hoặc user bất kỳ trong tenant chọn | bắt buộc với user thuộc tenant; bị từ chối với `PLATFORM_ADMIN` |
+| `TENANT_ADMIN`   | `TENANT_ADMIN` / `TENANT_MEMBER` trong **tenant của chính mình**    | tùy chọn; khác tenant trong token ➔ `403`; vắng ➔ lấy từ token  |
+| `TENANT_MEMBER`  | không tạo được (`403` ở `PoliciesGuard`)                            | —                                                               |
+
+User mới `isActive = true`, `isEmailVerified = true`, với mật khẩu admin đặt (băm Argon2id). Mỗi lần tạo/sửa/xóa user và tạo/sửa tenant đều ghi `audit_logs` (xem doc 02, mục 5). Email trùng ➔ `409 RESOURCE_CONFLICT`.
+
+0. `POST /auth/refresh` và `/auth/logout` chấp nhận request không có body (trình duyệt không gửi body; token nằm trong cookie `refresh_token`).
+1. **Đăng nhập:** backend set hai cookie — `refresh_token` (`HttpOnly; SameSite=Lax; Path=/api/v1/auth`, `Secure` theo `COOKIE_SECURE`) và `csrf_token` (đọc được từ JS, `Path=/`) — rồi trả body `{ data: { accessToken, user, csrfToken } }`. Refresh token không xuất hiện trong body với client web. (Client gửi header `x-client-type: mobile` sẽ nhận `refreshToken` trong body và không có cookie; repo này không có app mobile.)
+2. **Quên mật khẩu:** `forgot-password` gửi OTP 6 số qua email (SMTP; không cấu hình SMTP thì OTP chỉ hiện trong log API), hiệu lực 5 phút, cooldown 60 giây; luôn trả cùng một thông báo dù email có tồn tại hay không. `reset-password` kiểm OTP (lưu trong Redis dưới dạng hash, dùng một lần), đổi mật khẩu và **thu hồi mọi session** của user. Chỉ có OTP reset mật khẩu; không còn OTP xác minh email.
+3. **Đổi mật khẩu:** `change-password` (cần access token) cũng thu hồi mọi session.
+4. **Giới hạn tốc độ** (theo IP, lưu ở Redis): `login` 5/phút, `refresh` 30/phút, `forgot-password` và `reset-password` 5/phút, mặc định 120/phút.
+5. **Single-flight Refresh Token Lock (Phía Client):**
+   - Khi có nhiều request đồng thời bị `401 Unauthorized`, chỉ cho phép đúng **1 request refresh duy nhất** được gọi lên backend (`apps/web/src/lib/http/refresh.ts`), kèm khóa liên tab bằng `navigator.locks` để hai tab không refresh cùng lúc.
    - Các request còn lại xếp hàng đợi và tự động thử lại khi có token mới.
 
 ---
@@ -43,7 +56,7 @@ sessions
 ├─ id            uuid pk
 ├─ user_id       uuid
 ├─ family_id     uuid          -- 1 lần đăng nhập = 1 family
-├─ token_hash    text          -- SHA-256 của refresh token, KHÔNG lưu token gốc
+├─ token_hash    text          -- HMAC-SHA256 (khóa = JWT_REFRESH_SECRET) của refresh token, KHÔNG lưu token gốc
 ├─ parent_id     uuid null     -- token trước đó trong chuỗi rotation
 ├─ used_at       timestamptz null
 ├─ revoked_at    timestamptz null
@@ -65,23 +78,27 @@ sessions
 - Refresh token là **one-time use**. Không bao giờ trả lại đúng refresh token cũ.
 - Chỉ lưu `token_hash`, không lưu token gốc — DB bị lộ thì token vẫn vô dụng.
 - `POST /auth/logout` thu hồi 1 family; `POST /auth/logout-all` thu hồi mọi family của user.
-- Access token mang `jti` để có thể chặn ngay khi cần (denylist Redis, TTL = thời gian sống còn lại của token).
+- Refresh token là chuỗi ngẫu nhiên 32 byte (không phải JWT), nên mỗi lần refresh đều là một lần tra DB để phát hiện token đã dùng.
+- Access token mang `jti`; `logout` và `logout-all` đưa `jti` của token hiện tại vào denylist Redis (`auth:denylist:<jti>`, TTL = thời gian sống của access token), và `JwtAuthGuard` từ chối token nằm trong denylist.
+- `reset-password` và `change-password` thu hồi mọi family của user.
 
 ### 1.4 Lựa chọn `SameSite` cho Refresh Cookie
 
-`SameSite=Strict` an toàn nhất nhưng **cookie sẽ không được gửi kèm khi trình duyệt quay về từ domain khác** — ví dụ redirect trở lại sau OAuth callback. Người dùng vừa trả tiền xong sẽ thấy mình bị đăng xuất.
+`SameSite=Strict` an toàn nhất nhưng **cookie sẽ không được gửi kèm khi trình duyệt quay về từ domain khác** — ví dụ redirect từ trang thanh toán hay từ một liên kết ngoài. Người dùng sẽ thấy mình bị đăng xuất.
 
 Quy ước của boilerplate:
 
-| Thuộc tính | Giá trị                          | Lý do                                                  |
-| :--------- | :------------------------------- | :----------------------------------------------------- |
-| `HttpOnly` | `true`                           | JavaScript không đọc được ➔ XSS không trộm được token  |
-| `Secure`   | `true`                           | Chỉ gửi qua HTTPS                                      |
-| `SameSite` | `Lax`                            | Sống sót qua redirect trả về từ OAuth / liên kết ngoài |
-| `Path`     | `/api/v1/auth`                   | Cookie không bị gửi kèm mọi request API khác           |
-| CSRF       | **Bắt buộc** double-submit token | Bù lại phần `Lax` nới lỏng hơn `Strict`                |
+| Thuộc tính | Giá trị                                      | Lý do                                                     |
+| :--------- | :------------------------------------------- | :-------------------------------------------------------- |
+| `HttpOnly` | `true`                                       | JavaScript không đọc được ➔ XSS không trộm được token     |
+| `Secure`   | `COOKIE_SECURE` (production bắt buộc `true`) | Chỉ gửi qua HTTPS; dev trên `http://localhost` để `false` |
+| `SameSite` | `Lax`                                        | Sống sót qua điều hướng từ liên kết ngoài                 |
+| `Path`     | `/api/v1/auth`                               | Cookie không bị gửi kèm mọi request API khác              |
+| CSRF       | **Bắt buộc** double-submit token             | Bù lại phần `Lax` nới lỏng hơn `Strict`                   |
 
 Chọn `Lax` **bắt buộc** đi kèm CSRF token — thiếu một trong hai là lỗi bảo mật.
+
+**Cách `CsrfMiddleware` hoạt động** (global, `core/middleware/csrf.middleware.ts`): bỏ qua `GET/HEAD/OPTIONS`; nếu request **không có** cookie `csrf_token` thì cho qua (không có session cookie để lợi dụng, ví dụ request bearer thuần hoặc lần đăng nhập đầu); nếu có cookie thì header `x-csrf-token` phải khớp (so sánh constant-time) **và** header `Origin` (nếu có) phải bằng `WEB_ORIGIN`. Hệ quả vận hành: `WEB_ORIGIN` sai ➔ đăng nhập vẫn được nhưng mọi POST/PATCH/DELETE sau đó bị `403 CSRF_VALIDATION_FAILED`; cookie `csrf_token` cũ của dự án khác trên `localhost` gây lỗi tương tự (client web tự xóa cookie và thử lại một lần cho `login`/`refresh`). Xem `setup.md`, mục Troubleshooting.
 
 ---
 
@@ -89,7 +106,7 @@ Chọn `Lax` **bắt buộc** đi kèm CSRF token — thiếu một trong hai l�
 
 ### 2.1 Định nghĩa Ability Builder
 
-Đặt tại `packages/shared-types/src/auth/ability.ts`. Mỗi entity nghiệp vụ là một khóa trong `SubjectShapes`; entity thuộc tenant luôn mang `tenantId` để kiểm tra chủ sở hữu bằng `subject('Name', entity)`.
+Đặt tại `packages/shared-types/src/auth/ability.ts`. Mỗi entity nghiệp vụ là một khóa trong `SubjectShapes`; entity thuộc tenant luôn mang `tenantId` để kiểm tra chủ sở hữu bằng `subject('Name', entity)`. Tóm tắt quyền: `PLATFORM_ADMIN` ➔ `manage all`; `TENANT_ADMIN` ➔ đọc tenant mình, sửa tenant mình, tạo/sửa/xóa/đọc user trong tenant mình; `TENANT_MEMBER` ➔ đọc tenant mình, đọc user trong tenant mình, sửa hồ sơ chính mình.
 
 ```typescript
 export interface SubjectShapes {
@@ -133,11 +150,11 @@ export function defineAbilityFor(user: UserContext): AppAbility {
 ### 3.1 Cạm bẫy số 1 của CASL: kiểm tra ở mức _type_ không đủ
 
 ```typescript
-// ❌ SAI — tưởng là đã chặn, thực ra không chặn gì cả
+// ❌ SAI cho quyền phụ thuộc điều kiện — tưởng là đã chặn, thực ra không chặn gì cả
 @CheckPolicies((ability) => ability.can('update', 'User'))
 ```
 
-Rule `can('update', 'User', { tenantId })` mang **điều kiện trên thuộc tính**. Khi gọi `ability.can('update', 'User')` với subject là **chuỗi type**, CASL không có instance để so điều kiện ➔ trả `true` nếu tồn tại _bất kỳ_ rule nào cho `User`. Nghĩa là **TENANT_MEMBER vẫn qua được guard ở mức type dù chỉ được sửa hồ sơ của chính mình**.
+Rule `can('update', 'User', { id: user.id })` mang **điều kiện trên thuộc tính**. Khi gọi `ability.can('update', 'User')` với subject là **chuỗi type**, CASL không có instance để so điều kiện ➔ trả `true` nếu tồn tại _bất kỳ_ rule nào cho `User`. Nghĩa là **TENANT_MEMBER vẫn qua được guard ở mức type dù chỉ được sửa hồ sơ của chính mình**.
 
 ➔ Guard chỉ là **lớp 1: chặn sớm theo vai trò**. Bắt buộc phải có **lớp 2** sau khi đã load entity.
 
@@ -151,29 +168,37 @@ export class UsersController {
   @CheckPolicies((ability) => ability.can('read', 'User'))
   list(@Query() query: ListUsersDto) { ... }
 
-  @Patch(':id')
-  @CheckPolicies((ability) => ability.can('update', 'User')) // lớp 1: lọc vai trò không có quyền gì
-  update(@Param('id') id: string, @Body() dto: UpdateUserDto) { ... }
+  @Post()
+  @CheckPolicies((ability) => ability.can('create', 'User')) // TENANT_MEMBER không có rule `create` ➔ 403
+  create(@CurrentUser() actor: AuthContext, @Body() dto: CreateUserDto, ...) { ... }
+
+  // GET/PATCH/DELETE :id không gắn @CheckPolicies: quyền phụ thuộc bản ghi cụ thể,
+  // nên chỉ lớp 2 (service) mới trả lời được.
 }
 ```
 
-Tác dụng: loại bỏ ngay các vai trò hoàn toàn không có quyền (ví dụ ngữ cảnh không có tenant ➔ `403` mà không tốn một truy vấn DB nào).
+Tác dụng: loại bỏ ngay các vai trò hoàn toàn không có quyền (ví dụ ngữ cảnh không có tenant, hay `TENANT_MEMBER` gọi `POST /users` ➔ `403` mà không tốn một truy vấn DB nào). `tenants` làm tương tự (`POST /tenants` chỉ `PLATFORM_ADMIN` qua được).
 
 ### 3.3 Lớp 2 — Kiểm tra trên instance (bắt buộc)
 
 ```typescript
 import { subject } from '@casl/ability';
-import { ForbiddenError } from '@casl/ability';
 
 @Injectable()
 export class UsersService {
   async update(actor: AuthContext, id: string, dto: UpdateUserDto) {
-    const existing = await this.loadOrThrow(id);
+    const existing = await this.loadOrThrow(id); // RLS: user của tenant khác ➔ 404
 
     // ✅ ĐÚNG — CASL so điều kiện { tenantId } / { id } với dữ liệu thật
-    this.assertCan(actor, 'update', existing); // dùng subject('User', existing) bên trong
+    this.assertCan(actor, 'update', existing); // bên trong: ability.can(action, subject('User', {...}))
+    // đổi isActive cần quyền `delete` — `TENANT_MEMBER` không tự khóa/mở tài khoản của mình
+    if (dto.isActive !== undefined) this.assertCan(actor, 'delete', existing);
 
-    return this.transactions.runInRequestContext((tx) => this.repository.update(tx, id, toPatch(dto)));
+    return this.transactions.runInRequestContext(async (tx) => {
+      const row = await this.repository.update(tx, id, toPatch(dto));
+      await this.audit.record(tx, { actorId: actor.id, action: 'user.update', ... });
+      return row;
+    });
   }
 }
 ```
@@ -182,59 +207,57 @@ Service ném domain error (`ForbiddenActionError`, `ResourceNotFoundError`), kh�
 
 `subject('User', user)` gắn nhãn type cho object thuần để CASL biết áp rule nào. Thiếu bước này, CASL không nhận diện được object ➔ ném lỗi hoặc trả sai.
 
+Với `create`, service còn tự tính tenant đích (`resolveTenantId`) từ actor + DTO rồi mới kiểm tra `subject('User', { id: 'new', tenantId })`, vì quyền tạo của `TENANT_ADMIN` bị ràng buộc theo `tenantId`.
+
 ### 3.4 Ba lớp phòng thủ độc lập
 
-| Lớp                               | Vị trí           | Chặn được gì                                | Chặn hụt gì                               |
-| :-------------------------------- | :--------------- | :------------------------------------------ | :---------------------------------------- |
-| 1. `PoliciesGuard`                | Trước controller | Sai vai trò                                 | Sai tenant/chủ sở hữu (không có instance) |
-| 2. `throwUnlessCan(subject(...))` | Trong service    | Sai tenant, sai chủ sở hữu                  | Lỗi dev quên gọi                          |
-| 3. **Postgres RLS**               | Trong database   | Mọi truy vấn, kể cả khi dev quên lớp 1 và 2 | —                                         |
+| Lớp                                    | Vị trí           | Chặn được gì                                | Chặn hụt gì                               |
+| :------------------------------------- | :--------------- | :------------------------------------------ | :---------------------------------------- |
+| 1. `PoliciesGuard`                     | Trước controller | Sai vai trò                                 | Sai tenant/chủ sở hữu (không có instance) |
+| 2. `ability.can(action, subject(...))` | Trong service    | Sai tenant, sai chủ sở hữu                  | Lỗi dev quên gọi                          |
+| 3. **Postgres RLS**                    | Trong database   | Mọi truy vấn, kể cả khi dev quên lớp 1 và 2 | —                                         |
 
-Lớp 3 là **chốt chặn cuối cùng và là lớp đáng tin nhất** vì nó không phụ thuộc vào việc lập trình viên có nhớ hay không. Xem [02-backend-core-va-drizzle-rls.md](02-backend-core-va-drizzle-rls.md). Hai lớp trên tồn tại để trả về mã lỗi `403` tường minh thay vì `404`/rỗng khó hiểu do RLS lọc mất.
+Lớp 3 là **chốt chặn cuối cùng và là lớp đáng tin nhất** vì nó không phụ thuộc vào việc lập trình viên có nhớ hay không. Xem [02-backend-core-va-drizzle-rls.md](02-backend-core-va-drizzle-rls.md). Hai lớp trên tồn tại để trả về mã lỗi `403` tường minh thay vì rỗng khó hiểu do RLS lọc mất. Lưu ý quy ước: bản ghi của tenant khác bị RLS ẩn nên service trả `404`, còn `403` dành cho sai vai trò hoặc sai quyền sở hữu trong cùng tenant.
 
 ## 4. Thực thi Phân quyền tại Frontend (`apps/web`)
 
-### 4.1 `AbilityProvider` & `<Can>` Component
+### 4.1 `AbilityProvider` & `CanAction`
+
+Cùng hàm `defineAbilityFor` của backend chạy ở web (`apps/web/src/features/auth/ability/`). User lấy từ store Zustand `entities/session` (access token và user chỉ nằm trong RAM).
 
 ```tsx
-import { createContext, useMemo } from 'react';
-import { createContextualCan } from '@casl/react';
-import { AbilityBuilder, createMongoAbility } from '@casl/ability';
-import { useAuthStore } from '@/features/auth/store';
-import { defineAbilityFor, type AppAbility } from '@repo/shared-types';
-
-/** Ability rỗng cho khách chưa đăng nhập — không bao giờ để context là null. */
-const anonymousAbility = new AbilityBuilder<AppAbility>(createMongoAbility).build();
-
-export const AbilityContext = createContext<AppAbility>(anonymousAbility);
-export const Can = createContextualCan(AbilityContext.Consumer);
-
-export function AbilityProvider({ children }: { children: React.ReactNode }) {
+// ability-context.tsx (rút gọn)
+export function AbilityProvider({ children }: { children: ReactNode }) {
   const user = useAuthStore((s) => s.user);
 
   // useMemo là BẮT BUỘC: thiếu nó, mỗi lần render tạo một object ability mới
-  // ➔ context thay đổi tham chiếu ➔ toàn bộ cây <Can> re-render vô ích.
-  const ability = useMemo(() => (user ? defineAbilityFor(user) : anonymousAbility), [user]);
+  // ➔ context đổi tham chiếu ➔ toàn bộ cây con re-render vô ích.
+  const ability = useMemo<AppAbility>(
+    () => (user ? defineAbilityFor(toUserContext(user)) : defineAnonymousAbility()),
+    [user],
+  );
 
   return <AbilityContext.Provider value={ability}>{children}</AbilityContext.Provider>;
 }
 ```
 
-Sử dụng trong giao diện:
+Sử dụng trong giao diện (`CanAction`, export từ `@/features/auth`):
 
 ```tsx
-<Can I="create" a="User">
-  <Button onClick={openCreateModal}>Thêm người dùng</Button>
-</Can>
+<CanAction I="create" a="User">
+  <Button onClick={openCreateUserForm}>{t('actions.create')}</Button>
+</CanAction>
 ```
 
-Với kiểm tra trên bản ghi cụ thể, dùng `this` thay vì `a`:
+Với kiểm tra trên bản ghi cụ thể, dùng `this` thay vì `a` (và gắn nhãn bằng `subject('User', user)`):
 
 ```tsx
-<Can I="update" this={subject('User', user)}>
-  <Button onClick={openEditModal}>Sửa</Button>
-</Can>
+<CanAction I="update" this={subject('User', user)}>
+  <Button onClick={openEditModal}>{t('actions.edit')}</Button>
+</CanAction>
 ```
+
+`RouteGuard` (`app/components/route-guard.tsx`) bọc các route cần đăng nhập, nhận `allowedRoles` và/hoặc `checkAbility`.
 
 ### 4.2 Frontend authz chỉ là UX, không phải bảo mật
 
@@ -246,11 +269,14 @@ Hệ quả thực tế: **cấm** dùng `<Can>` làm nơi duy nhất quyết đ�
 
 ## 5. Checklist Thực thi
 
-- [ ] Đăng nhập trên web ➔ refresh token nằm trong cookie `HttpOnly; Secure; SameSite=Lax; Path=/api/v1/auth`, **không** xuất hiện trong response body.
-- [ ] Đăng ký ➔ tạo đúng 1 tenant `"<name>'s workspace"` và 1 user `TENANT_ADMIN` thuộc tenant đó.
+- [ ] Đăng nhập trên web ➔ refresh token nằm trong cookie `refresh_token` (`HttpOnly; SameSite=Lax; Path=/api/v1/auth`, `Secure` ở production), **không** xuất hiện trong response body.
+- [ ] Không có route đăng ký: `POST /api/v1/auth/register` trả `404`.
+- [ ] `PLATFORM_ADMIN` tạo tenant rồi tạo `TENANT_ADMIN` cho tenant đó; `TENANT_ADMIN` tạo user trong tenant mình thì được, truyền `tenantId` của tenant khác thì nhận `403`; `TENANT_MEMBER` gọi `POST /users` nhận `403`.
 - [ ] `document.cookie` trong DevTools **không** đọc được refresh token.
 - [ ] Gọi `/auth/refresh` 2 lần với **cùng** một refresh token ➔ lần 2 trả `401` **và** toàn bộ family bị thu hồi (kiểm tra `revoked_at` trong bảng `sessions`).
 - [ ] Bắn 5 request đồng thời khi access token hết hạn ➔ log xác nhận chỉ có **1** lần gọi `/auth/refresh`.
-- [ ] `TENANT_MEMBER` gọi `PATCH /users/:id` với `id` của user khác trong cùng tenant ➔ nhận `403` từ lớp 2.
+- [ ] `TENANT_MEMBER` gọi `PATCH /users/:id` với `id` của user khác trong cùng tenant ➔ nhận `403` từ lớp 2; với `id` của user ở tenant khác ➔ `404` (RLS).
+- [ ] Đăng nhập thành công rồi `POST` với `Origin` khác `WEB_ORIGIN` ➔ `403 CSRF_VALIDATION_FAILED`.
 - [ ] Xóa lớp 2 tạm thời ➔ vẫn không sửa được dữ liệu của tenant khác (chứng minh RLS là chốt chặn độc lập).
 - [ ] Bảng `sessions` chỉ chứa `token_hash`, grep toàn bảng không thấy token dạng gốc.
+- [ ] `reset-password` thành công ➔ mọi refresh token cũ của user bị thu hồi.

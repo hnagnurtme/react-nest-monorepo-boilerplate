@@ -16,24 +16,18 @@ owner: Platform Team
 
 **Quy tắc:** cấm mọi import chứa `../`. Ra khỏi thư mục hiện tại ➔ dùng alias. Trong cùng thư mục thì `./x` vẫn hợp lệ.
 
-**Vì sao:** `../../../shared/utils/money` không cho biết mình đang ở đâu, gãy ngay khi di chuyển file, và làm mọi thao tác refactor thành thủ công.
+**Vì sao:** `../../../lib/utils` không cho biết mình đang ở đâu, gãy ngay khi di chuyển file, và làm mọi thao tác refactor thành thủ công.
 
 ```typescript
 // ❌
-import { formatMoney } from '../../../shared/utils/money';
-import { ProjectCard } from '../../projects/components/ProjectCard';
+import { cn } from '../../../lib/utils';
+import { UsersTable } from '../../users/components/users-table';
 // ✅
-import { formatMoney } from '@/shared/utils/money';
-import { ProjectCard } from '@/features/projects';
+import { cn } from '@/lib/utils';
+import { UsersPage } from '@/features/users';
 ```
 
-**Cưỡng chế:** 🤖
-
-```javascript
-'no-restricted-imports': ['error', {
-  patterns: [{ group: ['../*'], message: 'Dùng path alias (@/...) thay cho đường dẫn leo cấp.' }],
-}]
-```
+**Cưỡng chế:** 🤖 `no-restricted-imports` với pattern `../*` và `../../*` (`packages/eslint-config/base.js`).
 
 ### A2. Bảng alias chuẩn
 
@@ -41,24 +35,21 @@ Alias được cố định cho toàn monorepo. **Không tự chế alias mới*
 
 #### `apps/api` (NestJS)
 
-| Alias              | Trỏ tới              | Tầng |
-| :----------------- | :------------------- | :--- |
-| `@/config/*`       | `src/config/*`       | 1    |
-| `@/common/*`       | `src/common/*`       | 2    |
-| `@/core/*`         | `src/core/*`         | 3    |
-| `@/integrations/*` | `src/integrations/*` | 4    |
-| `@/modules/*`      | `src/modules/*`      | 5    |
+| Alias            | Trỏ tới            | Tầng |
+| :--------------- | :----------------- | :--- |
+| `@/config`       | `src/config`       | 1    |
+| `@/common`       | `src/common`       | 2    |
+| `@/core`         | `src/core`         | 3    |
+| `@/integrations` | `src/integrations` | 4    |
+| `@/modules`      | `src/modules`      | 5    |
+
+API là ESM (`NodeNext`): import tương đối và import alias tới file đều kèm đuôi `.js` (ví dụ `@/core/errors/index.js`); riêng `@/config` và `@/common` còn có alias tới `index.ts`.
 
 #### `apps/web` (React + Vite)
 
-| Alias          | Trỏ tới          |
-| :------------- | :--------------- |
-| `@/app/*`      | `src/app/*`      |
-| `@/config/*`   | `src/config/*`   |
-| `@/lib/*`      | `src/lib/*`      |
-| `@/shared/*`   | `src/shared/*`   |
-| `@/entities/*` | `src/entities/*` |
-| `@/features/*` | `src/features/*` |
+| Alias | Trỏ tới | Ghi chú                                                                                                                                      |
+| :---- | :------ | :------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@/*` | `src/*` | Một alias duy nhất; các thư mục `app`, `config`, `lib`, `shared`, `entities`, `features` đi sau nó (`@/lib/http/client`, `@/features/users`) |
 
 #### Toàn monorepo
 
@@ -69,15 +60,16 @@ Alias được cố định cho toàn monorepo. **Không tự chế alias mới*
 
 > Khi nhân bản boilerplate sang dự án mới, đổi `@repo/` thành namespace của dự án (xem [00-tong-quan-boilerplate.md](../00-tong-quan-boilerplate.md)).
 
-### A3. Alias phải khai đồng bộ ở 3 nơi 🤖
+### A3. Alias phải khai đồng bộ ở mọi nơi dùng nó 👀
 
-Đây là lỗi hay gặp nhất: khai trong `tsconfig` nên IDE không báo đỏ, nhưng bundler không hiểu ➔ **fail lúc runtime**.
+Đây là lỗi hay gặp nhất: khai trong `tsconfig` nên IDE và `tsc` không báo đỏ, nhưng bundler/test runner không hiểu ➔ **fail lúc chạy**.
 
-| Nơi khai             | File                                                                    | Ai dùng            |
-| :------------------- | :---------------------------------------------------------------------- | :----------------- |
-| 1. TypeScript        | `tsconfig.json` ➔ `compilerOptions.paths`                               | `tsc`, IDE         |
-| 2. Bundler / runtime | `vite.config.ts` (`resolve.alias`) · `nest-cli.json` + `tsconfig-paths` | Lúc build và chạy  |
-| 3. ESLint            | `eslint-import-resolver-typescript`                                     | Quy tắc `import/*` |
+| App        | Nơi khai                                                                                                                                                   |
+| :--------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/api` | `tsconfig.json` ➔ `paths` (cũng được `tsc-alias` dùng khi build) · `vitest.config.ts` ➔ `resolve.alias` · `vitest.integration.config.ts` ➔ `resolve.alias` |
+| `apps/web` | `tsconfig.json` ➔ `paths` · `vite.config.ts` ➔ `resolve.alias` (vitest dùng chung file này)                                                                |
+
+ESLint (`import/no-unresolved`) phân giải alias qua `eslint-import-resolver-typescript` đọc `tsconfig.json`, nên chỉ bắt được alias thiếu ở tsconfig.
 
 ```jsonc
 // tsconfig.json — apps/web
@@ -99,15 +91,15 @@ export default defineConfig({
 });
 ```
 
-**Cưỡng chế:** 🤖 `import/no-unresolved` phát hiện alias khai thiếu ở bất kỳ nơi nào.
+**Cưỡng chế:** 🤖 một phần: `import/no-unresolved` + `tsc` bắt alias thiếu ở tsconfig; thiếu ở vitest/vite chỉ lộ khi chạy test/build.
 
 ### A4. Import xuyên feature chỉ qua public entry 🤖
 
 ```typescript
 // ❌ Thò tay vào ruột feature khác
-import { OrderTable } from '@/features/orders/components/OrderTable';
+import { CreateUserForm } from '@/features/users/components/create-user-form';
 // ✅ Chỉ lấy thứ feature đó chủ động công bố
-import { OrderTable } from '@/features/orders';
+import { UsersPage } from '@/features/users';
 ```
 
 **Cưỡng chế:** 🤖 `boundaries/entry-point`.
@@ -119,7 +111,6 @@ import { OrderTable } from '@/features/orders';
 3. `@repo/*`
 4. Alias nội bộ (`@/...`)
 5. Tương đối cùng thư mục (`./...`)
-6. Import kiểu CSS
 
 Mỗi nhóm cách nhau 1 dòng trắng, trong nhóm sắp theo alphabet.
 
@@ -138,9 +129,11 @@ Mỗi nhóm cách nhau 1 dòng trắng, trong nhóm sắp theo alphabet.
     "strict": true,
     "noUncheckedIndexedAccess": true, // arr[0] có kiểu T | undefined
     "noImplicitOverride": true,
+    "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "useUnknownInCatchVariables": true, // catch (e: unknown)
     "exactOptionalPropertyTypes": true,
+    "noPropertyAccessFromIndexSignature": true, // obj['key'] thay vì obj.key
     "forceConsistentCasingInFileNames": true,
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
@@ -151,7 +144,7 @@ Mỗi nhóm cách nhau 1 dòng trắng, trong nhóm sắp theo alphabet.
 
 **Vì sao `noUncheckedIndexedAccess`:** không có nó, `const first = items[0]` được suy ra là `T` kể cả khi mảng rỗng ➔ `undefined is not an object` lúc runtime. Đây là cờ đắt giá nhất trong danh sách.
 
-**Không được tắt bất kỳ cờ nào ở cấp app.** Cần ngoại lệ ➔ sửa file quy tắc này.
+**Không được tắt bất kỳ cờ nào ở cấp app.** Cần ngoại lệ ➔ sửa file quy tắc này. Ngoại lệ hiện có, nằm ở preset chứ không ở app: `packages/tsconfig/nest.json` tắt `verbatimModuleSyntax` (decorator metadata của Nest cần import giá trị) và dùng `module: NodeNext`.
 
 ---
 
@@ -223,7 +216,7 @@ type State = { status: 'loading' } | { status: 'error'; error: AppError } | { st
 import type { Project } from '@repo/shared-types';
 ```
 
-**Vì sao:** `verbatimModuleSyntax` yêu cầu điều này, và nó tránh import vòng lúc runtime với decorator của NestJS.
+**Vì sao:** `verbatimModuleSyntax` (ở web) yêu cầu điều này, và nó tránh import vòng lúc runtime với decorator của NestJS; ở API ESLint `consistent-type-imports` thay thế vai trò đó.
 
 **Cưỡng chế:** 🤖 `@typescript-eslint/consistent-type-imports`.
 
@@ -246,6 +239,6 @@ export type CreateProjectInput = z.infer<typeof createProjectSchema>;
 //    const tenant = user.tenantId;
 ```
 
-**Ngoại lệ:** `createContext(null!)` cho React context — nhưng xem [04-frontend-react.md](04-frontend-react.md), cách tốt hơn là dùng giá trị mặc định thật.
+Không có ngoại lệ trong lint. Với React context, dùng giá trị mặc định thật thay vì `createContext(null!)` (xem `AbilityContext`, mặc định là ability rỗng).
 
 **Cưỡng chế:** 🤖 `@typescript-eslint/no-non-null-assertion`.

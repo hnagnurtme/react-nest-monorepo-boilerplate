@@ -1,8 +1,8 @@
 # AGENTS.md — AI Agent Guidance & Operating Protocols
 
-> **Source of truth for coding rules:** [`docs/rules/`](docs/rules/) (written in Vietnamese). **Architectural decisions:** [`docs/adr/`](docs/adr/). This file covers only what an agent would likely get wrong without help. Where docs conflict with this file, `docs/` wins.
->
-> This repo is a generic **multi-tenant Auth + Users boilerplate**: `apps/api` (NestJS) and `apps/web` (React SPA). Add your own business entities on top of the `users` reference slice.
+> **Source of truth for coding rules:** [`docs/rules/`](docs/rules/) (written in Vietnamese). **Architectural decisions:** [`docs/adr/`](docs/adr/). This file covers only what an agent would likely get wrong without help. Where docs conflict with this file, `docs/` wins; where docs conflict with the code, the code wins and the docs get fixed.
+
+This is a multi-tenant auth + users boilerplate: `apps/api` (NestJS), `apps/web` (React SPA), `packages/{api-contract,shared-types,eslint-config,tsconfig}`. There is no mobile app and no Python worker.
 
 ---
 
@@ -14,17 +14,24 @@ All build, test, lint, migration, and dev commands **MUST** go through `just`. N
 | :---------------------- | :------------------------------------------------------------------------------------------------ |
 | `just install`          | `pnpm install --frozen-lockfile`                                                                  |
 | `just up` / `just down` | `docker compose up -d` / `docker compose down` (Postgres 16 + Redis 7)                            |
+| `just stop`             | `docker compose stop` and kills listeners on ports 3000 and 5173                                  |
+| `just dev`              | `turbo run dev` (api + web)                                                                       |
 | `just api` / `just web` | `pnpm --filter @repo/<app> dev`                                                                   |
 | `just db-generate`      | `drizzle-kit generate`                                                                            |
 | `just db-migrate`       | `tsx src/core/database/migrate.ts` — **not** `drizzle-kit migrate`                                |
-| `just db-seed`          | seeds two tenants (`Acme Inc.`, `Globex Corp.`) and a platform admin                              |
+| `just db-seed`          | `tsx src/core/database/seed.ts` (dev tenants and accounts)                                        |
 | `just contract`         | export OpenAPI from NestJS → generate `packages/api-contract/src/generated.ts`                    |
 | `just verify`           | format-check → lint → typecheck → test → build → audit (in that order)                            |
 | `just secrets`          | `gitleaks detect --config .gitleaks.toml --no-banner --redact` — requires `brew install gitleaks` |
 
 - `just db-migrate`, `just db-seed`, `just db-studio` require a running Postgres — run `just up` first.
-- `just test` runs **unit tests only**. Integration tests: `pnpm test:integration` (inside `apps/api`).
+- `just test` runs **unit tests only**. Integration tests: `pnpm test:integration` (inside `apps/api`, needs `just up` + `just db-migrate`).
 - Node `>=20.18.0`; package manager `pnpm@9.15.4` (enforced by `packageManager` field).
+- Seed accounts for dev (password `Password123!`): `admin@example.com` (`PLATFORM_ADMIN`), `admin-a@example.com` and `member-a@example.com` (tenant Acme), `admin-b@example.com` (tenant Globex).
+
+### Gotcha: the API dev runner must keep decorator metadata
+
+`apps/api` `dev` runs `node --watch --import @swc-node/register/esm-register src/main.ts`. swc emits decorator metadata and resolves the `@/` aliases. **Do not switch it to `tsx` / esbuild**: they do not emit `emitDecoratorMetadata`, so `ZodValidationPipe` silently skips validation of `@Body()` / `@Query()` DTOs in dev and invalid input reaches the services with no error. Do not use `nest start --watch` either: on this ESM setup it fails on `@/` aliases unless the output is post-processed with `tsc-alias` (only the `build` script does that). `tsx` is still fine for one-off scripts: `migrate.ts`, `seed.ts`, `export-openapi.ts`.
 
 ---
 
@@ -34,6 +41,7 @@ All build, test, lint, migration, and dev commands **MUST** go through `just`. N
 | :--------------------------------------- | :----------------------------------------------------------------- |
 | Any TS/JS file                           | `just typecheck` + `just lint`                                     |
 | Any API endpoint, DTO, or response shape | `just contract` then commit both `openapi.json` and `generated.ts` |
+| Schema, RLS, or auth changes             | integration tests (`pnpm test:integration` in `apps/api`)          |
 | Non-trivial feature or PR                | `just verify`                                                      |
 
 Lint runs with `--max-warnings=0` in CI — zero warnings allowed. Fix the root cause; never suppress with `any` or `@ts-ignore`.
@@ -44,70 +52,64 @@ Lint runs with `--max-warnings=0` in CI — zero warnings allowed. Fix the root 
 
 There are two `DATABASE_URL`-style variables that **must never be swapped**:
 
-| Variable                 | Role                                                               | Used by               |
-| :----------------------- | :----------------------------------------------------------------- | :-------------------- |
-| `DATABASE_URL`           | `boilerplate_app` (DML, `NOBYPASSRLS`)                             | NestJS app at runtime |
-| `MIGRATION_DATABASE_URL` | `postgres` superuser → drops to `boilerplate_owner` via `SET ROLE` | `migrate.ts` only     |
+| Variable                 | Role                                                               | Used by                              |
+| :----------------------- | :----------------------------------------------------------------- | :----------------------------------- |
+| `DATABASE_URL`           | `boilerplate_app` (DML, `NOBYPASSRLS`)                             | NestJS app at runtime                |
+| `MIGRATION_DATABASE_URL` | `postgres` superuser → drops to `boilerplate_owner` via `SET ROLE` | `migrate.ts`, `seed.ts`, drizzle-kit |
 
-Pointing the app at the owner role **silently disables RLS for all queries** — data leaks across tenants with no errors. A third role, `boilerplate_readonly`, exists for reporting.
+Pointing the app at the owner role **silently disables RLS for all queries** — data leaks across tenants with no errors. The env schema rejects identical values, but not a wrong-role value.
 
 **Migration sequence** (`apps/api/src/core/database/migrate.ts`):
 
 1. Connect with `MIGRATION_DATABASE_URL` (superuser, `max: 1` pool so `SET ROLE` is session-local)
-2. Run `sql/00-roles.sql` — creates `boilerplate_owner`, `boilerplate_app` (and readonly) roles
+2. Run `sql/00-roles.sql` — creates `boilerplate_owner`, `boilerplate_app`, `boilerplate_readonly`
 3. `SET ROLE boilerplate_owner` — tables end up owned by this role, not the superuser
 4. Apply Drizzle migrations from `apps/api/drizzle/`
 5. Run `sql/99-grants.sql`
 
-**Schema files** (edit these, never the generated migration SQL):
-`apps/api/src/core/database/schema/` — `tenants.ts`, `users.ts`, `sessions.ts`, `audit-logs.ts`, `index.ts`
+**Schema files** (edit these, never the generated migration SQL): `apps/api/src/core/database/schema/` — `users.ts`, `tenants.ts`, `sessions.ts`, `audit-logs.ts`, `index.ts`.
 
-**Never edit** `apps/api/drizzle/` migration files or `drizzle/meta/` after they are merged to `main`. Fix forward with a new migration. The history is currently one squashed migration, `drizzle/0000_*.sql`, which also holds the hand-written RLS policies.
+**Never edit** `apps/api/drizzle/` migration files or `drizzle/meta/` after they are merged to `main`. Fix forward with a new migration.
 
-**Type conventions** (enforced by CI grep):
+**Type conventions** (the first three are checked by the CI `conventions` job; the rest are review rules):
 
-- Money: `bigint` in minor units, column named `price_minor`, companion `currency_code char(3)`. Never `numeric`/`float`.
-- Timestamps: always `timestamp('...', { withTimezone: true })`. Bare `timestamp()` is rejected.
-- Enums: `text` + `CHECK` constraint (e.g. `ck_users_role`). Not `pgEnum` — `ALTER TYPE ADD VALUE` cannot run inside a transaction and cannot be rolled back.
+- Timestamps: always `timestamp('...', { withTimezone: true })`. Bare `timestamp()` fails CI.
+- Enums: `text` + `CHECK` constraint. `pgEnum` fails CI — `ALTER TYPE ADD VALUE` cannot run inside a transaction and cannot be rolled back.
 - Soft deletes: `deleted_at timestamptz`, not `is_deleted boolean`.
 - Boolean columns: `is_` / `has_` prefix. Timestamp columns: `_at` suffix.
+- Money (when you add it): `bigint` in minor units, named `*_minor`, with a `currency_code char(3)`. There is no money column or util in the boilerplate today.
 
 ---
 
-## 4. Multi-Tenancy & RLS — Invariants That Break Silently
-
-**Model:** table `tenants`; `users.tenant_id` (one user = one tenant; null only for `PLATFORM_ADMIN`, enforced by `ck_users_tenant_role`). Roles: `PLATFORM_ADMIN`, `TENANT_ADMIN`, `TENANT_MEMBER` (`ck_users_role`). Registration creates a tenant (`"<name>'s workspace"`) and its first `TENANT_ADMIN`.
+## 4. RLS — Invariants That Break Silently
 
 Every table needs **both** `ENABLE ROW LEVEL SECURITY` and `FORCE ROW LEVEL SECURITY`. Without `FORCE`, the table-owner role bypasses its own policies (the migration role owns all tables).
 
-**Exactly one policy per table** (`tenants`, `users`, `sessions`, `audit_logs`). Two `PERMISSIVE` policies are `OR`-ed by Postgres — this caused a real security incident (ADR-0003). `sessions` has no `tenant_id` and is admin-only.
+**Exactly one policy per table.** Two `PERMISSIVE` policies are `OR`-ed by Postgres (see ADR-0003).
 
-RLS is controlled by transaction-local session variables set via `set_config(..., true)` (`true` = is_local, resets at transaction end):
+Both rules are checked by the `coverage` tests in `apps/api/src/core/database/__tests__/rls-isolation.integration.spec.ts` (every public table has RLS enabled and forced; at most one policy per table). That is an integration test, so it runs in CI's `integration` job and locally only with Postgres up. There is no separate CI grep for RLS.
 
-- `app.access_mode`: `'admin'` or `'tenant'` only (there is no `'public'` or `'customer'` mode).
-- `app.tenant_id`: the caller's tenant, empty otherwise.
+RLS is controlled by the transaction-local settings `app.access_mode` and `app.tenant_id`, set via `set_config(..., true)` (`true` = is_local, resets at transaction end). Access modes: `'admin'` (needs a `reason`; used by `PLATFORM_ADMIN` and by the auth flow for `sessions`) and `'tenant'` (needs a `tenantId`). There is **no `public` mode**. `sessions` is reachable only in `admin` mode.
 
-`AccessContext` is `{ accessMode: 'tenant', tenantId } | { accessMode: 'admin', reason }` (`core/database/request-context.ts`). Admin mode always requires a `reason` and is logged.
-
-**All business queries must go through `TransactionManager`**:
+**All business queries must go through `TransactionManager`** (`apps/api/src/core/database/transaction.manager.ts`):
 
 ```typescript
 // Correct
-this.txManager.runInTenantContext(user.tenantId, async (tx) => { ... });
-this.txManager.runInRequestContext(async (tx) => { ... });   // context set by JwtAuthGuard
-this.txManager.runAsAdmin('reason for crossing tenants', async (tx) => { ... });
-this.txManager.run({ accessMode: 'tenant', tenantId }, async (tx) => { ... });
+this.transactions.runInRequestContext(async (tx) => { ... });   // context set by JwtAuthGuard
+this.transactions.run({ accessMode: 'admin', reason: 'auth:login' }, async (tx) => { ... });
 
 // NEVER in business code
-this.txManager.raw; // escape hatch only (health probes, migrations)
-db.select();        // direct db access — bypasses RLS setup
+this.transactions.raw; // escape hatch for health probes / migrations only
+db.select();           // direct db access — bypasses RLS setup (ESLint blocks `db.*` in modules/)
 ```
 
-A query outside a `TransactionManager`-managed transaction sees `app.access_mode` unset → **returns zero rows silently** (fail-closed). This manifests as "data disappeared" and is extremely hard to debug. Likewise, a `@Public()` route called without a token gets **no** access context.
+A query outside a `TransactionManager`-managed transaction sees `app.access_mode` unset → **returns zero rows silently** (fail-closed). This manifests as "data disappeared" and is extremely hard to debug.
 
-**RLS testing requirement:** Integration tests must connect as `boilerplate_app`, not `postgres`/owner. Tests using the owner role pass while the policy is completely broken. `vitest.integration.config.ts` sets `fileParallelism: false` — integration specs cannot run in parallel.
+**RLS testing requirement:** integration tests must connect as `boilerplate_app` (`DATABASE_URL`), not `postgres`/owner. Tests using the owner role pass while the policy is completely broken. `vitest.integration.config.ts` sets `fileParallelism: false` — integration specs cannot run in parallel.
 
-**RLS policies are hand-written** below the generated DDL inside the same migration `.sql` file. This is explicitly permitted by rule `03-database-drizzle.md F1`.
+**RLS policies are hand-written** below the generated DDL inside the same migration `.sql` file (rule `03-database-drizzle.md` F1).
+
+**Audit log:** `core/audit/AuditService.record(tx, entry)` writes `audit_logs` inside the caller's transaction (it commits or rolls back with the change). Currently used for `user.create|update|delete` and `tenant.create|update`. Never put password hashes in before/after snapshots.
 
 ---
 
@@ -115,17 +117,17 @@ A query outside a `TransactionManager`-managed transaction sees `app.access_mode
 
 `just contract` runs two steps:
 
-1. Starts NestJS with dummy env vars (no real Postgres/Redis — connections are lazy) and writes `packages/api-contract/openapi.json`
-2. Generates `packages/api-contract/src/generated.ts` from that JSON
+1. Boots NestJS with placeholder env vars (no real Postgres/Redis — connections are lazy) and writes `packages/api-contract/openapi.json`
+2. Generates `packages/api-contract/src/generated.ts` from that JSON (`openapi-typescript`)
 
 **Never manually edit:**
 
 - `packages/api-contract/openapi.json`
 - `packages/api-contract/src/generated.ts`
 
-CI runs an `openapi-drift` job that regenerates and fails on any `git diff`. After any API shape change, run `just contract` and commit both files before opening a PR.
+CI runs an `openapi-drift` job that regenerates and fails on any `git diff`. After any API shape change, run `just contract` and commit both files.
 
-The frontend must consume types **exclusively** from `@repo/api-contract`. Hand-writing response shapes diverges silently.
+The frontend must consume types **exclusively** from `@repo/api-contract` (through `@/lib/http/types`). Hand-writing response shapes diverges silently.
 
 ---
 
@@ -137,43 +139,43 @@ Dependency direction (one-way, enforced by `eslint-plugin-boundaries`):
 config ← common ← core ← integrations ← modules
 ```
 
-- `config/`: Zod env schema (`src/config/env.schema.ts`). Every env var must appear in both this file and `apps/api/.env.example` — CI checks they match. No `.default()` for secrets.
+- `config/`: Zod env schema (`src/config/env.schema.ts`). Every env var must appear in both this file and `apps/api/.env.example` (a convention; CI does not compare them). No `.default()` for secrets.
 - `common/`: Pure helpers, shared decorators, shared DTOs. Cannot import `core`, `integrations`, or `modules`.
-- `core/`: Drizzle, Pino logger, OpenTelemetry, `TransactionManager`, global filters/interceptors/guards.
-- `integrations/`: All outbound HTTP (`axios`, third-party SDKs). Currently empty (README only). Importing `axios` inside `modules/` is a linter error.
-- `modules/`: Business slices (`auth`, `users`, `health`). Cannot call `db.select()` directly.
+- `core/`: Drizzle, Pino logger, OpenTelemetry, `TransactionManager`, audit, auth token service, mail, Redis, CSRF middleware, global filters/interceptors/guards.
+- `integrations/`: Outbound adapters (currently empty). Importing `axios`, `node-fetch`, AWS/OpenAI SDKs, or `ioredis` inside `modules/` is a lint error.
+- `modules/`: Business slices: `auth`, `users`, `tenants`, `health`. Cannot call `db.*` directly.
 
-**Module structure** (`modules/<feature>/`) — `modules/users/` is the reference slice (list/get/update/soft-delete within a tenant):
+The API is **ESM** (`NodeNext`): relative imports carry an explicit `.js` extension, and `@/...` aliases are used for cross-directory imports.
+
+**Module structure** (`modules/<feature>/`):
 
 ```
 <feature>.module.ts
 <feature>.controller.ts
 <feature>.service.ts
 <feature>.repository.ts
+<feature>.openapi.ts
+<feature>.types.ts
 dto/
-errors/
 index.ts   ← the ONLY public surface; Repository is never exported from index
 ```
 
-Services throw domain errors, **not** `HttpException`. `GlobalExceptionFilter` maps them to RFC 9457 responses. Do not `throw new NotFoundException()` in a service.
+Services throw domain errors (`core/errors`), **not** `HttpException`. `GlobalExceptionFilter` maps them to RFC 9457 responses, and also unwraps Drizzle's `cause` to map Postgres SQLSTATE codes (`23505` → 409 `RESOURCE_CONFLICT`, `23503` → 409 `REFERENCE_CONSTRAINT`, `23514` → 422). Do not `throw new NotFoundException()` in a service.
 
-**Repositories add no tenant filter.** Isolation comes from RLS (ADR-0003); do not add `WHERE tenant_id = ...` as a substitute.
-
-**CASL critical pitfall:** `ability.can('update', 'User')` with a string subject ignores all conditions and returns `true`. Ownership checks require `subject('User', entity)` — always. Subjects live in `SubjectShapes` (`packages/shared-types/src/auth/ability.ts`): `User`, `Tenant`. Every tenant-owned subject carries `tenantId`. Add your own entities by extending `SubjectShapes`.
-
-**Auth:** access token claims are `sub`, `email`, `role`, `tenantId?`, `jti`. There are no memberships and no active-tenant switching.
-
-**Adding a tenant-scoped entity:** follow the checklist in `docs/02-backend-core-va-drizzle-rls.md` section 9 (schema with `tenant_id` + RLS policy → repository → service ability check → contract → web).
+**CASL critical pitfall:** `ability.can('update', 'User')` with a string subject ignores all conditions and returns `true`. Ownership checks require `subject('User', entity)` — always. `@CheckPolicies` on a controller is layer 1 (role only); the service re-checks on the loaded record (layer 2); RLS is layer 3.
 
 ---
 
 ## 7. API Design Conventions
 
-- All endpoints prefixed `/api/v1`. No unversioned endpoints.
-- `tenantId` must **never** be accepted from the client in request DTOs — always read from the JWT via `@CurrentUser()`. (Note: today `ci.yml` has no grep enforcing this; rely on review.)
-- All endpoints are authenticated by default (global `JwtAuthGuard`). Public endpoints require `@Public()` — omitting it gives a silent `401`.
-- `ValidationPipe` is global with `whitelist: true` + `forbidNonWhitelisted: true`. Extra fields are rejected.
+- All endpoints prefixed `/api/v1`. No unversioned endpoints (except `/healthz`, `/readyz`).
+- **Tenant comes from the JWT, not the client.** `tenantId` must not appear in request DTOs, with one exception: `POST /users` accepts an optional `tenantId` because a `PLATFORM_ADMIN` chooses the tenant for the new user. For a `TENANT_ADMIN` the value is validated against the token (a different value is rejected, an absent one is filled from the token). Any other DTO with `tenantId` is a bug. This is a review rule; there is no CI grep for it.
+- Roles: `PLATFORM_ADMIN` (no tenant), `TENANT_ADMIN`, `TENANT_MEMBER`. There is **no self sign-up**: `POST /auth/register`, `/auth/verify-email`, `/auth/resend-otp` do not exist. Accounts are created only by admins (`POST /tenants`, `POST /users`); created users are active and email-verified.
+- Remaining auth endpoints: `login`, `refresh`, `logout`, `logout-all`, `me`, `forgot-password` (OTP by email), `reset-password`, `change-password`.
+- All endpoints are authenticated by default (global `JwtAuthGuard`). Public endpoints require `@Public()` — omitting it gives a `401`.
+- Validation is `ZodValidationPipe` (global, `nestjs-zod`) with `.strict()` DTO schemas, so extra fields are rejected with 422. There is no class-validator `ValidationPipe`.
 - `201 POST` must include a `Location` header. `204 DELETE` has no body.
+- Lists use offset pagination: `?page=1&limit=20` (max 100), `sortBy` must be allow-listed per repository.
 
 **Response envelope — always:**
 
@@ -184,12 +186,18 @@ Services throw domain errors, **not** `HttpException`. `GlobalExceptionFilter` m
 
 Never return a bare array — no place to add `meta` later without a breaking change.
 
-**Error format:** RFC 9457 with `Content-Type: application/problem+json`. Must include `code` (stable `SCREAMING_SNAKE_CASE`), `traceId`, and `invalidParams` for validation failures.
+**Error format:** RFC 9457 with `Content-Type: application/problem+json`. Includes `code` (stable `SCREAMING_SNAKE_CASE`, see `common/constants/error-codes.ts`), `traceId` when a span is active, and `invalidParams` for validation failures.
 
 **Health endpoints** (excluded from `/api` prefix):
 
 - `/healthz` — liveness: must NOT check DB. Failure → container restart.
 - `/readyz` — readiness: checks DB + Redis. Failure → traffic removed.
+
+**Auth/CSRF facts that bite:**
+
+- Web clients get the refresh token in an httpOnly `refresh_token` cookie (`Path=/api/v1/auth`, `SameSite=Lax`) plus a readable `csrf_token` cookie. `CsrfMiddleware` (global) only enforces when a `csrf_token` cookie is present: it then needs a matching `x-csrf-token` header **and** `Origin === WEB_ORIGIN`. `WEB_ORIGIN` must equal the web dev origin (`http://localhost:5173`), or POSTs fail with 403 once the cookie exists. A stale `csrf_token` cookie set by another project on `localhost` causes the same 403 (see `setup.md`).
+- `POST /auth/refresh` and `/auth/logout` accept a missing body: the browser sends none and the token comes from the `refresh_token` cookie.
+- Login is throttled per IP (5/min), refresh 30/min, forgot/reset 5/min; the counters live in Redis, so a dead Redis breaks auth.
 
 ---
 
@@ -199,17 +207,20 @@ From `packages/tsconfig/base.json` (do not disable at app level):
 
 - `noUncheckedIndexedAccess: true` — `arr[0]` is `T | undefined`. Every array access needs a guard.
 - `exactOptionalPropertyTypes: true` — `{ foo?: string }` means the property can be absent or `string`, not `string | undefined`.
-- `verbatimModuleSyntax: true` — type-only imports **must** use `import type { X }`. Especially important with NestJS decorators to avoid circular runtime imports.
 - `useUnknownInCatchVariables: true` — `catch (error: unknown)`, never assume `.message` exists.
 - `noPropertyAccessFromIndexSignature: true` — index signatures require bracket notation.
+- `verbatimModuleSyntax: true` in `base.json` (web); `packages/tsconfig/nest.json` turns it **off** for the API so Nest decorator metadata keeps working. Still use `import type` for type-only imports (ESLint `consistent-type-imports`).
 
-Banned by ESLint:
+Enforced by ESLint (`packages/eslint-config`):
 
-- `any` (`@typescript-eslint/no-explicit-any: 'error'`) — use `unknown` at boundaries, narrow with Zod.
-- Non-null assertion `!` — except `createContext(null!)` for React contexts.
+- `any` (`no-explicit-any`, `no-unsafe-*`) — use `unknown` at boundaries, narrow with Zod.
+- Non-null assertion `!`.
 - `as` assertions on object literals — use Zod parsing for runtime narrowing.
-- `../` relative imports crossing directory boundaries — use `@/` or `@repo/` aliases.
-- `No React.FC` — TypeScript infers component return types from `.tsx` files.
+- `../` relative imports — use `@/` or `@repo/` aliases.
+- `no-console`, `import/no-cycle`, `import/order`, `unicorn/filename-case`, `consistent-type-definitions: interface`.
+- `React.FC` is a review rule, not a lint rule — still do not use it.
+
+Not enforced by tooling despite older docs: `max-depth`, `complexity`, `max-lines`, `max-params`, `no-magic-numbers` are switched off in the shared config.
 
 ---
 
@@ -217,39 +228,38 @@ Banned by ESLint:
 
 **Two separate Vitest configs in `apps/api`:**
 
-- `vitest.config.ts` — unit tests (`**/*.spec.ts`, excludes `*.integration.spec.ts`). Runs with `--sequence.shuffle`.
-- `vitest.integration.config.ts` — integration tests (`**/*.integration.spec.ts`). `fileParallelism: false`. `testTimeout: 30_000`. Requires live Postgres + Redis.
+- `vitest.config.ts` — unit tests (`src/**/*.spec.ts`, `test/**/*.spec.ts`; excludes `*.integration.spec.ts`). Runs with `sequence.shuffle`, so tests must not depend on order.
+- `vitest.integration.config.ts` — integration tests (`*.integration.spec.ts`). `fileParallelism: false`. `testTimeout: 30_000`. Requires live Postgres + Redis (CI uses service containers, not Testcontainers).
 
-`just test` = unit tests only. Integration tests require `just up` first.
+**Coverage thresholds (Vitest enforces, only when run with coverage):**
 
-**Coverage thresholds (Vitest enforces):**
+- `apps/api` `src/common/utils/**`: lines/functions/statements 95%, branches 90%
+- `apps/api` `src/modules/**`: lines/functions/statements 80%, branches 70%
+- `apps/web`: thresholds on `src/lib/http/**`, `src/lib/auth/**`, `route-guard.tsx`, `features/auth/api/**` (see `apps/web/vite.config.ts`)
+- `src/core/database/schema/**` is excluded from API coverage.
 
-- `src/common/utils/**`: lines/functions/statements 95%, branches 90%
-- `src/modules/**`: lines/functions/statements 80%, branches 70%
-- `src/core/database/schema/**` is excluded from coverage entirely.
+`just test` = unit tests only. Web tests live in `apps/web/test/` (Vitest + Testing Library).
 
 ---
 
-## 10. Package Aliases — Must Be Declared in Three Places
+## 10. Package Aliases — Must Be Declared in All Places
 
-Adding a new alias requires updating all three simultaneously or builds/IDE break silently.
+Adding a new alias requires updating every place or builds/tests break silently.
 
-**`apps/api`:** `tsconfig.json` paths + `vitest.config.ts` `resolve.alias` + `vitest.integration.config.ts` `resolve.alias`
-**`apps/web`:** `tsconfig.json` paths + `vite.config.ts` `resolve.alias` + ESLint import resolver
+**`apps/api`:** `tsconfig.json` paths + `vitest.config.ts` `resolve.alias` + `vitest.integration.config.ts` `resolve.alias`.
+**`apps/web`:** `tsconfig.json` paths + `vite.config.ts` `resolve.alias` (ESLint resolves through the tsconfig).
 
-Canonical aliases:
-
-| App           | Alias                                                                | Target           |
-| :------------ | :------------------------------------------------------------------- | :--------------- |
-| `apps/api`    | `@/config`, `@/common`, `@/core`, `@/integrations`, `@/modules`      | `src/<layer>`    |
-| `apps/web`    | `@/app`, `@/config`, `@/lib`, `@/shared`, `@/entities`, `@/features` | `src/<layer>`    |
-| monorepo-wide | `@repo/shared-types`, `@repo/api-contract`                           | `packages/*/src` |
+| App           | Alias                                                           | Target           |
+| :------------ | :-------------------------------------------------------------- | :--------------- |
+| `apps/api`    | `@/config`, `@/common`, `@/core`, `@/integrations`, `@/modules` | `src/<layer>`    |
+| `apps/web`    | `@/*` (one catch-all alias)                                     | `src/*`          |
+| monorepo-wide | `@repo/shared-types`, `@repo/api-contract`                      | `packages/*/src` |
 
 ---
 
 ## 11. Frontend Architecture
 
-**HTTP layer:** All API calls go through `apps/web/src/lib/http/client.ts`. Never use raw `fetch` or `axios` in components.
+**HTTP layer:** All API calls go through `apps/web/src/lib/http/client.ts` (a `fetch` wrapper — there is no axios). Never use raw `fetch` or `axios` in features, entities, or shared (ESLint-enforced). The client unwraps the `{ data }` envelope, attaches the bearer token, adds `x-csrf-token` to unsafe methods, and does single-flight refresh on 401 (`lib/http/refresh.ts`, with a cross-tab lock).
 
 **Dependency direction** (enforced by `eslint-plugin-boundaries`):
 
@@ -259,28 +269,31 @@ app → features → entities → shared → lib → config
 
 Feature A cannot import `features/B/components/Something`. Only `features/B` (its `index.ts` barrel).
 
+**Features:** `auth` (login, forgot/reset password, CASL ability provider), `users` and `tenants` (admin UIs, including the create-user and create-tenant forms), `home`, `status`. There is no sign-up page and no social login.
+
 **State management:**
 
 - TanStack Query — server state (never copy to Zustand)
-- Zustand — global client state only (theme, in-RAM access token)
+- Zustand — global client state only (`entities/session`: user and in-RAM access token)
 - URL search params — filters/pagination
 - `useState` — local UI state
 
-**`shared/ui/`** contains shadcn primitives — do not edit these files. Add variants via `cva` or wrap in `shared/components/`.
+**`shared/ui/`** holds small hand-written primitives (button, input, toast, ...), not generated shadcn output. Add variants rather than domain logic; keep it free of `features/` / `entities/` imports (ESLint-enforced).
 
-**Routes** wired in `apps/web/src/app/router.tsx` last, after the page is ready. All routes use `lazy()` + `<Suspense>`.
+**Routes** wired in `apps/web/src/app/router.tsx` last, after the page is ready. All routes use `lazy()` + `<Suspense>`; protected ones sit inside `RouteGuard`.
 
-**i18n** locale files: `apps/web/src/lib/i18n/locales/{en,vi}/auth.json`.
+**i18n:** `apps/web/src/lib/i18n/locales/{en,vi}/*.json` (`auth`, `users`, ...). The default language is English; Vietnamese is available. Add every new string to both locales.
 
 ---
 
-## 12. CI & Deployment
+## 12. CI Pipeline
 
-- CI only runs on push/PR to `main` and `develop`. No CI on other branches.
-- Editing only `docs/**`, `*.md`, or `AGENTS.md` on a PR to `develop` skips all code quality jobs (`docs_only=true`). PRs into `main` always run the full suite.
-- Only one branch-protection check needed: **`CI Gate`** (aggregates all jobs).
-- Migrations must **not** run in the container startup command — multiple replicas would race.
-- This repo has CI only; there is no CD workflow. Add your own deployment pipeline (`apps/api/Dockerfile` builds the API image).
+- CI only runs on push/PR to `main` and `develop`. No CI on other branches. There is **no CD workflow**.
+- Jobs: `secret-scan`, `commitlint`, `quality` (format + lint with `--max-warnings=0`), `typecheck`, `test-unit` (+ `pnpm audit:ci`), `integration` (Postgres 16 + Redis 7 service containers, runs `db:migrate` twice to prove idempotency, then `test:integration` as the app role), `openapi-drift`, `conventions` (grep checks, below).
+- `conventions` fails when: a bare `timestamp(` without `withTimezone` appears in `apps/api/src/core/database/schema/*.ts`; `pgEnum(` appears there; or `from 'axios'` appears under `apps/api/src/modules`. Those are the only CI greps. Everything else described as "CI greps ..." in older docs is not implemented.
+- Editing only `docs/**`, `*.md`, or `AGENTS.md` skips the code jobs on PRs to `develop` (`docs_only`); PRs into `main` always run everything.
+- Only one branch-protection check is needed: **`CI Gate`** (aggregates all jobs).
+- Migrations must **not** run in the container startup command — multiple replicas would race. Only `apps/api` has a Dockerfile.
 
 ---
 
@@ -288,10 +301,10 @@ Feature A cannot import `features/B/components/Something`. Only `features/B` (it
 
 When adding a feature that touches both backend and frontend, this order is required:
 
-1. Schema change (with `tenant_id`) → `just db-generate` → `just db-migrate`
+1. Schema change → `just db-generate` → `just db-migrate`
 2. Hand-write RLS policies below the generated DDL in the migration `.sql` file
-3. Write integration tests for RLS isolation (two tenants; verify cross-tenant isolation for read and write, in `tenant` and `admin` modes)
-4. Implement DTOs, repository, service (with `subject(...)` ability check), controller (with OpenAPI decorators)
+3. Write integration tests for RLS isolation (two tenants; verify read, write, and cross-tenant insert)
+4. Implement DTOs, repository, service (with `AuditService` for sensitive writes), controller (with OpenAPI decorators)
 5. `just contract` → commit both `openapi.json` and `generated.ts`
 6. Frontend consumes types from `@repo/api-contract` only
 7. Wire routes in `apps/web/src/app/router.tsx` last
@@ -300,12 +313,12 @@ When adding a feature that touches both backend and frontend, this order is requ
 
 ## 14. Naming Conventions
 
-- The domain term is `Tenant`. Do not invent synonyms (Organization, Workspace, Account); register new business terms in `docs/glossary.md`.
+- Domain terms: use `Tenant` (not Organization, Workspace, Account). See `docs/glossary.md`.
 - Roles: `PLATFORM_ADMIN`, `TENANT_ADMIN`, `TENANT_MEMBER`.
 - Files: `kebab-case` with role suffix — `users.service.ts`, `use-users.ts`.
 - Classes/types/interfaces: `PascalCase`, no `I` prefix (`UsersRepository`, not `IUsersRepository`).
 - Boolean vars: `is`/`has`/`can`/`should` prefix.
-- Async finders: `findX` returns `null`; `findXOrThrow` throws.
+- Async finders: `findX` returns `null`/`undefined`; `findXOrThrow` throws.
 
 ---
 
@@ -324,9 +337,9 @@ ADR constraints in brief:
 
 - **ADR-0001**: Modular monolith — do not split into microservices.
 - **ADR-0002**: Drizzle, not Prisma.
-- **ADR-0003**: Authorization via Postgres RLS, not app-layer filtering.
+- **ADR-0003**: Tenant isolation via Postgres RLS, not app-layer filtering.
 - **ADR-0004**: CASL/ABAC, not plain RBAC.
-- **ADR-0006**: SPA — no Next.js, server components, or `app/`-style routing. (ADR-0005 does not exist: the HMAC M2M decision was removed together with the AI worker.)
+- **ADR-0006**: SPA — no Next.js, server components, or `app/`-style routing. (There is no ADR-0005; the number is unused.)
 
 ---
 
@@ -334,12 +347,11 @@ ADR constraints in brief:
 
 - `.agents/mcp_config.json` is git-ignored. Only `.agents/mcp_config.example.json` (with placeholders) may be committed.
 - `VITE_*` env vars are embedded in the build output — never put secrets there.
-- `ARGON2_MEMORY_COST` must be `>=19456` (OWASP minimum). Do not lower it.
-- File uploads (if you add them) use presigned URLs: client → API for URL → client uploads directly to object storage. Files must not pass through the API body. Magic bytes verify file type, not extension.
-- Idempotency-Key is required for payments, refunds, and bulk notifications, and for any expensive write you add.
-- Run `just secrets` to check for leaked credentials (`brew install gitleaks` required).
+- `ARGON2_MEMORY_COST` must be `>=19456` (OWASP minimum); the env schema enforces it. Do not lower it.
+- Run `just secrets` to check for leaked credentials (`brew install gitleaks` required); the pre-commit hook also runs gitleaks when installed.
+- Rate limiting and the access-token denylist live in Redis (`auth:denylist:<jti>`); refresh tokens are opaque random values stored only as HMAC-SHA256 hashes in `sessions`.
 
-## 19. Git Commit Policy
+## 17. Git Commit Policy
 
 When making commits on behalf of the user (e.g. via `git-master` skill or any omo workflow):
 
@@ -347,8 +359,6 @@ When making commits on behalf of the user (e.g. via `git-master` skill or any om
 - **Never add** any AI attribution lines to commit bodies.
 - Commit messages must contain only: subject line, optional body, and conventional commit fields.
 - The commit author is always the human developer — not the AI agent.
-
-<!-- CODEGRAPH_START -->
 
 ## CodeGraph
 
@@ -358,4 +368,3 @@ In repositories indexed by CodeGraph (a `.codegraph/` directory exists at the re
 - **Shell** (always works): `codegraph explore "<symbol names or question>"` prints the same output.
 
 If there is no `.codegraph/` directory, skip CodeGraph entirely — indexing is the user's decision.
-<!-- CODEGRAPH_END -->

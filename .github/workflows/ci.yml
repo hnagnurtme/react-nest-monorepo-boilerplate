@@ -284,6 +284,35 @@ jobs:
             exit 1
           fi
 
+  # Cheap grep guards for conventions no linter covers (docs/rules/03-database-drizzle.md B2/B6,
+  # docs/rules/02-backend-nestjs.md A2). ESLint already blocks axios in modules; this catches it
+  # even if the lint config is edited.
+  conventions:
+    name: Conventions
+    needs: changes
+    if: needs.changes.outputs.api_any == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: No bare timestamp() in the schema (use withTimezone)
+        run: |
+          if grep -nE "timestamp\(" apps/api/src/core/database/schema/*.ts | grep -v "withTimezone"; then
+            echo "::error::timestamp() without withTimezone in apps/api/src/core/database/schema"
+            exit 1
+          fi
+      - name: No pgEnum in the schema (use text + CHECK)
+        run: |
+          if grep -nE "pgEnum\(" apps/api/src/core/database/schema/*.ts; then
+            echo "::error::pgEnum is banned; use a text column with a CHECK constraint"
+            exit 1
+          fi
+      - name: No axios import in modules (outbound HTTP belongs in integrations)
+        run: |
+          if grep -rnE "from ['\"]axios['\"]" apps/api/src/modules; then
+            echo "::error::axios imported under apps/api/src/modules; use an adapter in src/integrations"
+            exit 1
+          fi
+
   # Aggregator Gate: Single required check for GitHub Branch Protection
   ci-gate:
     name: CI Gate
@@ -296,6 +325,7 @@ jobs:
       - test-unit
       - openapi-drift
       - integration
+      - conventions
     if: always()
     runs-on: ubuntu-latest
     steps:

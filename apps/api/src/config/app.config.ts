@@ -98,6 +98,10 @@ export class AppConfig {
     return this.env.ARGON2_MEMORY_COST;
   }
 
+  get appName(): string {
+    return this.env.APP_NAME;
+  }
+
   get corsOrigins(): string[] {
     return this.env.CORS_ORIGINS;
   }

@@ -17,30 +17,42 @@ owner: Platform Team
 ```
 src/
 ├── config/                  # TẦNG 1: Validate biến môi trường bằng Zod
-│   ├── env.schema.ts
-│   ├── app.config.ts
-│   └── database.config.ts
+│   ├── env.schema.ts        # nguồn sự thật của mọi biến môi trường
+│   ├── app.config.ts        # AppConfig: truy cập env đã validate qua DI
+│   └── load-env-file.ts
 │
 ├── common/                  # TẦNG 2: Tiện ích thuần túy, KHÔNG dính DB/Redis/HTTP/FS
-│   ├── constants/           # error-codes, regex
-│   ├── decorators/          # @Public(), @CurrentUser(), @Paginated()
-│   ├── dto/                 # PageQueryDto, CursorPageDto
-│   └── utils/               # money, date, slug, crypto
+│   ├── constants/           # error-codes, http (header, body limit), regex
+│   ├── decorators/          # @Public(), @CurrentUser(), @ClientInfoParam(), @NoEnvelope(), ApiProblemResponses
+│   ├── dto/                 # pageQuerySchema, parseSort, buildPaginationMeta
+│   ├── types/               # AuthContext, ClientInfo
+│   └── utils/               # duration, slug
 │
-├── core/                    # TẦNG 3: Hạ tầng kỹ thuật, nạp 1 lần tại AppModule
-│   ├── database/            # DrizzleModule, TransactionManager, RLS context
-│   ├── logger/              # LoggerModule (Pino + dynamic mixin)
-│   ├── telemetry/           # OpenTelemetry SDK bootstrap
+├── core/                    # TẦNG 3: Hạ tầng kỹ thuật, nạp 1 lần tại CoreModule
+│   ├── database/            # DrizzleModule, TransactionManager, request-context, schema/, sql/, migrate.ts, seed.ts
+│   ├── audit/               # AuditService: ghi audit_logs trong transaction của caller
+│   ├── auth/                # AccessTokenService: ký/verify JWT, denylist jti trong Redis
+│   ├── guards/              # JwtAuthGuard (global), PoliciesGuard + @CheckPolicies
+│   ├── middleware/          # CsrfMiddleware (double-submit)
+│   ├── errors/              # AppError và các domain error
+│   ├── filters/             # GlobalExceptionFilter (RFC 9457)
 │   ├── interceptors/        # TransformInterceptor ({ data, meta })
-│   └── filters/             # GlobalExceptionFilter (RFC 9457)
+│   ├── logger/              # Pino + mixin (traceId, userId, tenantId) + redact
+│   ├── mail/                # MailService (SMTP, template HTML)
+│   ├── openapi/             # hỗ trợ CSRF cho Swagger UI
+│   ├── redis/               # RedisService, throttler storage
+│   └── telemetry/           # OpenTelemetry SDK bootstrap (import đầu tiên của main.ts)
 │
 ├── integrations/            # TẦNG 4: Outbound Adapters gọi hệ thống ngoài (hiện chỉ có README, thêm adapter khi cần)
 │
 └── modules/                 # TẦNG 5: Các lát cắt nghiệp vụ (Feature Slices)
     ├── health/              # /healthz (Liveness) & /readyz (Readiness)
-    ├── auth/                # Đăng ký (tạo tenant + TENANT_ADMIN), login, refresh rotation, OTP, reset mật khẩu
-    └── users/               # list/get/update/soft-delete user trong tenant — slice mẫu 5 tầng
+    ├── auth/                # login, refresh rotation, logout, me, forgot/reset/change password
+    ├── users/               # list/get/create/update/soft-delete user — slice mẫu
+    └── tenants/             # list/get/create/update tenant
 ```
+
+**Không có tự đăng ký.** Tài khoản chỉ do admin tạo: `PLATFORM_ADMIN` tạo tenant (`POST /tenants`) và user ở bất kỳ tenant nào (`POST /users` kèm `tenantId`); `TENANT_ADMIN` tạo `TENANT_ADMIN`/`TENANT_MEMBER` trong tenant của mình. User mới ở trạng thái active + đã xác minh email, với mật khẩu do admin đặt. Các route `auth/register`, `verify-email`, `resend-otp` đã bị gỡ.
 
 ---
 
@@ -48,9 +60,9 @@ src/
 
 ### 2.1 Thiết lập Database Roles trong PostgreSQL
 
-Hệ thống sử dụng **3 database roles** riêng biệt:
+Hệ thống sử dụng **3 database roles** riêng biệt, tạo bởi `src/core/database/sql/00-roles.sql` (idempotent, chạy trước mỗi lần migrate):
 
-1. `boilerplate_owner`: Dùng riêng cho Drizzle Migrations (`drizzle-kit migrate`), có quyền DDL tạo bảng, index, triggers.
+1. `boilerplate_owner`: sở hữu mọi bảng, có quyền DDL. Chỉ dùng cho migration: `migrate.ts` (lệnh `just db-migrate`) kết nối bằng `MIGRATION_DATABASE_URL` (superuser) rồi `SET ROLE boilerplate_owner`. Không dùng `drizzle-kit migrate`.
 2. `boilerplate_app`: Dùng cho ứng dụng NestJS runtime kết nối bình thường, không bypass được RLS (`NOBYPASSRLS`).
 3. `boilerplate_readonly`: Dùng cho báo cáo, phân tích đọc dữ liệu (Read-only replicas).
 
@@ -75,7 +87,7 @@ Kiểu `AccessContext` (`core/database/request-context.ts`) là union phân bi�
 export type AccessContext = { accessMode: 'tenant'; tenantId: string } | { accessMode: 'admin'; reason: string };
 ```
 
-Bảng `sessions` chỉ truy cập được ở chế độ `admin` (luồng auth chạy với `reason` rõ ràng); mọi caller khác thấy bảng rỗng.
+Bảng `sessions` chỉ truy cập được ở chế độ `admin` (luồng auth chạy với `reason` rõ ràng, ví dụ `auth:refresh`); mọi caller khác thấy bảng rỗng. `JwtAuthGuard` suy ra access mode từ role trong token: `PLATFORM_ADMIN` ➔ `admin` (reason `platform-admin:<id>`), role thuộc tenant ➔ `tenant` kèm `tenantId` (token thiếu tenant bị từ chối).
 
 ### 2.3 Transaction-local Session Context
 
@@ -99,12 +111,12 @@ _(Tham số thứ 3 là `true` → biến chỉ sống trong transaction hiện 
 
 - `TransactionManager` có các phương thức: `run(context, fn)`, `runInRequestContext(fn)` (lấy context do `JwtAuthGuard` đặt), `runAsAdmin(reason, fn)`, `runInTenantContext(tenantId, fn)` và `raw` (chỉ cho health probe/migration).
 - Mọi truy vấn nghiệp vụ **phải** nằm trong transaction do `TransactionManager` mở. Query chạy ngoài transaction sẽ không có context → fail-closed.
-- `DATABASE_URL` lúc runtime **phải** trỏ tới role `boilerplate_app`. Role `boilerplate_owner` là chủ sở hữu bảng nên có thể bỏ qua RLS nếu thiếu `FORCE ROW LEVEL SECURITY` — chỉ dùng cho migration.
+- `DATABASE_URL` lúc runtime **phải** trỏ tới role `boilerplate_app`. Role `boilerplate_owner` là chủ sở hữu bảng nên có thể bỏ qua RLS nếu thiếu `FORCE ROW LEVEL SECURITY` — chỉ dùng cho migration. Env schema từ chối `DATABASE_URL === MIGRATION_DATABASE_URL`, nhưng không kiểm tra được bạn trỏ nhầm sang role owner.
 - Nếu dùng PgBouncer, bắt buộc **transaction pooling mode** (session mode sẽ giữ GUC rò sang request khác khi thiếu `is_local = true`).
 
 ### 2.4 Mẫu Bảng có RLS trong Drizzle (bảng `users`)
 
-Schema nằm ở `apps/api/src/core/database/schema/` (`tenants.ts`, `users.ts`, `sessions.ts`, `audit-logs.ts`). Rút gọn:
+Schema nằm ở `apps/api/src/core/database/schema/` (`tenants.ts`, `users.ts`, `sessions.ts`, `audit-logs.ts`). Chỉ sửa các file này rồi `just db-generate`; không sửa tay migration đã merge. Rút gọn:
 
 ```typescript
 export const tenants = pgTable('tenants', {
@@ -155,9 +167,9 @@ CREATE POLICY "users_access_policy" ON "users"
 
 Ghi chú theo bảng:
 
-- `tenants`: policy so khớp trên chính `id` — tenant sửa được hàng của mình nhưng không tạo được tenant khác.
+- `tenants`: policy so khớp trên chính `id` — tenant sửa được hàng của mình nhưng không tạo được tenant khác (`WITH CHECK`).
 - `sessions`: không có `tenant_id`; policy chỉ cho `admin`.
-- `audit_logs`: `tenant_id` nullable (hành động của platform), cùng khuôn `admin OR tenant`.
+- `audit_logs`: `tenant_id` nullable (hành động của platform), cùng khuôn `admin OR tenant`; tenant không ghi được dòng gán cho tenant khác.
 
 ### 2.5 Checklist Bắt buộc Khi Thêm Bảng Mới
 
@@ -166,29 +178,18 @@ Mỗi bảng nghiệp vụ có cột `tenant_id` bắt buộc đi kèm trong cù
 - [ ] `ENABLE ROW LEVEL SECURITY` **và** `FORCE ROW LEVEL SECURITY`.
 - [ ] Đúng **một** policy `FOR ALL`, đặt tên `<table>_access_policy`.
 - [ ] Index trên `tenant_id` (policy chạy trên mọi câu truy vấn, thiếu index là seq scan toàn bảng).
-- [ ] Integration test cách ly: tạo dữ liệu 2 tenant, assert tenant A không đọc/ghi được dữ liệu tenant B ở cả `tenant` và `admin` mode.
+- [ ] Integration test cách ly: tạo dữ liệu 2 tenant, assert tenant A không đọc/ghi được dữ liệu tenant B, và `admin` mode thấy cả hai.
 
-Xem thêm [mục 9](#9-checklist-thêm-một-entity-thuộc-tenant-mới) cho quy trình đầy đủ từ schema tới contract.
+Xem thêm [mục 6](#6-checklist-thêm-một-entity-thuộc-tenant-mới) cho quy trình đầy đủ từ schema tới contract.
 
 ### 2.6 Kiểm tra Tự động — Không Bảng Nào Bị Bỏ Sót
 
-Con người sẽ quên. Chốt chặn bằng một test chạy trong CI:
+Chốt chặn nằm trong integration test, **không** phải một bước riêng của `ci.yml`: describe `coverage` của `apps/api/src/core/database/__tests__/rls-isolation.integration.spec.ts` kiểm tra
 
-```sql
--- Phải trả về 0 dòng. Khác 0 → CI fail.
-SELECT c.relname AS bang_thieu_rls
-FROM pg_class c
-JOIN pg_namespace n  ON n.oid = c.relnamespace
-JOIN pg_attribute a  ON a.attrelid = c.oid
-WHERE n.nspname = 'public'
-  AND c.relkind = 'r'
-  AND a.attname = 'tenant_id'
-  AND a.attnum > 0
-  AND NOT a.attisdropped
-  AND (NOT c.relrowsecurity OR NOT c.relforcerowsecurity);
-```
+1. mọi bảng trong schema `public` đều `relrowsecurity` **và** `relforcerowsecurity`;
+2. không bảng nào có quá một policy (`pg_policies`).
 
-Chạy cùng bộ integration test bằng Testcontainers (xem [08-testing.md](rules/08-testing.md)).
+Test này chạy trong job `integration` của CI (Postgres service container + role `boilerplate_app`); chạy local bằng `pnpm test:integration` trong `apps/api` sau `just up` và `just db-migrate`. Thêm bảng mới mà quên RLS ➔ job `integration` đỏ.
 
 ---
 
@@ -200,18 +201,16 @@ Mọi API response thành công đều tự động được bọc:
 
 ```json
 {
-  "data": { ... },
-  "meta": {
-    "page": 1,
-    "limit": 20,
-    "total": 100
-  }
+  "data": [ ... ],
+  "meta": { "page": 1, "limit": 20, "total": 100, "totalPages": 5 }
 }
 ```
 
+Handler trả `{ items, meta }` ➔ interceptor đổi thành `{ data: items, meta }`; trả object/mảng thường ➔ `{ data }`; `204` không có body. `@NoEnvelope()` bỏ qua việc bọc (stream, file).
+
 Header phản hồi:
 
-- `x-trace-id: 0af7651916cd43dd8448eb211c80319c`
+- `x-trace-id: 0af7651916cd43dd8448eb211c80319c` (khi có span đang hoạt động)
 
 ### 3.2 `GlobalExceptionFilter` (RFC 9457)
 
@@ -225,11 +224,19 @@ Mọi lỗi HTTP / Hệ thống đều trả về:
   "detail": "User with ID '...' does not exist",
   "instance": "/api/v1/users/...",
   "code": "RESOURCE_NOT_FOUND",
-  "invalidParams": []
+  "traceId": "0af7651916cd43dd8448eb211c80319c"
 }
 ```
 
-Content-Type: `application/problem+json`.
+Content-Type: `application/problem+json`. `invalidParams` (`[{ name, reason }]`) chỉ có với lỗi validation (`422 VALIDATION_FAILED`). Danh sách `code` ổn định ở `src/common/constants/error-codes.ts`.
+
+Filter cũng **mở lớp `cause` của lỗi Drizzle** để ánh xạ mã SQLSTATE của Postgres thành lỗi API ổn định, nên service không cần tự bắt lỗi driver:
+
+| SQLSTATE | HTTP | `code`                 | Ví dụ                                    |
+| :------- | :--- | :--------------------- | :--------------------------------------- |
+| `23505`  | 409  | `RESOURCE_CONFLICT`    | tạo user trùng email, tenant trùng slug  |
+| `23503`  | 409  | `REFERENCE_CONSTRAINT` | tham chiếu không tồn tại / còn đang dùng |
+| `23514`  | 422  | `VALIDATION_FAILED`    | vi phạm `CHECK` constraint               |
 
 ---
 
@@ -242,32 +249,42 @@ import { z } from 'zod';
 
 export const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-  PORT: z.coerce.number().default(3000),
+  PORT: z.coerce.number().int().positive().default(3000),
   DATABASE_URL: z.string().url(),
   REDIS_URL: z.string().url(),
+  JWT_ACCESS_SECRET: z.string().min(32),
   // ... xem file thực tế cho danh sách đầy đủ
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;
 ```
 
-Trong `main.ts`: parse env trước khi khởi tạo `NestFactory`. Nếu thiếu biến môi trường, in ra bảng lỗi chi tiết và `process.exit(1)`. Mọi biến phải xuất hiện ở cả `env.schema.ts` lẫn `.env.example`; không dùng `.default()` cho secret.
+`getEnv()` được gọi từ chunk import đầu tiên của `main.ts` (tracer): parse env trước khi khởi tạo `NestFactory`; thiếu hoặc sai biến ➔ in bảng lỗi chi tiết và `process.exit(1)`. Các ràng buộc chéo (`superRefine`): hai JWT secret phải khác nhau, `DATABASE_URL` phải khác `MIGRATION_DATABASE_URL`, và ở production `COOKIE_SECURE=true` + có `COOKIE_DOMAIN`. Secret (`JWT_*_SECRET`, `DATABASE_URL`, ...) không có `.default()`.
+
+Quy ước: mọi biến phải xuất hiện ở cả `env.schema.ts` lẫN `apps/api/.env.example` (giữ đồng bộ trong cùng PR; **chưa có** bước CI so khớp hai file này).
 
 ---
 
-## 5. Checklist Thực thi
+## 5. Audit Log
+
+`AuditService.record(tx, entry)` (`core/audit/audit.service.ts`) thêm một dòng vào `audit_logs` **bằng đúng `tx` của caller**, nên bản ghi commit hoặc rollback cùng thay đổi mà nó mô tả. Hiện được ghi cho `user.create`, `user.update`, `user.delete`, `tenant.create`, `tenant.update`, kèm `actor_id`, `tenant_id`, `resource_type`, `resource_id`, `before_state`/`after_state` (JSON). Không đưa secret (hash mật khẩu) vào snapshot. Bảng này có RLS như các bảng khác: tenant chỉ thấy/ghi dòng của tenant mình. Hiện chưa có endpoint đọc audit log.
+
+---
+
+## 6. Checklist Thực thi
 
 - [ ] `just api` khởi động: thiếu 1 biến env bất kỳ ➔ process exit(1) kèm bảng lỗi Zod, không chạy nửa vời.
 - [ ] `DATABASE_URL` runtime trỏ role `boilerplate_app`; xác nhận `SELECT rolbypassrls FROM pg_roles WHERE rolname='boilerplate_app'` trả `false`.
 - [ ] Test cách ly: seed 2 tenant, ở `access_mode = 'tenant'` của A, `SELECT` không thấy dòng nào của B, `UPDATE` dòng của B trả 0 rows affected.
 - [ ] Test fail-closed: chạy query **không** khai báo `app.access_mode` ➔ trả 0 dòng, không lỗi ngầm.
 - [ ] Test `sessions`: ở `access_mode = 'tenant'` ➔ `SELECT` trả 0 dòng; chỉ `admin` mới đọc được.
-- [ ] Query quét RLS ở mục 2.6 trả về 0 dòng.
+- [ ] Test `coverage` (mục 2.6) xanh: mọi bảng đã `ENABLE` + `FORCE` RLS, mỗi bảng tối đa một policy.
 - [ ] Gọi 1 endpoint lỗi bất kỳ ➔ `Content-Type: application/problem+json`, body đúng RFC 9457, có header `x-trace-id`.
+- [ ] Tạo user trùng email ➔ `409 RESOURCE_CONFLICT` (SQLSTATE `23505` được ánh xạ).
 
 ---
 
-## 9. Checklist thêm một Entity thuộc Tenant mới
+## 7. Checklist thêm một Entity thuộc Tenant mới
 
 Lấy `apps/api/src/modules/users/` làm mẫu. Ví dụ thêm entity `Project`:
 
@@ -276,8 +293,8 @@ Lấy `apps/api/src/modules/users/` làm mẫu. Ví dụ thêm entity `Project`:
 3. **Test cách ly** — thêm integration test (kết nối bằng role `boilerplate_app`) với 2 tenant: đọc, ghi, và `admin` mode.
 4. **Ability** — thêm `Project: { id: string; tenantId: string }` vào `SubjectShapes` trong `packages/shared-types/src/auth/ability.ts`, rồi khai báo `can(...)` theo role trong `defineAbilityFor`.
 5. **Repository** — `projects.repository.ts` chỉ nhận `tx`, **không** lọc `tenant_id` thủ công (RLS lo), không export ra `index.ts`.
-6. **Service** — mọi truy vấn qua `TransactionManager.runInRequestContext`; kiểm tra quyền trên từng bản ghi bằng `ability.can(action, subject('Project', entity))` (không dùng subject chuỗi); ném domain error, không ném `HttpException`.
-7. **Controller + DTO** — `@CheckPolicies(...)` cho quyền cấp route, DTO Zod **không** chứa `tenantId` (lấy từ JWT qua `@CurrentUser()`), decorator OpenAPI đầy đủ; `POST` trả `201` + `Location`; envelope `{ data, meta }`.
+6. **Service** — mọi truy vấn qua `TransactionManager.runInRequestContext`; ghi `AuditService.record(tx, ...)` cho thay đổi nhạy cảm; kiểm tra quyền trên từng bản ghi bằng `ability.can(action, subject('Project', entity))` (không dùng subject chuỗi); ném domain error, không ném `HttpException`.
+7. **Controller + DTO** — `@CheckPolicies(...)` cho quyền cấp route, DTO Zod `.strict()` và **không** chứa `tenantId` (lấy từ JWT qua `@CurrentUser()`; ngoại lệ duy nhất hiện nay là `POST /users`, nơi `PLATFORM_ADMIN` chọn tenant), decorator OpenAPI đầy đủ; `POST` trả `201` + `Location`; envelope `{ data, meta }`.
 8. **Contract** — `just contract`, commit cả `openapi.json` và `generated.ts`.
 9. **Web** — thêm `features/projects/` dùng type từ `@repo/api-contract`, nối route trong `app/router.tsx` sau cùng.
 10. **Kiểm chứng** — `just typecheck`, `just lint`, `just test`, `pnpm test:integration` (trong `apps/api`), và `just verify` cho thay đổi lớn.

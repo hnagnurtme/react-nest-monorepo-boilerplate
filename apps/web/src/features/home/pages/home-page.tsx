@@ -2,9 +2,11 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
 import { useAuthStore } from '@/entities/session';
+import { useBrand } from '@/shared/hooks';
 
 export function HomePage() {
   const { t } = useTranslation('auth');
+  const brand = useBrand();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const user = useAuthStore((s) => s.user);
   const clearAuth = useAuthStore((s) => s.clearAuth);
@@ -15,8 +17,15 @@ export function HomePage() {
   return (
     <div className="bg-background flex min-h-screen flex-col items-center justify-center p-6 text-center">
       <div className="border-border bg-card max-w-md rounded-2xl border p-8 shadow-sm">
-        <h1 className="text-foreground text-2xl font-bold">{t('header.brandName')}</h1>
-        <p className="text-muted-foreground mt-2 text-sm">{t('header.tagline')}</p>
+        {brand.thumbnailUrl ? (
+          <img
+            src={brand.thumbnailUrl}
+            alt={brand.name}
+            className="mx-auto mb-4 h-24 w-auto rounded-xl object-contain"
+          />
+        ) : null}
+        <h1 className="text-foreground text-2xl font-bold">{brand.name}</h1>
+        <p className="text-muted-foreground mt-2 text-sm">{brand.slogan}</p>
 
         {isAuthenticated && user ? (
           <div className="bg-primary-subtle mt-6 space-y-2 rounded-xl p-4 text-left text-xs">
@@ -26,6 +35,11 @@ export function HomePage() {
             <Link to="/users" className={linkClass}>
               {t('home.users')}
             </Link>
+            {user.role === 'PLATFORM_ADMIN' ? (
+              <Link to="/tenants" className={linkClass}>
+                {t('home.tenants')}
+              </Link>
+            ) : null}
             <button
               type="button"
               onClick={clearAuth}
@@ -38,9 +52,6 @@ export function HomePage() {
           <div className="mt-6 space-y-3">
             <Link to="/login" className={linkClass}>
               {t('form.submit')}
-            </Link>
-            <Link to="/users" className={linkClass}>
-              {t('home.users')}
             </Link>
           </div>
         )}

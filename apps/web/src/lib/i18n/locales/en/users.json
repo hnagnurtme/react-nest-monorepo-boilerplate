@@ -5,7 +5,8 @@
     "fullName": "Name",
     "email": "Email",
     "role": "Role",
-    "status": "Status"
+    "status": "Status",
+    "actions": "Actions"
   },
   "status": {
     "active": "Active",
@@ -19,5 +20,47 @@
     "next": "Next",
     "summary": "Page {{page}} of {{totalPages}} ({{total}} users)"
   },
-  "back": "Home"
+  "back": "Home",
+  "roles": {
+    "PLATFORM_ADMIN": "Platform admin",
+    "TENANT_ADMIN": "Tenant admin",
+    "TENANT_MEMBER": "Tenant member"
+  },
+  "actions": {
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "delete": "Delete",
+    "confirmDelete": "Delete user {{email}}? This cannot be undone.",
+    "updateSuccess": "User updated.",
+    "updateError": "Could not update the user.",
+    "deleteSuccess": "User deleted.",
+    "deleteError": "Could not delete the user."
+  },
+  "create": {
+    "open": "Create user",
+    "title": "Create user",
+    "fullName": "Full name",
+    "email": "Email",
+    "phone": "Phone (optional)",
+    "phonePlaceholder": "+84901234567",
+    "password": "Password",
+    "role": "Role",
+    "tenant": "Tenant",
+    "tenantPlaceholder": "Select a tenant",
+    "cancel": "Cancel",
+    "submit": "Create user",
+    "success": "User created.",
+    "duplicateEmail": "A user with this email already exists.",
+    "error": "Could not create the user.",
+    "validation": {
+      "fullNameMin": "Full name must be at least 2 characters",
+      "fullNameMax": "Full name must be at most 100 characters",
+      "emailRequired": "Please enter an email",
+      "emailInvalid": "Invalid email address",
+      "phone": "Invalid phone number",
+      "passwordMin": "Password must be at least 8 characters",
+      "roleNotAllowed": "You cannot assign this role",
+      "tenantRequired": "Please select a tenant"
+    }
+  }
 }

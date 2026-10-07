@@ -8,7 +8,7 @@ owner: Platform Team
 
 # Kế hoạch Boilerplate 00: Tổng quan Bộ khung Fullstack Đa Dự án (nest-react-turbo-boilerplate)
 
-> **Mục tiêu:** Cung cấp bộ khung Enterprise Modular Monolith hoàn chỉnh, chuẩn mực, chỉ chứa phần **Auth + Users đa tenant** (đăng ký, đăng nhập, refresh-token rotation, OTP, reset mật khẩu, quản lý user trong tenant), sẵn sàng nhân bản để làm nền tảng cho bất kỳ sản phẩm SaaS multi-tenant hoặc hệ thống quản trị nội bộ nào. Nghiệp vụ riêng của dự án được thêm vào sau, theo [checklist thêm entity](02-backend-core-va-drizzle-rls.md#9-checklist-thêm-một-entity-thuộc-tenant-mới).
+> **Mục tiêu:** Cung cấp bộ khung Enterprise Modular Monolith hoàn chỉnh, chuẩn mực, chỉ chứa phần **Auth + Users + Tenants đa tenant** (đăng nhập, refresh-token rotation, reset mật khẩu bằng OTP qua email, admin tạo/quản lý tenant và user, audit log). **Không có tự đăng ký**: tài khoản chỉ do admin tạo, sẵn sàng nhân bản để làm nền tảng cho bất kỳ sản phẩm SaaS multi-tenant hoặc hệ thống quản trị nội bộ nào. Nghiệp vụ riêng của dự án được thêm vào sau, theo [checklist thêm entity](02-backend-core-va-drizzle-rls.md#7-checklist-thêm-một-entity-thuộc-tenant-mới).
 
 ---
 
@@ -38,11 +38,11 @@ owner: Platform Team
 | **Monorepo Manager**  | **Turborepo + pnpm workspaces** | Quản lý đa package, build caching siêu tốc, symlink nội bộ                       |
 | **Backend Framework** | **NestJS 11+**                  | Modular Monolith (5 tầng: `config`, `common`, `core`, `integrations`, `modules`) |
 | **Database & ORM**    | **PostgreSQL 16 + Drizzle ORM** | Hỗ trợ RLS tự nhiên, migration SQL thuần, lightweight connection pool            |
-| **Cache**             | **Redis 7**                     | Caching và các tác vụ cần lưu trạng thái ngắn hạn                                |
+| **Redis**             | **Redis 7**                     | Rate limit (throttler), denylist access token, OTP reset mật khẩu                |
 | **Frontend Web**      | **React 19 + Vite**             | SPA hiệu năng cao, render nhanh, cấu hình build đơn giản                         |
-| **UI Kit & Styling**  | **Tailwind CSS v4 + shadcn/ui** | CSS-first `@theme`, copy-paste primitives dựa trên Radix UI                      |
+| **UI & Styling**      | **Tailwind CSS v4**             | CSS-first `@theme`; primitive viết tay trong `apps/web/src/shared/ui`            |
 | **Phân quyền**        | **CASL (`@casl/ability`)**      | ABAC (Attribute-Based Access Control) dùng chung Backend & Frontend              |
-| **Observability**     | **Pino + OpenTelemetry**        | JSON logging tự động inject `traceId`/`tenantId`, W3C traceparent                |
+| **Observability**     | **Pino + OpenTelemetry**        | JSON logging tự động inject `traceId`/`userId`/`tenantId`, W3C traceparent       |
 
 ---
 
@@ -51,15 +51,17 @@ owner: Platform Team
 ```
 nest-react-turbo-boilerplate/
 ├── apps/
-│   ├── api/                    # NestJS Backend API (tầng src/integrations/ để trống, sẵn sàng dùng)
-│   └── web/                    # React 19 + Vite Frontend SPA
+│   ├── api/                    # NestJS Backend API (modules: auth, users, tenants, health; src/integrations/ để trống)
+│   └── web/                    # React 19 + Vite Frontend SPA (features: auth, users, tenants, home, status)
 │
 ├── packages/
 │   ├── tsconfig/               # Base tsconfigs (strict, noUncheckedIndexedAccess)
 │   ├── eslint-config/          # Quy tắc boundaries và quy chuẩn code
-│   ├── shared-types/           # Enums, ApiResponse<T>, RFC 9457, CASL Ability
-│   └── api-contract/           # Generated API client từ OpenAPI spec
+│   ├── shared-types/           # ApiResponse<T>, ProblemDetails (RFC 9457), UserRole, CASL Ability
+│   └── api-contract/           # Type sinh từ OpenAPI (openapi.json, src/generated.ts)
 │
+├── docs/                       # Tài liệu thiết kế, rules, ADR
+├── justfile                    # Mọi lệnh dev/build/test đi qua `just`
 ├── docker-compose.yml          # PostgreSQL 16 & Redis 7 (local)
 ├── pnpm-workspace.yaml
 ├── turbo.json
@@ -81,25 +83,26 @@ Khi áp dụng bộ khung này cho một dự án mới (ví dụ: `MyAwesomePro
 2. **Đổi tên namespace package:**
    - Thay `@repo/` bằng `@myproject/` trong toàn bộ `package.json` và `tsconfig.json`.
 3. **Đổi tên Database roles:**
-   - Ba role `boilerplate_owner` / `boilerplate_app` / `boilerplate_readonly` xuất hiện trong `docker-compose.yml`, script khởi tạo DB **và trong mệnh đề `TO ...` của mọi RLS policy**. Đổi tên bằng find-and-replace trên toàn repo, bỏ sót một chỗ trong policy là RLS không áp dụng.
-   - Đổi tên Database trong `docker-compose.yml` (ví dụ: `myproject_db`).
+   - Ba role `boilerplate_owner` / `boilerplate_app` / `boilerplate_readonly` xuất hiện trong `apps/api/src/core/database/sql/00-roles.sql` và `99-grants.sql`, `migrate.ts`, mệnh đề `TO ...` của mọi RLS policy trong `apps/api/drizzle/*.sql`, các file `.env.example`, `ci.yml` và integration test. Đổi tên bằng find-and-replace trên toàn repo, bỏ sót một chỗ trong policy là RLS không áp dụng.
+   - Đổi tên Database (`boilerplate_dev`, `boilerplate_test`) trong `docker-compose.yml`, `.env.example` và `ci.yml` (ví dụ: `myproject_db`).
 4. **Cấu hình môi trường:**
-   - Sao chép `apps/api/.env.example` thành `apps/api/.env` (và `apps/web/.env.example` thành `apps/web/.env`).
+   - Sao chép `apps/api/.env.example` thành `apps/api/.env` và `apps/web/.env.example` thành `apps/web/.env`. `WEB_ORIGIN` phải trùng origin của web dev server (`http://localhost:5173`).
    - Sinh `JWT_ACCESS_SECRET` và `JWT_REFRESH_SECRET` riêng biệt (`openssl rand -hex 32`), không dùng lại giữa hai biến.
 5. **Khởi chạy hạ tầng và cài đặt:**
    ```bash
    just install
    just up
    just db-migrate
+   just db-seed   # tài khoản dev: admin@example.com, admin-a@example.com, ... (mật khẩu Password123!)
    just dev
    ```
 
 ---
 
-## 5. Lộ trình Triển khai Các File Kế hoạch Boilerplate
+## 5. Các Tài liệu Thiết kế Liên quan
 
 - [01-monorepo-va-tooling.md](01-monorepo-va-tooling.md): Cấu hình Monorepo, Workspaces, Turborepo, TSConfig & ESLint Boundaries (5 tầng).
 - [02-backend-core-va-drizzle-rls.md](02-backend-core-va-drizzle-rls.md): Cấu trúc 5 tầng NestJS, Drizzle ORM, Postgres RLS, Envelope & Error filters.
 - [03-auth-flow-va-casl-abac.md](03-auth-flow-va-casl-abac.md): Hệ thống xác thực (access token + refresh cookie) và phân quyền CASL ABAC multi-tenant.
-- [04-frontend-react-va-shadcn.md](04-frontend-react-va-shadcn.md): React 19 Feature-first, Tailwind v4, shadcn/ui, HTTP Client.
-- [06-observability-va-ci-cd.md](06-observability-va-ci-cd.md): Pino Logger mixin, OpenTelemetry W3C, GitHub Actions CI.
+- [04-frontend-react-va-shadcn.md](04-frontend-react-va-shadcn.md): React 19 Feature-first, Tailwind v4, HTTP Client, TanStack Query.
+- [06-observability-va-ci-cd.md](06-observability-va-ci-cd.md): Pino Logger mixin, OpenTelemetry W3C, GitHub Actions CI (không có CD).

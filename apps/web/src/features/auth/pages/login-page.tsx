@@ -10,14 +10,14 @@ export function LoginPage() {
 
   return (
     <div className="bg-card text-foreground selection:bg-primary-light selection:text-primary flex h-dvh flex-col overflow-hidden">
-      {/* 1. Phần thân trên: Split Screen 2 Cột phủ toàn màn hình */}
+      {/* 1. Split screen, two columns */}
       <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-2">
-        {/* Cột trái: Header (Logo + Cần hỗ trợ?) + Form Đăng nhập */}
+        {/* Left column: header + sign-in form */}
         <div className="flex min-h-0 flex-col justify-between overflow-y-auto px-6 py-6 sm:px-10 lg:px-14">
-          {/* Header chỉ có logo bên trái, Cần hỗ trợ? bên phải */}
+          {/* Header with the brand */}
           <AuthHeader />
 
-          {/* Form đăng nhập căn giữa với khoảng đệm thoải mái */}
+          {/* Sign-in form, centred */}
           <main className="my-auto flex flex-1 items-center justify-center py-6">
             <LoginForm
               onForgotPassword={() => {
@@ -26,17 +26,17 @@ export function LoginPage() {
             />
           </main>
 
-          {/* Khoảng trống cân bằng phía dưới */}
+          {/* Bottom spacer */}
           <div className="h-4" />
         </div>
 
-        {/* Cột phải: banner thương hiệu */}
+        {/* Right column: brand banner */}
         <div className="hidden h-full w-full overflow-hidden lg:block">
           <LoginHeroBanner />
         </div>
       </div>
 
-      {/* 2. Modal Quên mật khẩu */}
+      {/* 2. Forgot-password modal */}
       <ForgotPasswordModal
         isOpen={isForgotModalOpen}
         onClose={() => {
