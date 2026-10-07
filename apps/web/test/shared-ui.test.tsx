@@ -2,16 +2,9 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { KeyRound } from 'lucide-react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { GoogleIcon } from '@/shared/icons';
 import { CheckboxField, DividerLabel, SegmentedControl } from '@/shared/ui';
 
 describe('shared UI primitives', () => {
-  it('renders brand icons from shared icons', () => {
-    render(<GoogleIcon title="Google" />);
-
-    expect(screen.getByTitle('Google')).toBeInTheDocument();
-  });
-
   it('renders a labeled divider', () => {
     render(<DividerLabel label="or continue with" />);
 

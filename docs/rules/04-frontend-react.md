@@ -60,16 +60,16 @@ Nếu nhiều feature hoặc nhiều component cùng lặp lại một hình d�
 
 ```tsx
 // ❌ Feature tự copy cùng một button style ở nhiều nơi
-<button className="border-border bg-card text-foreground hover:bg-muted ...">Google</button>
+<button className="border-border bg-card text-foreground hover:bg-muted ...">Export</button>
 
 // ✅ Shared primitive giữ hình dạng; feature giữ nội dung/nghiệp vụ
 <Button variant="outline" size="xs">
-  <GoogleIcon />
-  {t('form.fastAuthGoogle')}
+  <DownloadIcon />
+  {t('actions.export')}
 </Button>
 ```
 
-`shared/icons` chỉ chứa icon/brand asset không biết nghiệp vụ. Màu hard-code chỉ được chấp nhận trong brand asset cố định như logo Google; màu UI còn lại phải đi qua token trong `@theme`.
+`shared/icons` chỉ chứa icon/brand asset không biết nghiệp vụ. Màu hard-code chỉ được chấp nhận trong brand asset cố định như logo của đối tác; màu UI còn lại phải đi qua token trong `@theme`.
 
 ---
 

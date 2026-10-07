@@ -13,10 +13,6 @@ const LoginPage = lazy(() =>
   import('@/features/auth').then((module) => ({ default: module.LoginPage })),
 );
 
-const RegisterPage = lazy(() =>
-  import('@/features/auth').then((module) => ({ default: module.RegisterPage })),
-);
-
 const StatusPage = lazy(() =>
   import('@/features/status').then((module) => ({ default: module.StatusPage })),
 );
@@ -32,7 +28,6 @@ export function AppRouter() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
           <Route path="/status" element={<StatusPage />} />
           <Route
             path="/users"

@@ -40,7 +40,7 @@ src/
 │   └── user/
 │
 └── features/                # Từng slice nghiệp vụ độc lập, tự chứa
-    ├── auth/                # Login, Register, ForgotPassword, useAuth
+    ├── auth/                # Login, ForgotPassword, useAuth
     ├── home/                # Trang chủ
     ├── status/              # Trạng thái hệ thống
     └── <feature>/           # Slice nghiệp vụ của bạn (ví dụ users/, projects/)

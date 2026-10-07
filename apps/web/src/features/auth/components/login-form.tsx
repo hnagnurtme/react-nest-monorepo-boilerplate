@@ -1,9 +1,5 @@
-import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
-
 import { useLoginForm } from '@/features/auth/hooks/use-login-form';
 
-import { FastAuthButtons } from './fast-auth-buttons';
 import { LoginFormHeader } from './login-form-header';
 import { LoginIdentityInput } from './login-identity-input';
 import { LoginSubmitButton } from './login-submit-button';
@@ -14,7 +10,6 @@ interface LoginFormProps {
 }
 
 export function LoginForm({ onForgotPassword }: LoginFormProps) {
-  const { t } = useTranslation('auth');
   const { form, showPassword, togglePasswordVisibility, isSubmitting, onSubmit } = useLoginForm();
 
   return (
@@ -33,19 +28,6 @@ export function LoginForm({ onForgotPassword }: LoginFormProps) {
 
         <LoginSubmitButton isSubmitting={isSubmitting} />
       </form>
-
-      <FastAuthButtons />
-
-      {/* Link chuyển sang đăng ký */}
-      <p className="text-muted-foreground mt-4 text-center text-sm">
-        {t('form.noAccountPrompt')}
-        <Link
-          to="/register"
-          className="text-primary hover:text-primary-hover font-semibold transition-colors"
-        >
-          {t('form.registerAction')}
-        </Link>
-      </p>
     </div>
   );
 }

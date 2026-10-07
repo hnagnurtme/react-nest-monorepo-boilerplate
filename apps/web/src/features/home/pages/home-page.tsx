@@ -39,9 +39,6 @@ export function HomePage() {
             <Link to="/login" className={linkClass}>
               {t('form.submit')}
             </Link>
-            <Link to="/register" className={linkClass}>
-              {t('register.submit')}
-            </Link>
             <Link to="/users" className={linkClass}>
               {t('home.users')}
             </Link>
