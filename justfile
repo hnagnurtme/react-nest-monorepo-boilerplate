@@ -12,16 +12,6 @@ up:
 down:
   docker compose down
 
-# Production/Staging container stack (Postgres, Redis, API)
-prod-up:
-  docker compose -f docker-compose.prod.yml up -d
-
-prod-down:
-  docker compose -f docker-compose.prod.yml down
-
-prod-pull:
-  docker compose -f docker-compose.prod.yml pull
-
 # Stop docker containers and kill running dev servers (api, web)
 stop:
   docker compose stop

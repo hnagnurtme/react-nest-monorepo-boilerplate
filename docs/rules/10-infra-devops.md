@@ -66,10 +66,7 @@ USER app
 
 ### C1. Một artifact, nhiều môi trường 👀
 
-- **Frontend (`apps/web`)**: Phân phối và hosting trực tiếp qua Cloudflare Pages (tự động theo dõi git branch).
-- **Backend (`apps/api`)**: Build Docker image một lần và phát hành lên **GitHub Container Registry (GHCR)** qua workflow CD. Production chạy bằng `docker-compose.prod.yml` (service `api` + `cloudflared`); API không publish port ra host, chỉ truy cập được qua **Cloudflare Tunnel**.
-  - Merge `develop`: tag `develop`, `sha-<commit>` (Staging).
-  - Merge `main` / Tag `v*`: tag `latest`, `<version>`, `sha-<commit>` (Production).
+- **Triển khai**: repo này chỉ có CI, không có workflow CD. Hãy tự thêm pipeline deploy phù hợp hạ tầng của bạn (`apps/api/Dockerfile` build image cho API).
 - Build một lần, promote artifact qua staging rồi production. Build lại cho từng môi trường nghĩa là thứ đã test không phải thứ đang chạy.
 
 ### C2. Rolling deploy, zero-downtime 👀
@@ -141,7 +138,7 @@ Mặc định `deny incoming`. Postgres và Redis **không bao giờ** lộ ra I
 
 ### F2. Không publish port của API ra host 👀
 
-Traffic vào qua Cloudflare Tunnel (`cloudflared`), nên không cần mở port inbound nào; API chỉ nằm trong mạng nội bộ của compose.
+Đặt API sau reverse proxy / tunnel của hạ tầng bạn dùng, để không cần mở port inbound trực tiếp.
 
 ### F3. TLS ở mọi nơi, kể cả giữa các service nội bộ 🤖
 

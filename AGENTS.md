@@ -280,7 +280,7 @@ Feature A cannot import `features/B/components/Something`. Only `features/B` (it
 - Editing only `docs/**`, `*.md`, or `AGENTS.md` on a PR to `develop` skips all code quality jobs (`docs_only=true`). PRs into `main` always run the full suite.
 - Only one branch-protection check needed: **`CI Gate`** (aggregates all jobs).
 - Migrations must **not** run in the container startup command — multiple replicas would race.
-- Docker image is built for `api` only. Production runs via `docker-compose.prod.yml` (api + `cloudflared`; the API is reachable only through the Cloudflare tunnel). Web deployment is Cloudflare Pages (automatic).
+- This repo has CI only; there is no CD workflow. Add your own deployment pipeline (`apps/api/Dockerfile` builds the API image).
 
 ---
 
