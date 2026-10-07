@@ -71,11 +71,8 @@ export class TenantsController {
   @ApiOperation({ summary: 'Get one tenant' })
   @ApiTenantResponse('The tenant')
   @ApiProblemResponses(UNAUTHORIZED, FORBIDDEN, NOT_FOUND)
-  get(
-    @CurrentUser() actor: AuthContext,
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<TenantResponse> {
-    return this.tenants.findOrThrow(actor, id);
+  get(@Param('id', ParseUUIDPipe) id: string): Promise<TenantResponse> {
+    return this.tenants.findOrThrow(id);
   }
 
   @Patch(':id')

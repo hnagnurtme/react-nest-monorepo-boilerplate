@@ -1,4 +1,8 @@
-import type { UserRole } from '@repo/shared-types';
+export interface UserRoleResponse {
+  id: string;
+  key: string;
+  name: string;
+}
 
 /** Whitelisted shape of a user in API responses (docs/rules/06-api-design.md C6). */
 export interface UserResponse {
@@ -6,7 +10,7 @@ export interface UserResponse {
   email: string;
   fullName: string;
   phoneNumber: string | null;
-  role: UserRole;
+  roles: UserRoleResponse[];
   tenantId: string | null;
   isActive: boolean;
   createdAt: string;

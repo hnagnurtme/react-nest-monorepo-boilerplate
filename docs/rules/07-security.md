@@ -51,7 +51,7 @@ Mọi thứ trong bundle web đều đọc được. Biến `VITE_*` là **công
 
 | Lớp                            | Chặn             | Ghi chú                                   |
 | :----------------------------- | :--------------- | :---------------------------------------- |
-| `PoliciesGuard`                | Sai vai trò      | Không chặn được sai tenant                |
+| `PoliciesGuard`                | Thiếu permission | Không chặn được sai tenant                |
 | `throwUnlessCan(subject(...))` | Sai quyền sở hữu | Phụ thuộc dev nhớ gọi                     |
 | **Postgres RLS**               | Mọi thứ          | Chốt chặn cuối, không phụ thuộc con người |
 
@@ -59,7 +59,9 @@ Mọi thứ trong bundle web đều đọc được. Biến `VITE_*` là **công
 
 Đây là cạm bẫy nghiêm trọng nhất của CASL. Kiểm tra quyền sở hữu **bắt buộc** dùng `subject('Project', entity)`. Xem [03-auth-flow-va-casl-abac.md](../03-auth-flow-va-casl-abac.md).
 
-### B3. `tenantId` luôn lấy từ JWT, không bao giờ từ client 👀 (ngoại lệ: `POST /users` cho `PLATFORM_ADMIN`)
+### B3. `tenantId` luôn lấy từ hồ sơ của người gọi, không bao giờ từ client 👀 (ngoại lệ: `POST /users` và `POST /roles` cho người dùng platform)
+
+Access token không còn mang `tenantId`: `JwtAuthGuard` nạp tenant từ hồ sơ quyền (DB) và `@CurrentUser()` trả giá trị đó.
 
 ### B4. Frontend authz chỉ là UX 👀
 
@@ -70,6 +72,18 @@ Mọi thứ trong bundle web đều đọc được. Biến `VITE_*` là **công
 `JwtAuthGuard` đăng ký ở cấp global; endpoint công khai phải khai báo `@Public()` **tường minh**.
 
 **Vì sao:** quên thêm guard ➔ endpoint hở. Quên thêm `@Public()` ➔ endpoint bị khóa, phát hiện ngay khi test. Chọn cái hỏng an toàn.
+
+### B6. Quyền đến từ DB; không bao giờ tin claim trong token để phân quyền 👀
+
+Access token chỉ định danh (`sub`, `email`, `jti`). Vai trò, tenant và grant lấy từ `AuthzService.loadProfile` trên mỗi request. Không thêm claim `role`/`tenantId` để "tiết kiệm một lượt đọc": đổi quyền hoặc khóa tài khoản sẽ không còn có hiệu lực ngay.
+
+### B7. Chống leo thang quyền là bất biến, không phải tùy chọn 👀
+
+Không ai cấp hoặc gán nhiều hơn mình đang giữ (`grantsCover`); không ai sửa vai trò của chính mình; tenant luôn còn ít nhất một `TENANT_ADMIN` active; vai trò hệ thống bất biến (kể cả với platform admin). Tenant không bao giờ viết điều kiện CASL: chỉ chọn preset `own_tenant`/`own_record`, còn `any` và mục `platformOnly` dành riêng cho vai trò scope `platform`. Chi tiết: [03-auth-flow-va-casl-abac.md](../03-auth-flow-va-casl-abac.md) mục 2.5, [ADR-0005](../adr/0005-permission-luu-trong-co-so-du-lieu.md).
+
+### B8. Một catalog entry mới phải đi cùng `just db-migrate` 👀
+
+Catalog nằm trong code nhưng được đồng bộ vào DB bởi `migrate.ts`, không phải lúc app khởi động. Thêm entry mà không chạy migrate ➔ entry chưa tồn tại trong `permissions`.
 
 ---
 

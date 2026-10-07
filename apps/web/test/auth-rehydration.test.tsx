@@ -196,17 +196,23 @@ describe('Phase 1: Auth Rehydration (H1-H8)', () => {
   });
 
   it('H8: useInitAuthSession runs only once (status !== initializing prevents re-run)', async () => {
-    const fetchMock = vi.fn();
+    const fetchMock = vi
+      .fn()
+      .mockImplementation((url: string) =>
+        Promise.resolve(
+          url.includes('/auth/me/abilities')
+            ? new Response(JSON.stringify({ data: { rules: [] } }), { status: 200 })
+            : new Response(
+                JSON.stringify(
+                  makeRefreshResponse({ accessToken: mockAccessToken, user: mockUser }),
+                ),
+                { status: 200 },
+              ),
+        ),
+      );
     vi.stubGlobal('fetch', fetchMock);
-
-    fetchMock.mockResolvedValueOnce(
-      new Response(
-        JSON.stringify(makeRefreshResponse({ accessToken: mockAccessToken, user: mockUser })),
-        {
-          status: 200,
-        },
-      ),
-    );
+    const refreshCalls = (): number =>
+      fetchMock.mock.calls.filter(([url]) => String(url).includes('/auth/refresh')).length;
 
     const { rerender } = render(
       <MemoryRouter>
@@ -218,7 +224,7 @@ describe('Phase 1: Auth Rehydration (H1-H8)', () => {
       expect(useAuthStore.getState().status).toBe('authenticated');
     });
 
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(refreshCalls()).toBe(1);
 
     rerender(
       <MemoryRouter>
@@ -227,7 +233,7 @@ describe('Phase 1: Auth Rehydration (H1-H8)', () => {
     );
 
     await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(refreshCalls()).toBe(1);
     });
   });
 });

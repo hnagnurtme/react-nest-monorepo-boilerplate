@@ -27,8 +27,6 @@ export class TokenService {
     return this.accessTokens.issue({
       sub: user.id,
       email: user.email,
-      role: user.role,
-      ...(user.tenantId === undefined ? {} : { tenantId: user.tenantId }),
     });
   }
 

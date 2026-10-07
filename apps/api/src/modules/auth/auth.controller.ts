@@ -11,6 +11,8 @@ import {
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Throttle, seconds } from '@nestjs/throttler';
 
+import { packAbility, type PackedRules } from '@repo/shared-types';
+
 import {
   ApiProblemResponses,
   ClientInfoParam,
@@ -19,10 +21,12 @@ import {
   type AuthContext,
   type ClientInfo,
 } from '@/common/index.js';
+import { AuthzService } from '@/core/authz/index.js';
 
 import { AuthCookieInterceptor } from './auth-cookie.interceptor.js';
 import {
   ACCESS_TOKEN_SECURITY_SCHEME,
+  ApiAbilitiesResponse,
   ApiAuthBodyResponse,
   ApiForgotPasswordResponse,
   ApiMessageResponse,
@@ -58,7 +62,10 @@ const { UNAUTHORIZED, FORBIDDEN, UNPROCESSABLE_ENTITY, TOO_MANY_REQUESTS, BAD_RE
 @Controller({ path: 'auth', version: '1' })
 @UseInterceptors(AuthCookieInterceptor)
 export class AuthController {
-  constructor(@Inject(AuthService) private readonly auth: AuthService) {}
+  constructor(
+    @Inject(AuthService) private readonly auth: AuthService,
+    @Inject(AuthzService) private readonly authz: AuthzService,
+  ) {}
 
   @Post('login')
   @Public()
@@ -161,5 +168,16 @@ export class AuthController {
   @ApiProblemResponses(UNAUTHORIZED)
   me(@CurrentUser() actor: AuthContext): Promise<PublicUser> {
     return this.auth.getProfile(actor.id);
+  }
+
+  @Get('me/abilities')
+  @ApiBearerAuth(ACCESS_TOKEN_SECURITY_SCHEME)
+  @ApiOperation({
+    summary: "The caller's permissions as packed CASL rules, for the client to build its ability",
+  })
+  @ApiAbilitiesResponse('Packed CASL rules')
+  @ApiProblemResponses(UNAUTHORIZED)
+  abilities(): { rules: PackedRules } {
+    return { rules: packAbility(this.authz.current()) };
   }
 }

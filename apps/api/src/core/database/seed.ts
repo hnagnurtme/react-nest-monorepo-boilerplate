@@ -3,6 +3,8 @@ import { sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 
+import { SYSTEM_ROLES } from '@repo/shared-types';
+
 import { loadEnvFile, validateEnv } from '@/config/index.js';
 
 import * as schema from './schema/index.js';
@@ -48,16 +50,32 @@ async function main(): Promise<void> {
     const [tenantA, tenantB] = tenantRows;
     if (tenantA === undefined || tenantB === undefined) throw new Error('tenant seed failed');
 
-    await db
+    const userRows = await db
       .insert(schema.users)
       .values(seedUsers(passwordHash, tenantA.id, tenantB.id))
-      .onConflictDoUpdate({ target: schema.users.email, set: { passwordHash } });
+      .onConflictDoUpdate({ target: schema.users.email, set: { passwordHash } })
+      .returning();
+
+    const roleByEmail = new Map<string, string>(SEED_ROLES.map(([email, role]) => [email, role]));
+    const assignments = userRows.flatMap((user) => {
+      const roleId = roleByEmail.get(user.email);
+      return roleId === undefined ? [] : [{ userId: user.id, roleId, tenantId: user.tenantId }];
+    });
+    await db.insert(schema.userRoles).values(assignments).onConflictDoNothing();
 
     process.stdout.write(`Seeded. Every account uses the password: ${SEED_PASSWORD}\n`);
   } finally {
     await pool.end();
   }
 }
+
+/** Which system role each seed account holds. Role ids are fixed, see SYSTEM_ROLES. */
+const SEED_ROLES: readonly (readonly [string, string])[] = [
+  ['admin@example.com', SYSTEM_ROLES.PLATFORM_ADMIN.id],
+  ['admin-a@example.com', SYSTEM_ROLES.TENANT_ADMIN.id],
+  ['member-a@example.com', SYSTEM_ROLES.TENANT_MEMBER.id],
+  ['admin-b@example.com', SYSTEM_ROLES.TENANT_ADMIN.id],
+];
 
 function seedUsers(
   passwordHash: string,
@@ -67,28 +85,15 @@ function seedUsers(
   const verified = { passwordHash, isActive: true, isEmailVerified: true };
 
   return [
-    { ...verified, email: 'admin@example.com', fullName: 'Platform Admin', role: 'PLATFORM_ADMIN' },
-    {
-      ...verified,
-      email: 'admin-a@example.com',
-      fullName: 'Tenant A Admin',
-      role: 'TENANT_ADMIN',
-      tenantId: tenantAId,
-    },
+    { ...verified, email: 'admin@example.com', fullName: 'Platform Admin' },
+    { ...verified, email: 'admin-a@example.com', fullName: 'Tenant A Admin', tenantId: tenantAId },
     {
       ...verified,
       email: 'member-a@example.com',
       fullName: 'Tenant A Member',
-      role: 'TENANT_MEMBER',
       tenantId: tenantAId,
     },
-    {
-      ...verified,
-      email: 'admin-b@example.com',
-      fullName: 'Tenant B Admin',
-      role: 'TENANT_ADMIN',
-      tenantId: tenantBId,
-    },
+    { ...verified, email: 'admin-b@example.com', fullName: 'Tenant B Admin', tenantId: tenantBId },
   ];
 }
 

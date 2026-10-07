@@ -2,6 +2,7 @@ export {
   AppError,
   CsrfValidationFailedError,
   ForbiddenActionError,
+  InvalidInputError,
   InvalidCredentialsError,
   MissingAccessContextError,
   RefreshTokenInvalidError,

@@ -1,8 +1,6 @@
 import { createZodDto } from 'nestjs-zod/dto';
 import { z } from 'zod';
 
-import { USER_ROLES } from '@repo/shared-types';
-
 import { pageQuerySchema } from '@/common/index.js';
 
 /** E.164-ish: optional +, 7 to 15 digits. */
@@ -34,9 +32,16 @@ export const createUserSchema = z
     fullName: z.string().trim().min(2).max(100),
     phoneNumber: z.string().regex(PHONE_REGEX, 'Invalid phone number').optional(),
     password: z.string().min(MIN_PASSWORD_LENGTH).max(MAX_PASSWORD_LENGTH),
-    role: z.enum(USER_ROLES),
+    /** At least one; the caller may only hand out roles it already holds. */
+    roleIds: z.array(z.string().uuid()).min(1).max(20),
     tenantId: z.string().uuid().optional(),
   })
   .strict();
 
 export class CreateUserDto extends createZodDto(createUserSchema) {}
+
+export const setUserRolesSchema = z
+  .object({ roleIds: z.array(z.string().uuid()).min(1).max(20) })
+  .strict();
+
+export class SetUserRolesDto extends createZodDto(setUserRolesSchema) {}

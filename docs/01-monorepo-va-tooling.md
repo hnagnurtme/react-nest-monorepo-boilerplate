@@ -91,8 +91,8 @@ app ──▶ features ──▶ entities ──▶ shared ──▶ lib ──�
 Types và hàm dùng chung giữa Backend và Frontend (`src/index.ts`):
 
 - `ApiResponse<T>`, `PaginationMeta`, `InvalidParam`, `ProblemDetails` (RFC 9457) và hằng `PROBLEM_CONTENT_TYPE`.
-- `USER_ROLES` / `UserRole` (`PLATFORM_ADMIN`, `TENANT_ADMIN`, `TENANT_MEMBER`), `UserContext`.
-- CASL: `defineAbilityFor(user)`, `defineAnonymousAbility()`, `SubjectShapes`, `AppAbility`.
+- Catalog phân quyền (`src/authz/catalog.ts`): `PERMISSION_CATALOG`, `SYSTEM_ROLES` (`PLATFORM_ADMIN`, `TENANT_ADMIN`, `TENANT_MEMBER`, id cố định), `SCOPE_PRESETS`, `grantsCover`. `migrate.ts` đồng bộ catalog này vào DB.
+- CASL (`src/authz/ability.ts`): `buildAbility(grants, user)`, `conditionsFor`, `defineAnonymousAbility()`, `packAbility` / `abilityFromPacked`, `SubjectShapes`, `AppAbility`, `UserContext`.
 - `HealthStatus` / `createHealthStatus`.
 
 ### 2.4 `packages/api-contract`

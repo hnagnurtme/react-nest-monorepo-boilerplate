@@ -12,6 +12,7 @@ import { RefreshTokenInvalidError, TokenReuseDetectedError } from '@/core/errors
 import { AuthRepository } from './auth.repository.js';
 import type { PublicUser } from './auth.types.js';
 import { TokenService, type IssuedRefreshToken } from './token.service.js';
+import { UserDirectory } from './user-directory.service.js';
 
 export interface IssuedSession {
   user: PublicUser;
@@ -28,7 +29,7 @@ export interface IssueRequest {
 }
 
 type RotationOutcome =
-  | { kind: 'rotated'; user: PublicUser; session: Session }
+  | { kind: 'rotated'; userId: string; session: Session }
   | { kind: 'reuse'; familyId: string; userId: string };
 
 /**
@@ -48,6 +49,7 @@ export class SessionService {
     @Inject(TransactionManager) private readonly transactions: TransactionManager,
     @Inject(AuthRepository) private readonly repository: AuthRepository,
     @Inject(TokenService) private readonly tokens: TokenService,
+    @Inject(UserDirectory) private readonly directory: UserDirectory,
   ) {}
 
   async issue(request: IssueRequest): Promise<IssuedSession> {
@@ -96,7 +98,10 @@ export class SessionService {
       throw new TokenReuseDetectedError();
     }
 
-    return this.issue({ user: outcome.user, client, previous: outcome.session });
+    const user = await this.directory.findActive(outcome.userId);
+    if (user === undefined) throw new RefreshTokenInvalidError();
+
+    return this.issue({ user, client, previous: outcome.session });
   }
 
   /** Ends the one login a refresh token belongs to. */
@@ -149,17 +154,7 @@ export class SessionService {
 
     await this.repository.markSessionUsed(tx, session.id);
 
-    return {
-      kind: 'rotated',
-      session,
-      user: {
-        id: user.id,
-        email: user.email,
-        fullName: user.fullName,
-        role: user.role as PublicUser['role'],
-        tenantId: user.tenantId ?? undefined,
-      },
-    };
+    return { kind: 'rotated', userId: user.id, session };
   }
 
   private async handleReuse(familyId: string, userId: string, client: ClientInfo): Promise<void> {

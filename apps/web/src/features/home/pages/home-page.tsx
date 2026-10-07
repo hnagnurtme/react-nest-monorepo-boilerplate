@@ -32,10 +32,19 @@ export function HomePage() {
           <div className="bg-primary-subtle mt-6 space-y-2 rounded-xl p-4 text-left text-xs">
             <p className="text-foreground">{user.fullName}</p>
             <p className="text-foreground">{user.email}</p>
-            <p className="text-foreground font-bold">{user.role}</p>
-            <Link to="/users" className={linkClass}>
-              {t('home.users')}
-            </Link>
+            <p className="text-foreground font-bold">
+              {user.roles.map((role) => role.name).join(', ')}
+            </p>
+            <CanAction I="read" a="User">
+              <Link to="/users" className={linkClass}>
+                {t('home.users')}
+              </Link>
+            </CanAction>
+            <CanAction I="read" a="Role">
+              <Link to="/roles" className={linkClass}>
+                {t('home.roles')}
+              </Link>
+            </CanAction>
             <CanAction I="create" a="Tenant">
               <Link to="/tenants" className={linkClass}>
                 {t('home.tenants')}

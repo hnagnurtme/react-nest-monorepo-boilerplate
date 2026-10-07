@@ -1,10 +1,7 @@
 import { Inject, Injectable, type CanActivate, type ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { ClsService } from 'nestjs-cls';
 
-import { defineAbilityFor, defineAnonymousAbility, type AppAbility } from '@repo/shared-types';
-
-import { CLS_KEYS, type AppClsStore } from '@/core/database/request-context.js';
+import { AuthzService } from '@/core/authz/index.js';
 import { ForbiddenActionError } from '@/core/errors/index.js';
 
 import { CHECK_POLICIES_KEY, type PolicyHandler } from './check-policies.decorator.js';
@@ -20,7 +17,7 @@ import { CHECK_POLICIES_KEY, type PolicyHandler } from './check-policies.decorat
 export class PoliciesGuard implements CanActivate {
   constructor(
     @Inject(Reflector) private readonly reflector: Reflector,
-    @Inject(ClsService) private readonly cls: ClsService<AppClsStore>,
+    @Inject(AuthzService) private readonly authz: AuthzService,
   ) {}
 
   canActivate(context: ExecutionContext): boolean {
@@ -32,19 +29,12 @@ export class PoliciesGuard implements CanActivate {
 
     if (handlers.length === 0) return true;
 
-    const ability = this.abilityForCurrentUser();
+    const ability = this.authz.current();
     const denied = handlers.some((handler) => !handler(ability));
     if (denied) {
       throw new ForbiddenActionError(context.getHandler().name, context.getClass().name);
     }
 
     return true;
-  }
-
-  private abilityForCurrentUser(): AppAbility {
-    const auth = this.cls.get(CLS_KEYS.authContext);
-    if (auth === undefined) return defineAnonymousAbility();
-
-    return defineAbilityFor(auth);
   }
 }

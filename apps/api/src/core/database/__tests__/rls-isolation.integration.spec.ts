@@ -3,6 +3,8 @@ import { randomUUID } from 'node:crypto';
 import { Pool, type PoolClient } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+import { SYSTEM_ROLES } from '@repo/shared-types';
+
 import { getEnv } from '@/config/index.js';
 import {
   ACCESS_MODE_SETTING,
@@ -30,6 +32,10 @@ const tenantA = { id: randomUUID(), slug: `rls-a-${randomUUID()}` };
 const tenantB = { id: randomUUID(), slug: `rls-b-${randomUUID()}` };
 const userA = { id: randomUUID(), email: `a-${randomUUID()}@example.test` };
 const userB = { id: randomUUID(), email: `b-${randomUUID()}@example.test` };
+const roleA = { id: randomUUID() };
+const roleB = { id: randomUUID() };
+const SYSTEM_TENANT_ADMIN = SYSTEM_ROLES.TENANT_ADMIN.id;
+const SYSTEM_PLATFORM_ADMIN = SYSTEM_ROLES.PLATFORM_ADMIN.id;
 
 /** Runs `fn` in a rolled-back transaction carrying an explicit access context. */
 async function withContext<T>(
@@ -74,13 +80,25 @@ beforeAll(async () => {
     [tenantA.id, tenantA.slug, tenantB.id, tenantB.slug],
   );
   await ownerPool.query(
-    `INSERT INTO users (id, email, password_hash, full_name, role, tenant_id)
-     VALUES ($1, $2, 'x', 'A Admin', 'TENANT_ADMIN', $3), ($4, $5, 'x', 'B Admin', 'TENANT_ADMIN', $6)`,
+    `INSERT INTO users (id, email, password_hash, full_name, tenant_id)
+     VALUES ($1, $2, 'x', 'A Admin', $3), ($4, $5, 'x', 'B Admin', $6)`,
     [userA.id, userA.email, tenantA.id, userB.id, userB.email, tenantB.id],
   );
+  await ownerPool.query(
+    `INSERT INTO roles (id, tenant_id, key, name) VALUES ($1, $2, 'RLS_A', 'RLS A'), ($3, $4, 'RLS_B', 'RLS B')`,
+    [roleA.id, tenantA.id, roleB.id, tenantB.id],
+  );
+  await ownerPool.query(`INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2), ($3, $4)`, [
+    userA.id,
+    SYSTEM_TENANT_ADMIN,
+    userB.id,
+    SYSTEM_TENANT_ADMIN,
+  ]);
 });
 
 afterAll(async () => {
+  await ownerPool.query('DELETE FROM user_roles WHERE user_id = ANY($1)', [[userA.id, userB.id]]);
+  await ownerPool.query('DELETE FROM roles WHERE id = ANY($1)', [[roleA.id, roleB.id]]);
   await ownerPool.query('DELETE FROM users WHERE id = ANY($1)', [[userA.id, userB.id]]);
   await ownerPool.query('DELETE FROM tenants WHERE id = ANY($1)', [[tenantA.id, tenantB.id]]);
   await Promise.all([appPool.end(), ownerPool.end()]);
@@ -132,8 +150,8 @@ describe('tenant isolation', () => {
     await expect(
       withContext({ accessMode: 'tenant', tenantId: tenantA.id }, async (client) =>
         client.query(
-          `INSERT INTO users (email, password_hash, full_name, role, tenant_id)
-           VALUES ($1, 'x', 'Smuggled', 'TENANT_MEMBER', $2)`,
+          `INSERT INTO users (email, password_hash, full_name, tenant_id)
+           VALUES ($1, 'x', 'Smuggled', $2)`,
           [`smuggled-${randomUUID()}@example.test`, tenantB.id],
         ),
       ),
@@ -191,6 +209,176 @@ describe('sessions table', () => {
     );
 
     expect(rows).toHaveLength(0);
+  });
+});
+
+describe('roles', () => {
+  const tenantCtx: AccessContext = { accessMode: 'tenant', tenantId: tenantA.id };
+
+  it("a tenant sees the shared system roles and its own, never another tenant's", async () => {
+    const rows = await withContext(
+      tenantCtx,
+      async (client) =>
+        (
+          await client.query<IdRow>('SELECT id FROM roles WHERE id = ANY($1)', [
+            [roleA.id, roleB.id, SYSTEM_TENANT_ADMIN],
+          ])
+        ).rows,
+    );
+
+    expect(rows.map((r) => r.id).sort()).toEqual([roleA.id, SYSTEM_TENANT_ADMIN].sort());
+  });
+
+  it('platform-scope system roles are invisible to a tenant', async () => {
+    const rows = await withContext(
+      tenantCtx,
+      async (client) =>
+        (await client.query<IdRow>('SELECT id FROM roles WHERE id = $1', [SYSTEM_PLATFORM_ADMIN]))
+          .rows,
+    );
+
+    expect(rows).toHaveLength(0);
+  });
+
+  it('a tenant cannot create a role in another tenant', async () => {
+    await expect(
+      withContext(tenantCtx, async (client) =>
+        client.query(`INSERT INTO roles (tenant_id, key, name) VALUES ($1, 'EVIL', 'Evil')`, [
+          tenantB.id,
+        ]),
+      ),
+    ).rejects.toThrow(/row-level security/iu);
+  });
+
+  it('a tenant cannot create a system role (tenant_id NULL) either', async () => {
+    await expect(
+      withContext(tenantCtx, async (client) =>
+        client.query(
+          `INSERT INTO roles (tenant_id, key, name, is_system) VALUES (NULL, 'EVIL', 'Evil', true)`,
+        ),
+      ),
+    ).rejects.toThrow(/row-level security/iu);
+  });
+
+  it('system roles are immutable: rename and delete are both refused, even in admin mode', async () => {
+    for (const context of [tenantCtx, { accessMode: 'admin', reason: 'rls-test' } as const]) {
+      await expect(
+        withContext(context, async (client) =>
+          client.query(`UPDATE roles SET name = 'Hacked' WHERE id = $1`, [SYSTEM_TENANT_ADMIN]),
+        ),
+      ).rejects.toThrow(/immutable|row-level security/iu);
+      await expect(
+        withContext(context, async (client) =>
+          client.query(`DELETE FROM roles WHERE id = $1`, [SYSTEM_TENANT_ADMIN]),
+        ),
+      ).rejects.toThrow(/immutable|row-level security/iu);
+    }
+  });
+
+  it('the grants of a system role cannot be edited either', async () => {
+    await expect(
+      withContext({ accessMode: 'admin', reason: 'rls-test' }, async (client) =>
+        client.query(`DELETE FROM role_permissions WHERE role_id = $1`, [SYSTEM_TENANT_ADMIN]),
+      ),
+    ).rejects.toThrow(/immutable/iu);
+  });
+
+  it("a tenant sees grants of roles it can see, and cannot add a grant to another tenant's role", async () => {
+    const rows = await withContext(
+      tenantCtx,
+      async (client) =>
+        (
+          await client.query<IdRow>(
+            'SELECT role_id AS id FROM role_permissions WHERE role_id = $1 LIMIT 1',
+            [SYSTEM_TENANT_ADMIN],
+          )
+        ).rows,
+    );
+    expect(rows).toHaveLength(1);
+
+    await expect(
+      withContext(tenantCtx, async (client) =>
+        client.query(
+          `INSERT INTO role_permissions (role_id, permission_id, scope_preset)
+           SELECT $1, id, 'own_tenant' FROM permissions WHERE action = 'read' AND subject = 'User'`,
+          [roleB.id],
+        ),
+      ),
+    ).rejects.toThrow(/row-level security/iu);
+  });
+});
+
+describe('user_roles', () => {
+  const tenantCtx: AccessContext = { accessMode: 'tenant', tenantId: tenantA.id };
+
+  it("a tenant sees only its own users' assignments", async () => {
+    const rows = await withContext(
+      tenantCtx,
+      async (client) =>
+        (
+          await client.query<{ user_id: string }>(
+            'SELECT user_id FROM user_roles WHERE user_id = ANY($1)',
+            [[userA.id, userB.id]],
+          )
+        ).rows,
+    );
+
+    expect(rows.map((r) => r.user_id)).toEqual([userA.id]);
+  });
+
+  it("a platform role cannot be assigned to a tenant user, nor another tenant's custom role", async () => {
+    await expect(
+      withContext({ accessMode: 'admin', reason: 'rls-test' }, async (client) =>
+        client.query(`INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2)`, [
+          userA.id,
+          SYSTEM_PLATFORM_ADMIN,
+        ]),
+      ),
+    ).rejects.toThrow(/platform roles/iu);
+
+    await expect(
+      withContext({ accessMode: 'admin', reason: 'rls-test' }, async (client) =>
+        client.query(`INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2)`, [
+          userA.id,
+          roleB.id,
+        ]),
+      ),
+    ).rejects.toThrow(/another tenant/iu);
+  });
+
+  it("assigning a role stamps the user's tenant, whatever the caller sent", async () => {
+    const row = await withContext(tenantCtx, async (client) => {
+      await client.query(
+        `INSERT INTO user_roles (user_id, role_id, tenant_id) VALUES ($1, $2, $3)`,
+        [userA.id, roleA.id, tenantB.id],
+      );
+      return (
+        await client.query<{ tenant_id: string }>(
+          'SELECT tenant_id FROM user_roles WHERE user_id = $1 AND role_id = $2',
+          [userA.id, roleA.id],
+        )
+      ).rows[0];
+    }).catch((error: unknown) => error);
+
+    // The forged tenant_id either fails the RLS check or is overwritten by the trigger.
+    if (row instanceof Error) expect(String(row)).toMatch(/row-level security/iu);
+    else expect(row).toEqual({ tenant_id: tenantA.id });
+  });
+});
+
+describe('permissions catalog', () => {
+  it('is readable by a tenant but not writable', async () => {
+    const rows = await withContext(
+      { accessMode: 'tenant', tenantId: tenantA.id },
+      async (client) => (await client.query<IdRow>('SELECT id FROM permissions')).rows,
+    );
+    expect(rows.length).toBeGreaterThan(0);
+
+    await expect(
+      withContext({ accessMode: 'tenant', tenantId: tenantA.id }, async (client) =>
+        client.query(`INSERT INTO permissions (action, subject) VALUES ('read', 'Evil')`),
+      ),
+    ).rejects.toThrow(/row-level security/iu);
   });
 });
 

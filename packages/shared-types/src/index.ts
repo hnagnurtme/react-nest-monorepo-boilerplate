@@ -1,4 +1,5 @@
-export * from './auth/ability.js';
+export * from './authz/catalog.js';
+export * from './authz/ability.js';
 
 export { PROBLEM_CONTENT_TYPE } from './http/api-response.js';
 export type {

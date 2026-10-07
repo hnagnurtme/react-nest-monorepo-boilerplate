@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 
+import { SYSTEM_ROLES, buildAbility, type PermissionGrant } from '@repo/shared-types';
+
 import type { AuthContext } from '@/common/index.js';
 import type { Tenant } from '@/core/database/schema/index.js';
-import type { TransactionManager } from '@/core/database/transaction.manager.js';
 import { ForbiddenActionError, ResourceNotFoundError } from '@/core/errors/index.js';
 import { TenantsService } from '@/modules/tenants/tenants.service.js';
 
@@ -21,21 +22,32 @@ function makeTenant(overrides: Partial<Tenant> = {}): Tenant {
   };
 }
 
-function makeActor(overrides: Partial<AuthContext>): AuthContext {
-  return {
-    id: 'actor',
-    email: 'actor@example.com',
-    role: 'TENANT_ADMIN',
-    tenantId: 't-1',
-    jti: 'jti',
-    ...overrides,
-  };
-}
+const TENANT_ADMIN: AuthContext = {
+  id: 'actor',
+  email: 'a@x.test',
+  tenantId: 't-1',
+  scope: 'tenant',
+  roles: ['TENANT_ADMIN'],
+  jti: 'j',
+};
+const PLATFORM_ADMIN: AuthContext = {
+  id: 'root',
+  email: 'r@x.test',
+  scope: 'platform',
+  roles: ['PLATFORM_ADMIN'],
+  jti: 'j',
+};
 
 describe('TenantsService', () => {
   let service: TenantsService;
-  let repository: { findById: Mock; create: Mock; update: Mock; list: Mock; count: Mock };
+  let repository: Record<'findById' | 'create' | 'update' | 'list' | 'count', Mock>;
   let audit: { record: Mock };
+  let authz: { current: Mock };
+
+  const as = (actor: AuthContext, grants: readonly PermissionGrant[]): AuthContext => {
+    authz.current.mockReturnValue(buildAbility(grants, { id: actor.id, tenantId: actor.tenantId }));
+    return actor;
+  };
 
   beforeEach(() => {
     repository = {
@@ -48,20 +60,22 @@ describe('TenantsService', () => {
       count: vi.fn(),
     };
     audit = { record: vi.fn() };
+    authz = { current: vi.fn() };
     const transactions = {
-      runInRequestContext: vi.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn({})),
+      runInRequestContext: vi.fn((fn: (tx: unknown) => Promise<unknown>) => fn({})),
     };
 
-    service = new TenantsService(transactions as unknown as TransactionManager, repository, audit);
+    service = new TenantsService(transactions as never, repository as never, audit, authz as never);
   });
 
   it('lets only a platform admin create a tenant, and audits it', async () => {
-    const platformAdmin = makeActor({ role: 'PLATFORM_ADMIN', tenantId: undefined });
-
-    await expect(service.create(makeActor({}), { name: 'X', slug: 'x' })).rejects.toBeInstanceOf(
+    const tenantAdmin = as(TENANT_ADMIN, SYSTEM_ROLES.TENANT_ADMIN.grants);
+    await expect(service.create(tenantAdmin, { name: 'X', slug: 'x' })).rejects.toBeInstanceOf(
       ForbiddenActionError,
     );
-    await service.create(platformAdmin, { name: 'Globex', slug: 'globex' });
+
+    const root = as(PLATFORM_ADMIN, SYSTEM_ROLES.PLATFORM_ADMIN.grants);
+    await service.create(root, { name: 'Globex', slug: 'globex' });
 
     expect(repository.create).toHaveBeenCalledTimes(1);
     expect(audit.record).toHaveBeenCalledWith(
@@ -71,30 +85,29 @@ describe('TenantsService', () => {
   });
 
   it('lets a tenant admin rename its own tenant but not switch it off', async () => {
+    const admin = as(TENANT_ADMIN, SYSTEM_ROLES.TENANT_ADMIN.grants);
     repository.findById.mockResolvedValue(makeTenant());
     repository.update.mockResolvedValue(makeTenant({ name: 'Renamed' }));
 
-    await expect(service.update(makeActor({}), 't-1', { name: 'Renamed' })).resolves.toMatchObject({
+    await expect(service.update(admin, 't-1', { name: 'Renamed' })).resolves.toMatchObject({
       name: 'Renamed',
     });
-    await expect(service.update(makeActor({}), 't-1', { isActive: false })).rejects.toBeInstanceOf(
+    await expect(service.update(admin, 't-1', { isActive: false })).rejects.toBeInstanceOf(
       ForbiddenActionError,
     );
   });
 
   it('refuses a read of another tenant even if RLS let the row through', async () => {
+    as(TENANT_ADMIN, SYSTEM_ROLES.TENANT_ADMIN.grants);
     repository.findById.mockResolvedValue(makeTenant({ id: 't-2' }));
 
-    await expect(service.findOrThrow(makeActor({}), 't-2')).rejects.toBeInstanceOf(
-      ForbiddenActionError,
-    );
+    await expect(service.findOrThrow('t-2')).rejects.toBeInstanceOf(ForbiddenActionError);
   });
 
   it('throws not found for an invisible tenant', async () => {
+    as(TENANT_ADMIN, SYSTEM_ROLES.TENANT_ADMIN.grants);
     repository.findById.mockResolvedValue(undefined);
 
-    await expect(service.findOrThrow(makeActor({}), 't-9')).rejects.toBeInstanceOf(
-      ResourceNotFoundError,
-    );
+    await expect(service.findOrThrow('t-9')).rejects.toBeInstanceOf(ResourceNotFoundError);
   });
 });

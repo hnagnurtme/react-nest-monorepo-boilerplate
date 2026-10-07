@@ -4,6 +4,8 @@ import { ClsService } from 'nestjs-cls';
 
 import { IS_PUBLIC_KEY, type AuthContext } from '@/common/index.js';
 import { AccessTokenService, type AccessTokenPayload } from '@/core/auth/access-token.service.js';
+import type { AuthzProfile } from '@/core/authz/index.js';
+import { AuthzService } from '@/core/authz/index.js';
 import { CLS_KEYS, type AccessContext, type AppClsStore } from '@/core/database/request-context.js';
 import { UnauthenticatedError } from '@/core/errors/index.js';
 
@@ -15,25 +17,28 @@ interface RequestLike {
 }
 
 /**
- * Derives the RLS access mode from the caller's role.
+ * Derives the RLS access mode from the caller's authorization profile.
  *
  * This is the one place the two authorization systems meet: CASL decides which
- * actions a role may attempt, and this decides how much of the table Postgres
+ * actions a caller may attempt, and this decides how much of the table Postgres
  * will show them in the first place.
  *
- * A tenant role with no tenant claim is rejected instead of being mapped to a
- * default: there is no safe fallback for "which tenant is this".
+ * A caller that is neither a platform user nor attached to a tenant is
+ * rejected instead of being mapped to a default: there is no safe fallback for
+ * "which tenant is this".
  */
-export function accessContextFor(payload: AccessTokenPayload): AccessContext {
-  if (payload.role === 'PLATFORM_ADMIN') {
-    return { accessMode: 'admin', reason: `platform-admin:${payload.sub}` };
+export function accessContextFor(
+  profile: Pick<AuthzProfile, 'userId' | 'scope' | 'tenantId'>,
+): AccessContext {
+  if (profile.scope === 'platform') {
+    return { accessMode: 'admin', reason: `platform-user:${profile.userId}` };
   }
 
-  if (payload.tenantId === undefined) {
-    throw new UnauthenticatedError('Access token has no tenant');
+  if (profile.tenantId === null) {
+    throw new UnauthenticatedError('Account has no tenant');
   }
 
-  return { accessMode: 'tenant', tenantId: payload.tenantId };
+  return { accessMode: 'tenant', tenantId: profile.tenantId };
 }
 
 /**
@@ -47,6 +52,7 @@ export class JwtAuthGuard implements CanActivate {
   constructor(
     @Inject(Reflector) private readonly reflector: Reflector,
     @Inject(AccessTokenService) private readonly accessTokens: AccessTokenService,
+    @Inject(AuthzService) private readonly authz: AuthzService,
     @Inject(ClsService) private readonly cls: ClsService<AppClsStore>,
   ) {}
 
@@ -61,12 +67,17 @@ export class JwtAuthGuard implements CanActivate {
     const payload = token === undefined ? undefined : await this.accessTokens.verify(token);
 
     if (payload !== undefined) {
-      const accessContext = accessContextFor(payload);
-      const authContext = toAuthContext(payload);
+      // Read from the database (cached), not from the token: a deactivated user
+      // or a changed role must stop working now, not when the token expires.
+      const profile = await this.authz.loadProfile(payload.sub);
+      if (profile === undefined) throw new UnauthenticatedError('Account is no longer active');
+
+      const authContext = toAuthContext(payload, profile);
       request.user = authContext;
-      this.cls.set(CLS_KEYS.userId, payload.sub);
-      this.cls.set(CLS_KEYS.tenantId, payload.tenantId);
-      this.cls.set(CLS_KEYS.accessContext, accessContext);
+      this.cls.set(CLS_KEYS.userId, profile.userId);
+      this.cls.set(CLS_KEYS.tenantId, profile.tenantId ?? undefined);
+      this.cls.set(CLS_KEYS.profile, profile);
+      this.cls.set(CLS_KEYS.accessContext, accessContextFor(profile));
       this.cls.set(CLS_KEYS.authContext, authContext);
       return true;
     }
@@ -86,12 +97,13 @@ function extractBearerToken(header: string | undefined): string | undefined {
   return header.slice(BEARER_PREFIX.length);
 }
 
-function toAuthContext(payload: AccessTokenPayload): AuthContext {
+function toAuthContext(payload: AccessTokenPayload, profile: AuthzProfile): AuthContext {
   return {
-    id: payload.sub,
+    id: profile.userId,
     email: payload.email,
-    role: payload.role,
-    tenantId: payload.tenantId,
+    tenantId: profile.tenantId ?? undefined,
+    scope: profile.scope,
+    roles: profile.roles.map((role) => role.key),
     jti: payload.jti,
   };
 }

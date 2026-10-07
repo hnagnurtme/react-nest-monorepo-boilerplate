@@ -8,4 +8,5 @@ export const AUTH_ENDPOINTS = {
   REFRESH: '/api/v1/auth/refresh',
   LOGOUT: '/api/v1/auth/logout',
   ME: '/api/v1/auth/me',
+  ABILITIES: '/api/v1/auth/me/abilities',
 } as const satisfies Record<string, keyof paths>;

@@ -1,39 +1,35 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { screen } from '@testing-library/react';
+import { Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { RouteGuard } from '@/app/components/route-guard';
 import { useAuthStore } from '@/entities/session';
-import { AbilityProvider } from '@/features/auth';
 import { TenantsPage } from '@/features/tenants';
-import { ToastProvider } from '@/shared/ui';
 
-import { makeUser, setSessionUser } from './fixtures/auth';
+import {
+  jsonResponse,
+  makePlatformAdmin,
+  makeTenantAdmin,
+  PLATFORM_ADMIN_GRANTS,
+  TENANT_ADMIN_GRANTS,
+} from './fixtures/auth';
+import { mockApi, renderWithProviders } from './providers';
 
 function renderRoute() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <ToastProvider>
-        <AbilityProvider>
-          <MemoryRouter initialEntries={['/tenants']}>
-            <Routes>
-              <Route
-                path="/tenants"
-                element={
-                  <RouteGuard allowedRoles={['PLATFORM_ADMIN']}>
-                    <TenantsPage />
-                  </RouteGuard>
-                }
-              />
-              <Route path="/" element={<div data-testid="home">Home</div>} />
-              <Route path="/login" element={<div data-testid="login">Login</div>} />
-            </Routes>
-          </MemoryRouter>
-        </AbilityProvider>
-      </ToastProvider>
-    </QueryClientProvider>,
+  return renderWithProviders(
+    <Routes>
+      <Route
+        path="/tenants"
+        element={
+          <RouteGuard checkAbility={(ability) => ability.can('create', 'Tenant')}>
+            <TenantsPage />
+          </RouteGuard>
+        }
+      />
+      <Route path="/" element={<div data-testid="home">Home</div>} />
+      <Route path="/login" element={<div data-testid="login">Login</div>} />
+    </Routes>,
+    ['/tenants'],
   );
 }
 
@@ -42,10 +38,10 @@ describe('TenantsPage route guard', () => {
     vi.unstubAllGlobals();
   });
 
-  it('redirects tenant admins to home', () => {
-    setSessionUser(makeUser({ role: 'TENANT_ADMIN' }));
+  it('redirects tenant admins to home', async () => {
+    mockApi(makeTenantAdmin(), TENANT_ADMIN_GRANTS);
     renderRoute();
-    expect(screen.getByTestId('home')).toBeInTheDocument();
+    expect(await screen.findByTestId('home')).toBeInTheDocument();
   });
 
   it('redirects anonymous users to login', () => {
@@ -55,26 +51,19 @@ describe('TenantsPage route guard', () => {
   });
 
   it('lets platform admins see the tenants list and create form', async () => {
-    setSessionUser(makeUser({ id: 'root', role: 'PLATFORM_ADMIN', tenantId: undefined }));
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue(
-        new Response(
-          JSON.stringify({
-            data: [
-              {
-                id: 't1',
-                name: 'Acme',
-                slug: 'acme',
-                isActive: true,
-                createdAt: '2026-01-01T00:00:00Z',
-              },
-            ],
-            meta: { page: 1, limit: 20, total: 1, totalPages: 1 },
-          }),
-          { status: 200, headers: { 'Content-Type': 'application/json' } },
-        ),
-      ),
+    mockApi(makePlatformAdmin(), PLATFORM_ADMIN_GRANTS, () =>
+      jsonResponse({
+        data: [
+          {
+            id: 't1',
+            name: 'Acme',
+            slug: 'acme',
+            isActive: true,
+            createdAt: '2026-01-01T00:00:00Z',
+          },
+        ],
+        meta: { page: 1, limit: 20, total: 1, totalPages: 1 },
+      }),
     );
     renderRoute();
 

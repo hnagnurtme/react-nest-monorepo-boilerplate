@@ -1,14 +1,16 @@
 import { z } from 'zod';
 
-import { USER_ROLES, type UserRole } from '@repo/shared-types';
-
 export const PHONE_REGEX = /^\+?[0-9]{7,15}$/;
 export const MIN_PASSWORD_LENGTH = 8;
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+export type RoleScopeName = 'platform' | 'tenant';
+
 export interface CreateUserSchemaOptions {
-  /** Only platform admins pick a tenant (and may create platform admins). */
-  isPlatformAdmin: boolean;
+  /** Only platform actors pick a tenant (and may create platform users). */
+  isPlatformActor: boolean;
+  /** Scope of a role id, so a platform role means "no tenant". */
+  scopeOf: (roleId: string) => RoleScopeName | undefined;
   t: (key: string) => string;
 }
 
@@ -17,12 +19,21 @@ export interface CreateUserFormValues {
   email: string;
   phoneNumber: string;
   password: string;
-  role: UserRole;
+  roleIds: string[];
   tenantId: string;
 }
 
+/** A user belongs to a tenant unless every selected role is a platform role. */
+export function needsTenant(
+  roleIds: readonly string[],
+  scopeOf: CreateUserSchemaOptions['scopeOf'],
+): boolean {
+  return roleIds.some((roleId) => scopeOf(roleId) !== 'platform');
+}
+
 export function createUserSchema({
-  isPlatformAdmin,
+  isPlatformActor,
+  scopeOf,
   t,
 }: CreateUserSchemaOptions): z.ZodType<CreateUserFormValues> {
   return z
@@ -42,18 +53,25 @@ export function createUserSchema({
         .trim()
         .refine((value) => value === '' || PHONE_REGEX.test(value), t('create.validation.phone')),
       password: z.string().min(MIN_PASSWORD_LENGTH, t('create.validation.passwordMin')),
-      role: z.enum(USER_ROLES),
+      roleIds: z.array(z.string()).min(1, t('create.validation.rolesRequired')),
       tenantId: z.string(),
     })
     .superRefine((value, context) => {
-      if (!isPlatformAdmin && value.role === 'PLATFORM_ADMIN') {
+      const scopes = new Set(value.roleIds.map((roleId) => scopeOf(roleId)));
+      if (scopes.has('platform') && scopes.size > 1) {
         context.addIssue({
           code: z.ZodIssueCode.custom,
-          path: ['role'],
-          message: t('create.validation.roleNotAllowed'),
+          path: ['roleIds'],
+          message: t('create.validation.mixedScope'),
         });
+        return;
       }
-      if (isPlatformAdmin && value.role !== 'PLATFORM_ADMIN' && !UUID_REGEX.test(value.tenantId)) {
+      if (
+        isPlatformActor &&
+        value.roleIds.length > 0 &&
+        needsTenant(value.roleIds, scopeOf) &&
+        !UUID_REGEX.test(value.tenantId)
+      ) {
         context.addIssue({
           code: z.ZodIssueCode.custom,
           path: ['tenantId'],

@@ -27,7 +27,7 @@ All build, test, lint, migration, and dev commands **MUST** go through `just`. N
 - `just db-migrate`, `just db-seed`, `just db-studio` require a running Postgres — run `just up` first.
 - `just test` runs **unit tests only**. Integration tests: `pnpm test:integration` (inside `apps/api`, needs `just up` + `just db-migrate`).
 - Node `>=20.18.0`; package manager `pnpm@9.15.4` (enforced by `packageManager` field).
-- Seed accounts for dev (password `Password123!`): `admin@example.com` (`PLATFORM_ADMIN`), `admin-a@example.com` and `member-a@example.com` (tenant Acme), `admin-b@example.com` (tenant Globex).
+- Seed accounts for dev (password `Password123!`): `admin@example.com` (`PLATFORM_ADMIN`), `admin-a@example.com` (`TENANT_ADMIN`) and `member-a@example.com` (`TENANT_MEMBER`) in tenant Acme, `admin-b@example.com` (`TENANT_ADMIN`, tenant Globex). Roles are assigned through `user_roles`.
 
 ### Gotcha: the API dev runner must keep decorator metadata
 
@@ -66,8 +66,9 @@ Pointing the app at the owner role **silently disables RLS for all queries** —
 3. `SET ROLE boilerplate_owner` — tables end up owned by this role, not the superuser
 4. Apply Drizzle migrations from `apps/api/drizzle/`
 5. Run `sql/99-grants.sql`
+6. `syncAuthzCatalog` (`authz-sync.ts`): upsert `PERMISSION_CATALOG` into `permissions` and `SYSTEM_ROLES` (with grants) into `roles`/`role_permissions`, as `boilerplate_app` in `admin` mode with `app.system_roles_write = 'on'`
 
-**Schema files** (edit these, never the generated migration SQL): `apps/api/src/core/database/schema/` — `users.ts`, `tenants.ts`, `sessions.ts`, `audit-logs.ts`, `index.ts`.
+**Schema files** (edit these, never the generated migration SQL): `apps/api/src/core/database/schema/` — `users.ts`, `tenants.ts`, `sessions.ts`, `audit-logs.ts`, `permissions.ts`, `roles.ts`, `role-permissions.ts`, `user-roles.ts`, `index.ts`.
 
 **Never edit** `apps/api/drizzle/` migration files or `drizzle/meta/` after they are merged to `main`. Fix forward with a new migration.
 
@@ -89,7 +90,9 @@ Every table needs **both** `ENABLE ROW LEVEL SECURITY` and `FORCE ROW LEVEL SECU
 
 Both rules are checked by the `coverage` tests in `apps/api/src/core/database/__tests__/rls-isolation.integration.spec.ts` (every public table has RLS enabled and forced; at most one policy per table). That is an integration test, so it runs in CI's `integration` job and locally only with Postgres up. There is no separate CI grep for RLS.
 
-RLS is controlled by the transaction-local settings `app.access_mode` and `app.tenant_id`, set via `set_config(..., true)` (`true` = is_local, resets at transaction end). Access modes: `'admin'` (needs a `reason`; used by `PLATFORM_ADMIN` and by the auth flow for `sessions`) and `'tenant'` (needs a `tenantId`). There is **no `public` mode**. `sessions` is reachable only in `admin` mode.
+RLS is controlled by the transaction-local settings `app.access_mode` and `app.tenant_id`, set via `set_config(..., true)` (`true` = is_local, resets at transaction end). Access modes: `'admin'` (needs a `reason`; used by callers whose profile scope is `platform`, and by system flows such as the auth flow for `sessions`, `AuthzService.loadProfile`, and the catalog sync) and `'tenant'` (needs a `tenantId`). There is **no `public` mode**. `sessions` is reachable only in `admin` mode. `JwtAuthGuard` picks the mode from the DB-loaded profile, never from the token.
+
+**Authorization tables** (`permissions`, `roles`, `role_permissions`, `user_roles`) follow the same one-policy rule, plus triggers a policy cannot express: system roles (`tenant_id` NULL, `is_system`) and their grants are immutable unless `app.system_roles_write = 'on'` (only the migrate job sets it, so not even an `admin`-mode API call can edit them); `user_roles` assignment validity is checked and `user_roles.tenant_id` is stamped from the user. Platform-scope system roles are hidden from `tenant` mode. A user has no `role` column any more: a platform user is `tenant_id` NULL plus a platform-scope role.
 
 **All business queries must go through `TransactionManager`** (`apps/api/src/core/database/transaction.manager.ts`):
 
@@ -109,7 +112,7 @@ A query outside a `TransactionManager`-managed transaction sees `app.access_mode
 
 **RLS policies are hand-written** below the generated DDL inside the same migration `.sql` file (rule `03-database-drizzle.md` F1).
 
-**Audit log:** `core/audit/AuditService.record(tx, entry)` writes `audit_logs` inside the caller's transaction (it commits or rolls back with the change). Currently used for `user.create|update|delete` and `tenant.create|update`. Never put password hashes in before/after snapshots.
+**Audit log:** `core/audit/AuditService.record(tx, entry)` writes `audit_logs` inside the caller's transaction (it commits or rolls back with the change). Currently used for `user.create|update|delete`, `user.roles.update`, `tenant.create|update`, and `role.create|update|permissions.update|delete`. Never put password hashes in before/after snapshots.
 
 ---
 
@@ -143,7 +146,7 @@ config ← common ← core ← integrations ← modules
 - `common/`: Pure helpers, shared decorators, shared DTOs. Cannot import `core`, `integrations`, or `modules`.
 - `core/`: Drizzle, Pino logger, OpenTelemetry, `TransactionManager`, audit, auth token service, mail, Redis, CSRF middleware, global filters/interceptors/guards.
 - `integrations/`: Outbound adapters (currently empty). Importing `axios`, `node-fetch`, AWS/OpenAI SDKs, or `ioredis` inside `modules/` is a lint error.
-- `modules/`: Business slices: `auth`, `users`, `tenants`, `health`. Cannot call `db.*` directly.
+- `modules/`: Business slices: `auth`, `users`, `tenants`, `roles`, `health`. Cannot call `db.*` directly.
 
 The API is **ESM** (`NodeNext`): relative imports carry an explicit `.js` extension, and `@/...` aliases are used for cross-directory imports.
 
@@ -162,16 +165,26 @@ index.ts   ← the ONLY public surface; Repository is never exported from index
 
 Services throw domain errors (`core/errors`), **not** `HttpException`. `GlobalExceptionFilter` maps them to RFC 9457 responses, and also unwraps Drizzle's `cause` to map Postgres SQLSTATE codes (`23505` → 409 `RESOURCE_CONFLICT`, `23503` → 409 `REFERENCE_CONSTRAINT`, `23514` → 422). Do not `throw new NotFoundException()` in a service.
 
-**CASL critical pitfall:** `ability.can('update', 'User')` with a string subject ignores all conditions and returns `true`. Ownership checks require `subject('User', entity)` — always. `@CheckPolicies` on a controller is layer 1 (role only); the service re-checks on the loaded record (layer 2); RLS is layer 3.
+**CASL critical pitfall:** `ability.can('update', 'User')` with a string subject ignores all conditions and returns `true`. Ownership checks require `subject('User', entity)` — always. `@CheckPolicies` on a controller is layer 1 (permission only); the service re-checks on the loaded record (layer 2); RLS is layer 3.
+
+**Authorization model (ADR-0005): permissions live in the database, the catalog lives in code.**
+
+- `PERMISSION_CATALOG` and `SYSTEM_ROLES` (fixed UUIDs) in `packages/shared-types/src/authz/catalog.ts` are the source of truth. A grant is `(action, subject, preset)` with preset `any | own_tenant | own_record`; `conditionsFor()` in `authz/ability.ts` maps presets to CASL conditions. Tenants choose presets and never author conditions. Tenant roles can never use `any` or `platformOnly` entries (`manage:all`, `Tenant` create/delete). `buildAbility` always adds `cannot update/delete Role { isSystem: true }`.
+- The access token carries only `sub`, `email`, `jti`. `JwtAuthGuard` calls `AuthzService.loadProfile(userId)` on **every** request (DB in `admin` mode, cached in Redis as `authz:profile:<id>`, TTL 300 s, evicted explicitly on role, permission, assignment, and deactivation changes). Tenant, scope, roles, and grants come from that profile; an inactive or missing user gives `401`. Profile scope `platform` means RLS `admin` mode; otherwise `tenant` mode with `profile.tenantId`; neither means `401`.
+- Services get the ability from `AuthzService.current()` and check with `subject('User', entity)`; `PoliciesGuard` uses the same ability. Do not rebuild abilities from token claims or `AuthContext.roles`.
+- Anti-escalation invariants (do not weaken them): nobody grants or assigns more than they hold (`grantsCover`: same action and subject at an equal or wider reach; `manage:all` covers all); nobody edits their own roles; a tenant always keeps at least one active `TENANT_ADMIN` (409); system roles are immutable even for platform admins; a role cannot be deleted while assigned (409).
+- **Gotcha: the permission sync runs in `just db-migrate`, not at app startup** (replicas would race). A new `PERMISSION_CATALOG` or `SYSTEM_ROLES` entry is invisible to the API until you run it, and `just db-migrate` needs `just up` first. Cached profiles also lag up to 300 s when something changes outside the API (a direct DB edit); changes made through the API evict the cache.
+- API: `GET /permissions` (what the caller may grant), `GET/POST /roles`, `GET/PATCH/DELETE /roles/:id`, `PUT /roles/:id/permissions`, `PUT /users/:id/roles`, `POST /users` takes `roleIds` (min 1), `GET /auth/me` (`PublicUser` with `scope` and `roles`), `GET /auth/me/abilities` (packed CASL rules; the web builds its ability with `abilityFromPacked`).
+- New entity with permissions: add the subject to `SubjectShapes` and `conditionsFor`; add catalog entries (with `platformOnly` and presets); add grants to `SYSTEM_ROLES` if a system role needs them; run `just db-migrate`; add the table with `tenant_id` and RLS; use `AuthzService.current()` and `subject()` in the service; `just contract`; `CanAction` in the web. Full checklist: `docs/03-auth-flow-va-casl-abac.md` section 2.7.
 
 ---
 
 ## 7. API Design Conventions
 
 - All endpoints prefixed `/api/v1`. No unversioned endpoints (except `/healthz`, `/readyz`).
-- **Tenant comes from the JWT, not the client.** `tenantId` must not appear in request DTOs, with one exception: `POST /users` accepts an optional `tenantId` because a `PLATFORM_ADMIN` chooses the tenant for the new user. For a `TENANT_ADMIN` the value is validated against the token (a different value is rejected, an absent one is filled from the token). Any other DTO with `tenantId` is a bug. This is a review rule; there is no CI grep for it.
-- Roles: `PLATFORM_ADMIN` (no tenant), `TENANT_ADMIN`, `TENANT_MEMBER`. There is **no self sign-up**: `POST /auth/register`, `/auth/verify-email`, `/auth/resend-otp` do not exist. Accounts are created only by admins (`POST /tenants`, `POST /users`); created users are active and email-verified.
-- Remaining auth endpoints: `login`, `refresh`, `logout`, `logout-all`, `me`, `forgot-password` (OTP by email), `reset-password`, `change-password`.
+- **Tenant comes from the caller's profile, not the client.** `tenantId` must not appear in request DTOs, with two exceptions: `POST /users` and `POST /roles` accept an optional `tenantId` because a platform admin chooses the tenant. For a tenant user the value is validated against their own tenant (a different value is rejected, an absent one is filled in). Any other DTO with `tenantId` is a bug. This is a review rule; there is no CI grep for it.
+- System roles: `PLATFORM_ADMIN` (platform scope, no tenant), `TENANT_ADMIN`, `TENANT_MEMBER`; tenants can add custom roles. There is **no self sign-up**: `POST /auth/register`, `/auth/verify-email`, `/auth/resend-otp` do not exist. Accounts are created only by users holding `create:User` (`POST /tenants` needs `create:Tenant`, platform only); created users are active and email-verified.
+- Remaining auth endpoints: `login`, `refresh`, `logout`, `logout-all`, `me`, `me/abilities`, `forgot-password` (OTP by email), `reset-password`, `change-password`.
 - All endpoints are authenticated by default (global `JwtAuthGuard`). Public endpoints require `@Public()` — omitting it gives a `401`.
 - Validation is `ZodValidationPipe` (global, `nestjs-zod`) with `.strict()` DTO schemas, so extra fields are rejected with 422. There is no class-validator `ValidationPipe`.
 - `201 POST` must include a `Location` header. `204 DELETE` has no body.
@@ -269,7 +282,7 @@ app → features → entities → shared → lib → config
 
 Feature A cannot import `features/B/components/Something`. Only `features/B` (its `index.ts` barrel).
 
-**Features:** `auth` (login, forgot/reset password, CASL ability provider), `users` and `tenants` (admin UIs, including the create-user and create-tenant forms), `home`, `status`. There is no sign-up page and no social login.
+**Features:** `auth` (login, forgot/reset password, CASL ability provider fed by `GET /auth/me/abilities`), `users` and `tenants` (admin UIs, including the create-user and create-tenant forms), `roles` (roles page with a permission matrix), `home`, `status`. Route guards and `CanAction` use abilities, never hardcoded role lists. There is no sign-up page and no social login.
 
 **State management:**
 
@@ -304,6 +317,7 @@ When adding a feature that touches both backend and frontend, this order is requ
 1. Schema change → `just db-generate` → `just db-migrate`
 2. Hand-write RLS policies below the generated DDL in the migration `.sql` file
 3. Write integration tests for RLS isolation (two tenants; verify read, write, and cross-tenant insert)
+   If the entity has permissions: add the subject to `SubjectShapes`/`conditionsFor` and the catalog entries (and `SYSTEM_ROLES` grants) in `packages/shared-types`, then run `just db-migrate` to sync them
 4. Implement DTOs, repository, service (with `AuditService` for sensitive writes), controller (with OpenAPI decorators)
 5. `just contract` → commit both `openapi.json` and `generated.ts`
 6. Frontend consumes types from `@repo/api-contract` only
@@ -314,7 +328,7 @@ When adding a feature that touches both backend and frontend, this order is requ
 ## 14. Naming Conventions
 
 - Domain terms: use `Tenant` (not Organization, Workspace, Account). See `docs/glossary.md`.
-- Roles: `PLATFORM_ADMIN`, `TENANT_ADMIN`, `TENANT_MEMBER`.
+- System role keys: `PLATFORM_ADMIN`, `TENANT_ADMIN`, `TENANT_MEMBER`. Permission keys are `action:subject` (`update:User`); presets are `any`, `own_tenant`, `own_record`.
 - Files: `kebab-case` with role suffix — `users.service.ts`, `use-users.ts`.
 - Classes/types/interfaces: `PascalCase`, no `I` prefix (`UsersRepository`, not `IUsersRepository`).
 - Boolean vars: `is`/`has`/`can`/`should` prefix.
@@ -339,7 +353,8 @@ ADR constraints in brief:
 - **ADR-0002**: Drizzle, not Prisma.
 - **ADR-0003**: Tenant isolation via Postgres RLS, not app-layer filtering.
 - **ADR-0004**: CASL/ABAC, not plain RBAC.
-- **ADR-0006**: SPA — no Next.js, server components, or `app/`-style routing. (There is no ADR-0005; the number is unused.)
+- **ADR-0005**: Roles and permissions live in the database (code owns the catalog, presets are a closed vocabulary), refining ADR-0004.
+- **ADR-0006**: SPA — no Next.js, server components, or `app/`-style routing.
 
 ---
 

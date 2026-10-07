@@ -1,19 +1,37 @@
 import { HttpStatus } from '@nestjs/common';
 import { ApiResponse } from '@nestjs/swagger';
 
-import { USER_ROLES } from '@repo/shared-types';
-
 type OpenApiSchema = Record<string, unknown>;
 
 const USER_SCHEMA: OpenApiSchema = {
   type: 'object',
-  required: ['id', 'email', 'fullName', 'phoneNumber', 'role', 'tenantId', 'isActive', 'createdAt'],
+  required: [
+    'id',
+    'email',
+    'fullName',
+    'phoneNumber',
+    'roles',
+    'tenantId',
+    'isActive',
+    'createdAt',
+  ],
   properties: {
     id: { type: 'string', format: 'uuid' },
     email: { type: 'string', format: 'email' },
     fullName: { type: 'string' },
     phoneNumber: { type: 'string', nullable: true },
-    role: { type: 'string', enum: USER_ROLES },
+    roles: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['id', 'key', 'name'],
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          key: { type: 'string' },
+          name: { type: 'string' },
+        },
+      },
+    },
     tenantId: { type: 'string', format: 'uuid', nullable: true },
     isActive: { type: 'boolean' },
     createdAt: { type: 'string', format: 'date-time' },

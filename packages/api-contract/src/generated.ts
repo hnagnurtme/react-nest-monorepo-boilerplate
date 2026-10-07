@@ -174,6 +174,94 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/me/abilities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The caller's permissions as packed CASL rules, for the client to build its ability */
+        get: operations["AuthController_abilities_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/permissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Permissions the caller may put into a role (the catalog it already holds) */
+        get: operations["RolesController_permissions_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List roles: the shared system roles and the tenant's own */
+        get: operations["RolesController_list_v1"];
+        put?: never;
+        /** Create a custom role in a tenant */
+        post: operations["RolesController_create_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/roles/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get one role with its permissions */
+        get: operations["RolesController_get_v1"];
+        put?: never;
+        post?: never;
+        /** Delete a custom role that is not assigned to anyone */
+        delete: operations["RolesController_remove_v1"];
+        options?: never;
+        head?: never;
+        /** Rename a custom role (system roles are immutable) */
+        patch: operations["RolesController_rename_v1"];
+        trace?: never;
+    };
+    "/api/v1/roles/{id}/permissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Replace the permissions of a custom role (never more than you hold) */
+        put: operations["RolesController_setPermissions_v1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tenants": {
         parameters: {
             query?: never;
@@ -247,6 +335,23 @@ export interface paths {
         patch: operations["UsersController_update_v1"];
         trace?: never;
     };
+    "/api/v1/users/{id}/roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Replace the roles of a user (never your own, never more than you hold) */
+        put: operations["UsersController_setRoles_v1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -274,6 +379,30 @@ export interface components {
             currentPassword: string;
             newPassword: string;
         };
+        CreateRoleDto: {
+            name: string;
+            /** Format: uuid */
+            tenantId?: string;
+            permissions: {
+                /** @enum {string} */
+                action: "create" | "read" | "update" | "delete";
+                subject: string;
+                /** @enum {string} */
+                preset: "any" | "own_tenant" | "own_record";
+            }[];
+        };
+        UpdateRoleDto: {
+            name: string;
+        };
+        SetRolePermissionsDto: {
+            permissions: {
+                /** @enum {string} */
+                action: "create" | "read" | "update" | "delete";
+                subject: string;
+                /** @enum {string} */
+                preset: "any" | "own_tenant" | "own_record";
+            }[];
+        };
         CreateTenantDto: {
             name: string;
             slug?: string;
@@ -288,8 +417,7 @@ export interface components {
             fullName: string;
             phoneNumber?: string;
             password: string;
-            /** @enum {string} */
-            role: "PLATFORM_ADMIN" | "TENANT_ADMIN" | "TENANT_MEMBER";
+            roleIds: string[];
             /** Format: uuid */
             tenantId?: string;
         };
@@ -297,6 +425,9 @@ export interface components {
             fullName?: string;
             phoneNumber?: string | null;
             isActive?: boolean;
+        };
+        SetUserRolesDto: {
+            roleIds: string[];
         };
     };
     responses: never;
@@ -378,7 +509,11 @@ export interface operations {
                                 email: string;
                                 fullName: string;
                                 /** @enum {string} */
-                                role: "PLATFORM_ADMIN" | "TENANT_ADMIN" | "TENANT_MEMBER";
+                                scope: "platform" | "tenant";
+                                roles: {
+                                    key: string;
+                                    name: string;
+                                }[];
                                 tenantId?: string;
                             };
                             refreshToken?: string;
@@ -453,7 +588,11 @@ export interface operations {
                                 email: string;
                                 fullName: string;
                                 /** @enum {string} */
-                                role: "PLATFORM_ADMIN" | "TENANT_ADMIN" | "TENANT_MEMBER";
+                                scope: "platform" | "tenant";
+                                roles: {
+                                    key: string;
+                                    name: string;
+                                }[];
                                 tenantId?: string;
                             };
                             refreshToken?: string;
@@ -768,7 +907,11 @@ export interface operations {
                             email: string;
                             fullName: string;
                             /** @enum {string} */
-                            role: "PLATFORM_ADMIN" | "TENANT_ADMIN" | "TENANT_MEMBER";
+                            scope: "platform" | "tenant";
+                            roles: {
+                                key: string;
+                                name: string;
+                            }[];
                             tenantId?: string;
                         };
                     };
@@ -776,6 +919,515 @@ export interface operations {
             };
             /** @description Not authenticated, or the token is invalid or expired */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+        };
+    };
+    AuthController_abilities_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Packed CASL rules */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: {
+                            rules: unknown[];
+                        };
+                    };
+                };
+            };
+            /** @description Not authenticated, or the token is invalid or expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+        };
+    };
+    RolesController_permissions_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Grantable permissions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: {
+                            action: string;
+                            subject: string;
+                            description: string;
+                            presets: ("any" | "own_tenant" | "own_record")[];
+                        }[];
+                    };
+                };
+            };
+            /** @description Not authenticated, or the token is invalid or expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Authenticated, but not allowed to do this */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+        };
+    };
+    RolesController_list_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of roles */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: {
+                            /** Format: uuid */
+                            id: string;
+                            key: string;
+                            name: string;
+                            /** @enum {string} */
+                            scope: "platform" | "tenant";
+                            isSystem: boolean;
+                            /** Format: uuid */
+                            tenantId: string | null;
+                            permissions: {
+                                /** @enum {string} */
+                                action: "manage" | "create" | "read" | "update" | "delete";
+                                subject: string;
+                                /** @enum {string} */
+                                preset: "any" | "own_tenant" | "own_record";
+                            }[];
+                        }[];
+                        meta: {
+                            page: number;
+                            limit: number;
+                            total: number;
+                            totalPages: number;
+                        };
+                    };
+                };
+            };
+            /** @description Not authenticated, or the token is invalid or expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Authenticated, but not allowed to do this */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description The payload failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+        };
+    };
+    RolesController_create_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateRoleDto"];
+            };
+        };
+        responses: {
+            /** @description The created role */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: {
+                            /** Format: uuid */
+                            id: string;
+                            key: string;
+                            name: string;
+                            /** @enum {string} */
+                            scope: "platform" | "tenant";
+                            isSystem: boolean;
+                            /** Format: uuid */
+                            tenantId: string | null;
+                            permissions: {
+                                /** @enum {string} */
+                                action: "manage" | "create" | "read" | "update" | "delete";
+                                subject: string;
+                                /** @enum {string} */
+                                preset: "any" | "own_tenant" | "own_record";
+                            }[];
+                        };
+                    };
+                };
+            };
+            /** @description Not authenticated, or the token is invalid or expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Authenticated, but not allowed to do this */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description The resource is in a state that forbids this change */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description The payload failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+        };
+    };
+    RolesController_get_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The role */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: {
+                            /** Format: uuid */
+                            id: string;
+                            key: string;
+                            name: string;
+                            /** @enum {string} */
+                            scope: "platform" | "tenant";
+                            isSystem: boolean;
+                            /** Format: uuid */
+                            tenantId: string | null;
+                            permissions: {
+                                /** @enum {string} */
+                                action: "manage" | "create" | "read" | "update" | "delete";
+                                subject: string;
+                                /** @enum {string} */
+                                preset: "any" | "own_tenant" | "own_record";
+                            }[];
+                        };
+                    };
+                };
+            };
+            /** @description Not authenticated, or the token is invalid or expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Authenticated, but not allowed to do this */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description No such resource, or the caller may not know it exists */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+        };
+    };
+    RolesController_remove_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Not authenticated, or the token is invalid or expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Authenticated, but not allowed to do this */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description No such resource, or the caller may not know it exists */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description The resource is in a state that forbids this change */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+        };
+    };
+    RolesController_rename_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateRoleDto"];
+            };
+        };
+        responses: {
+            /** @description The updated role */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: {
+                            /** Format: uuid */
+                            id: string;
+                            key: string;
+                            name: string;
+                            /** @enum {string} */
+                            scope: "platform" | "tenant";
+                            isSystem: boolean;
+                            /** Format: uuid */
+                            tenantId: string | null;
+                            permissions: {
+                                /** @enum {string} */
+                                action: "manage" | "create" | "read" | "update" | "delete";
+                                subject: string;
+                                /** @enum {string} */
+                                preset: "any" | "own_tenant" | "own_record";
+                            }[];
+                        };
+                    };
+                };
+            };
+            /** @description Not authenticated, or the token is invalid or expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Authenticated, but not allowed to do this */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description No such resource, or the caller may not know it exists */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description The resource is in a state that forbids this change */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description The payload failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+        };
+    };
+    RolesController_setPermissions_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetRolePermissionsDto"];
+            };
+        };
+        responses: {
+            /** @description The role with its new permissions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: {
+                            /** Format: uuid */
+                            id: string;
+                            key: string;
+                            name: string;
+                            /** @enum {string} */
+                            scope: "platform" | "tenant";
+                            isSystem: boolean;
+                            /** Format: uuid */
+                            tenantId: string | null;
+                            permissions: {
+                                /** @enum {string} */
+                                action: "manage" | "create" | "read" | "update" | "delete";
+                                subject: string;
+                                /** @enum {string} */
+                                preset: "any" | "own_tenant" | "own_record";
+                            }[];
+                        };
+                    };
+                };
+            };
+            /** @description Not authenticated, or the token is invalid or expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Authenticated, but not allowed to do this */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description No such resource, or the caller may not know it exists */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description The payload failed validation */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1068,8 +1720,12 @@ export interface operations {
                             email: string;
                             fullName: string;
                             phoneNumber: string | null;
-                            /** @enum {string} */
-                            role: "PLATFORM_ADMIN" | "TENANT_ADMIN" | "TENANT_MEMBER";
+                            roles: {
+                                /** Format: uuid */
+                                id: string;
+                                key: string;
+                                name: string;
+                            }[];
                             /** Format: uuid */
                             tenantId: string | null;
                             isActive: boolean;
@@ -1141,8 +1797,12 @@ export interface operations {
                             email: string;
                             fullName: string;
                             phoneNumber: string | null;
-                            /** @enum {string} */
-                            role: "PLATFORM_ADMIN" | "TENANT_ADMIN" | "TENANT_MEMBER";
+                            roles: {
+                                /** Format: uuid */
+                                id: string;
+                                key: string;
+                                name: string;
+                            }[];
                             /** Format: uuid */
                             tenantId: string | null;
                             isActive: boolean;
@@ -1213,8 +1873,12 @@ export interface operations {
                             email: string;
                             fullName: string;
                             phoneNumber: string | null;
-                            /** @enum {string} */
-                            role: "PLATFORM_ADMIN" | "TENANT_ADMIN" | "TENANT_MEMBER";
+                            roles: {
+                                /** Format: uuid */
+                                id: string;
+                                key: string;
+                                name: string;
+                            }[];
                             /** Format: uuid */
                             tenantId: string | null;
                             isActive: boolean;
@@ -1318,8 +1982,12 @@ export interface operations {
                             email: string;
                             fullName: string;
                             phoneNumber: string | null;
-                            /** @enum {string} */
-                            role: "PLATFORM_ADMIN" | "TENANT_ADMIN" | "TENANT_MEMBER";
+                            roles: {
+                                /** Format: uuid */
+                                id: string;
+                                key: string;
+                                name: string;
+                            }[];
                             /** Format: uuid */
                             tenantId: string | null;
                             isActive: boolean;
@@ -1349,6 +2017,95 @@ export interface operations {
             };
             /** @description No such resource, or the caller may not know it exists */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description The payload failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+        };
+    };
+    UsersController_setRoles_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetUserRolesDto"];
+            };
+        };
+        responses: {
+            /** @description The user with its new roles */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: email */
+                            email: string;
+                            fullName: string;
+                            phoneNumber: string | null;
+                            roles: {
+                                /** Format: uuid */
+                                id: string;
+                                key: string;
+                                name: string;
+                            }[];
+                            /** Format: uuid */
+                            tenantId: string | null;
+                            isActive: boolean;
+                            /** Format: date-time */
+                            createdAt: string;
+                        };
+                    };
+                };
+            };
+            /** @description Not authenticated, or the token is invalid or expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Authenticated, but not allowed to do this */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description No such resource, or the caller may not know it exists */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description The resource is in a state that forbids this change */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

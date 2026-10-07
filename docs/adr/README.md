@@ -48,10 +48,11 @@ Chọn gì, và vì sao chọn cái đó thay vì các phương án còn lại.
 
 ## Danh sách
 
-| #                                               | Quyết định                               | Trạng thái |
-| :---------------------------------------------- | :--------------------------------------- | :--------- |
-| [0001](0001-modular-monolith.md)                | Modular Monolith thay vì Microservices   | accepted   |
-| [0002](0002-drizzle-thay-vi-prisma.md)          | Drizzle ORM thay vì Prisma               | accepted   |
-| [0003](0003-rls-thay-vi-loc-o-tang-ung-dung.md) | Postgres RLS thay vì lọc ở tầng ứng dụng | accepted   |
-| [0004](0004-casl-abac-thay-vi-rbac.md)          | CASL ABAC thay vì RBAC thuần             | accepted   |
-| [0006](0006-spa-cho-toan-bo-web.md)             | SPA cho toàn bộ web, chưa dùng SSR       | accepted   |
+| #                                                  | Quyết định                                   | Trạng thái |
+| :------------------------------------------------- | :------------------------------------------- | :--------- |
+| [0001](0001-modular-monolith.md)                   | Modular Monolith thay vì Microservices       | accepted   |
+| [0002](0002-drizzle-thay-vi-prisma.md)             | Drizzle ORM thay vì Prisma                   | accepted   |
+| [0003](0003-rls-thay-vi-loc-o-tang-ung-dung.md)    | Postgres RLS thay vì lọc ở tầng ứng dụng     | accepted   |
+| [0004](0004-casl-abac-thay-vi-rbac.md)             | CASL ABAC thay vì RBAC thuần                 | accepted   |
+| [0005](0005-permission-luu-trong-co-so-du-lieu.md) | Permission lưu trong DB (RBAC + preset ABAC) | accepted   |
+| [0006](0006-spa-cho-toan-bo-web.md)                | SPA cho toàn bộ web, chưa dùng SSR           | accepted   |

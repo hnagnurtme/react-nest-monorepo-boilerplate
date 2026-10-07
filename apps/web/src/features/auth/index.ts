@@ -5,7 +5,12 @@ export {
 } from './components/forgot-password-modal';
 export { LoginForm } from './components/login-form';
 export { LoginPage } from './pages/login-page';
-export { AbilityProvider, useAbility } from './ability/ability-context';
+export {
+  AbilityProvider,
+  abilityKeys,
+  useAbility,
+  useAbilityLoading,
+} from './ability/ability-context';
 export { CanAction, type CanActionProps } from './ability/can-action';
 
 export { useInitAuthSession } from './api/use-init-auth-session';

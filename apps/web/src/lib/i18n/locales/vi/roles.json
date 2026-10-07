@@ -1,0 +1,87 @@
+{
+  "title": "Vai trò",
+  "subtitle": "Ai được làm gì trong không gian làm việc.",
+  "back": "Trang chủ",
+  "loading": "Đang tải...",
+  "error": "Không thể tải danh sách vai trò.",
+  "empty": "Không có vai trò.",
+  "system": "Hệ thống",
+  "view": "Xem",
+  "manage": "Sửa",
+  "open": "Mở vai trò {{name}}",
+  "close": "Đóng",
+  "cancel": "Hủy",
+  "columns": {
+    "name": "Tên",
+    "key": "Khóa",
+    "scope": "Phạm vi",
+    "permissions": "Quyền",
+    "actions": "Thao tác"
+  },
+  "scope": {
+    "platform": "Nền tảng",
+    "tenant": "Tenant"
+  },
+  "pagination": {
+    "previous": "Trước",
+    "next": "Sau",
+    "summary": "Trang {{page}} / {{totalPages}} ({{total}} vai trò)"
+  },
+  "subjects": {
+    "User": "Người dùng",
+    "Tenant": "Tenant",
+    "Role": "Vai trò",
+    "all": "Tất cả"
+  },
+  "actions": {
+    "manage": "Quản lý",
+    "create": "Tạo",
+    "read": "Xem",
+    "update": "Sửa",
+    "delete": "Xóa"
+  },
+  "presets": {
+    "none": "Không",
+    "own_record": "Chỉ bản ghi của mình",
+    "own_tenant": "Toàn tenant",
+    "any": "Tất cả"
+  },
+  "matrix": {
+    "rowLabel": "{{action}} {{subject}}"
+  },
+  "create": {
+    "open": "Tạo vai trò",
+    "title": "Tạo vai trò",
+    "name": "Tên",
+    "tenant": "Tenant",
+    "tenantPlaceholder": "Chọn tenant",
+    "submit": "Tạo vai trò",
+    "success": "Đã tạo vai trò.",
+    "error": "Không thể tạo vai trò.",
+    "validation": {
+      "nameMin": "Tên phải có ít nhất 2 ký tự",
+      "tenantRequired": "Vui lòng chọn tenant"
+    }
+  },
+  "editor": {
+    "title": "Vai trò: {{name}}",
+    "name": "Tên vai trò",
+    "rename": "Đổi tên",
+    "save": "Lưu quyền",
+    "delete": "Xóa vai trò",
+    "systemNotice": "Vai trò hệ thống chỉ được xem.",
+    "loadError": "Không thể tải vai trò.",
+    "confirmDelete": "Xóa vai trò {{name}}? Không thể hoàn tác.",
+    "renameSuccess": "Đã đổi tên vai trò.",
+    "renameError": "Không thể đổi tên vai trò.",
+    "saveSuccess": "Đã lưu quyền.",
+    "saveError": "Không thể lưu quyền.",
+    "deleteSuccess": "Đã xóa vai trò.",
+    "deleteError": "Không thể xóa vai trò."
+  },
+  "errors": {
+    "forbidden": "Bạn không có quyền thực hiện thao tác này.",
+    "conflict": "Tên vai trò đã tồn tại hoặc vai trò vẫn đang được gán cho người dùng.",
+    "invalid": "Yêu cầu không hợp lệ. Kiểm tra tên và quyền."
+  }
+}

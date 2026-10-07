@@ -1,14 +1,11 @@
 import { create } from 'zustand';
 
-import type { UserContext, UserRole } from '@repo/shared-types';
+import type { operations } from '@repo/api-contract';
+import type { UserContext } from '@repo/shared-types';
 
-export interface PublicUser {
-  id: string;
-  email: string;
-  fullName: string;
-  role: UserRole;
-  tenantId?: string | undefined;
-}
+/** The signed-in user as returned by login/refresh/me (typed by the API contract). */
+export type PublicUser =
+  operations['AuthController_me_v1']['responses'][200]['content']['application/json']['data'];
 
 export type SessionStatus = 'initializing' | 'authenticated' | 'anonymous';
 
@@ -41,7 +38,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 }));
 
 export function toUserContext(user: PublicUser): UserContext {
-  return { id: user.id, role: user.role, tenantId: user.tenantId };
+  return { id: user.id, tenantId: user.tenantId };
 }
 
 export function selectUserContext(state: AuthState): UserContext | null {

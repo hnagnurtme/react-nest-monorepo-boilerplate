@@ -1,5 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 
+import type { AuthzProfile } from '@/core/authz/index.js';
+import { AuthzService } from '@/core/authz/index.js';
 import type { User } from '@/core/database/schema/index.js';
 import { TransactionManager } from '@/core/database/transaction.manager.js';
 import { InvalidCredentialsError, ResourceNotFoundError } from '@/core/errors/index.js';
@@ -23,6 +25,7 @@ export class UserDirectory {
     @Inject(TransactionManager) private readonly transactions: TransactionManager,
     @Inject(AuthRepository) private readonly repository: AuthRepository,
     @Inject(CredentialsService) private readonly credentials: CredentialsService,
+    @Inject(AuthzService) private readonly authz: AuthzService,
   ) {}
 
   async authenticate(dto: LoginDto): Promise<PublicUser> {
@@ -39,7 +42,7 @@ export class UserDirectory {
     if (user === undefined) throw new InvalidCredentialsError();
 
     await this.credentials.clearAttempts(dto.email);
-    return toPublicUser(user);
+    return this.toPublicUser(user);
   }
 
   async findActive(userId: string): Promise<PublicUser | undefined> {
@@ -48,7 +51,7 @@ export class UserDirectory {
       async (tx) => this.repository.findActiveUserById(tx, userId),
     );
 
-    return user === undefined ? undefined : toPublicUser(user);
+    return user === undefined ? undefined : this.toPublicUser(user);
   }
 
   async findByEmail(email: string): Promise<User | undefined> {
@@ -104,25 +107,31 @@ export class UserDirectory {
       async (tx) => this.repository.updateUserPassword(tx, userId, newPasswordHash),
     );
   }
+
+  /**
+   * Built by whitelist rather than by deleting fields from the row: a column
+   * added next year would otherwise leak by default
+   * (docs/rules/06-api-design.md C6). Roles and scope come from the authz
+   * profile, the same source the guards use on every request.
+   */
+  private async toPublicUser(user: User): Promise<PublicUser> {
+    const profile = await this.authz.loadProfile(user.id);
+    if (profile === undefined) throw new InvalidCredentialsError();
+
+    return publicUserFrom(user, profile);
+  }
 }
 
-/**
- * Built by whitelist rather than by deleting fields from the row: a column
- * added next year would otherwise leak by default
- * (docs/rules/06-api-design.md C6).
- */
-function toPublicUser(user: {
-  id: string;
-  email: string;
-  fullName: string;
-  role: string;
-  tenantId: string | null;
-}): PublicUser {
+function publicUserFrom(
+  user: Pick<User, 'id' | 'email' | 'fullName' | 'tenantId'>,
+  profile: AuthzProfile,
+): PublicUser {
   return {
     id: user.id,
     email: user.email,
     fullName: user.fullName,
-    role: user.role as PublicUser['role'],
     tenantId: user.tenantId ?? undefined,
+    scope: profile.scope,
+    roles: profile.roles.map((role) => ({ key: role.key, name: role.name })),
   };
 }

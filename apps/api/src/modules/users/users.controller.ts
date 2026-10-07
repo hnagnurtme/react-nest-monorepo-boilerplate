@@ -10,6 +10,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Put,
   Query,
   Res,
   UseGuards,
@@ -26,7 +27,7 @@ import {
 import { CheckPolicies, PoliciesGuard } from '@/core/guards/index.js';
 import { ACCESS_TOKEN_SECURITY_SCHEME } from '@/modules/auth/index.js';
 
-import { CreateUserDto, ListUsersDto, UpdateUserDto } from './dto/index.js';
+import { CreateUserDto, ListUsersDto, SetUserRolesDto, UpdateUserDto } from './dto/index.js';
 import { ApiUserListResponse, ApiUserResponse } from './users.openapi.js';
 import { UsersService } from './users.service.js';
 import type { UserResponse } from './users.types.js';
@@ -76,11 +77,8 @@ export class UsersController {
   @ApiOperation({ summary: 'Get one user' })
   @ApiUserResponse('The user')
   @ApiProblemResponses(UNAUTHORIZED, FORBIDDEN, NOT_FOUND)
-  get(
-    @CurrentUser() actor: AuthContext,
-    @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<UserResponse> {
-    return this.users.findOrThrow(actor, id);
+  get(@Param('id', ParseUUIDPipe) id: string): Promise<UserResponse> {
+    return this.users.findOrThrow(id);
   }
 
   @Patch(':id')
@@ -94,6 +92,21 @@ export class UsersController {
     @Body() dto: UpdateUserDto,
   ): Promise<UserResponse> {
     return this.users.update(actor, id, dto);
+  }
+
+  @Put(':id/roles')
+  @ApiOperation({
+    summary: 'Replace the roles of a user (never your own, never more than you hold)',
+  })
+  @ApiBody({ type: SetUserRolesDto })
+  @ApiUserResponse('The user with its new roles')
+  @ApiProblemResponses(UNAUTHORIZED, FORBIDDEN, NOT_FOUND, CONFLICT, UNPROCESSABLE_ENTITY)
+  setRoles(
+    @CurrentUser() actor: AuthContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: SetUserRolesDto,
+  ): Promise<UserResponse> {
+    return this.users.setRoles(actor, id, dto);
   }
 
   @Delete(':id')

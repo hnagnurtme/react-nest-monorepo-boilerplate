@@ -2,6 +2,7 @@
 
 - **Trạng thái:** accepted
 - **Ngày:** 2026-10-07
+- **Được tinh chỉnh bởi:** [ADR-0005](0005-permission-luu-trong-co-so-du-lieu.md) — vẫn dùng CASL, nhưng quyền nay lưu trong DB và `defineAbilityFor` được thay bằng `buildAbility(grants, user)`.
 
 ## Bối cảnh
 

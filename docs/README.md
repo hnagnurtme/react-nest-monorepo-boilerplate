@@ -18,14 +18,14 @@ Tài liệu viết bằng tiếng Việt (README, `setup.md` và `AGENTS.md` ở
 
 ## 1. Tài liệu Thiết kế
 
-| #   | Tài liệu                                                | Phạm vi                                                  | Trạng thái |
-| :-- | :------------------------------------------------------ | :------------------------------------------------------- | :--------- |
-| 00  | [Tổng quan Boilerplate](00-tong-quan-boilerplate.md)    | Triết lý, tech stack, layout monorepo, nhân bản dự án    | ✅ stable  |
-| 01  | [Monorepo & Tooling](01-monorepo-va-tooling.md)         | Turborepo, pnpm, tsconfig, ESLint boundaries             | ✅ stable  |
-| 02  | [Backend Core & RLS](02-backend-core-va-drizzle-rls.md) | 5 tầng NestJS, Drizzle, Postgres RLS, envelope, RFC 9457 | ✅ stable  |
-| 03  | [Auth & Phân quyền](03-auth-flow-va-casl-abac.md)       | Xác thực, token rotation, CASL ABAC multi-tenant         | ✅ stable  |
-| 04  | [Frontend Web](04-frontend-react-va-shadcn.md)          | React 19, Vite, Tailwind v4, HTTP client, TanStack Query | ✅ stable  |
-| 06  | [Observability & CI](06-observability-va-ci-cd.md)      | Pino, OpenTelemetry, GitHub Actions (repo chỉ có CI)     | ✅ stable  |
+| #   | Tài liệu                                                | Phạm vi                                                      | Trạng thái |
+| :-- | :------------------------------------------------------ | :----------------------------------------------------------- | :--------- |
+| 00  | [Tổng quan Boilerplate](00-tong-quan-boilerplate.md)    | Triết lý, tech stack, layout monorepo, nhân bản dự án        | ✅ stable  |
+| 01  | [Monorepo & Tooling](01-monorepo-va-tooling.md)         | Turborepo, pnpm, tsconfig, ESLint boundaries                 | ✅ stable  |
+| 02  | [Backend Core & RLS](02-backend-core-va-drizzle-rls.md) | 5 tầng NestJS, Drizzle, Postgres RLS, envelope, RFC 9457     | ✅ stable  |
+| 03  | [Auth & Phân quyền](03-auth-flow-va-casl-abac.md)       | Xác thực, token rotation, vai trò/permission trong DB + CASL | ✅ stable  |
+| 04  | [Frontend Web](04-frontend-react-va-shadcn.md)          | React 19, Vite, Tailwind v4, HTTP client, TanStack Query     | ✅ stable  |
+| 06  | [Observability & CI](06-observability-va-ci-cd.md)      | Pino, OpenTelemetry, GitHub Actions (repo chỉ có CI)         | ✅ stable  |
 
 ## 2. Quy tắc Code — [`rules/`](rules/)
 

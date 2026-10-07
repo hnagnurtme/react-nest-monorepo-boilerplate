@@ -47,8 +47,9 @@ describe('AuthService', () => {
     id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
     email: 'member@example.com',
     fullName: 'Jane Member',
-    role: 'TENANT_MEMBER',
     tenantId: undefined,
+    scope: 'tenant',
+    roles: [{ key: 'TENANT_MEMBER', name: 'Tenant member' }],
   };
 
   beforeEach(() => {

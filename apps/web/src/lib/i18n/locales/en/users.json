@@ -4,7 +4,7 @@
   "columns": {
     "fullName": "Name",
     "email": "Email",
-    "role": "Role",
+    "role": "Roles",
     "status": "Status",
     "actions": "Actions"
   },
@@ -21,11 +21,6 @@
     "summary": "Page {{page}} of {{totalPages}} ({{total}} users)"
   },
   "back": "Home",
-  "roles": {
-    "PLATFORM_ADMIN": "Platform admin",
-    "TENANT_ADMIN": "Tenant admin",
-    "TENANT_MEMBER": "Tenant member"
-  },
   "actions": {
     "activate": "Activate",
     "deactivate": "Deactivate",
@@ -34,7 +29,11 @@
     "updateSuccess": "User updated.",
     "updateError": "Could not update the user.",
     "deleteSuccess": "User deleted.",
-    "deleteError": "Could not delete the user."
+    "deleteError": "Could not delete the user.",
+    "editRoles": "Edit roles",
+    "rolesSuccess": "Roles updated.",
+    "rolesError": "Could not update the roles.",
+    "rolesForbidden": "You are not allowed to assign these roles."
   },
   "create": {
     "open": "Create user",
@@ -44,7 +43,6 @@
     "phone": "Phone (optional)",
     "phonePlaceholder": "+84901234567",
     "password": "Password",
-    "role": "Role",
     "tenant": "Tenant",
     "tenantPlaceholder": "Select a tenant",
     "cancel": "Cancel",
@@ -59,8 +57,20 @@
       "emailInvalid": "Invalid email address",
       "phone": "Invalid phone number",
       "passwordMin": "Password must be at least 8 characters",
-      "roleNotAllowed": "You cannot assign this role",
-      "tenantRequired": "Please select a tenant"
-    }
+      "tenantRequired": "Please select a tenant",
+      "rolesRequired": "Select at least one role",
+      "mixedScope": "Do not mix platform and tenant roles"
+    },
+    "roles": "Roles",
+    "rolesHint": "Select at least one role.",
+    "rolesEmpty": "No roles available.",
+    "rolesLoading": "Loading roles...",
+    "systemBadge": "System"
+  },
+  "rolesDialog": {
+    "title": "Edit roles for {{email}}",
+    "save": "Save roles",
+    "cancel": "Cancel",
+    "loading": "Loading roles..."
   }
 }

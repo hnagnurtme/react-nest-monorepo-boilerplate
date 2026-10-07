@@ -3,25 +3,21 @@ import { Navigate, useLocation } from 'react-router-dom';
 
 import type { AppAbility } from '@repo/shared-types';
 
-import { useAuthStore, type PublicUser } from '@/entities/session';
-import { useAbility } from '@/features/auth';
+import { useAuthStore } from '@/entities/session';
+import { useAbility, useAbilityLoading } from '@/features/auth';
 import { PageLoader } from '@/shared/ui';
 
 interface RouteGuardProps {
-  allowedRoles?: PublicUser['role'][];
   checkAbility?: (ability: AppAbility) => boolean;
   children: ReactNode;
 }
 
-export function RouteGuard({
-  allowedRoles,
-  checkAbility,
-  children,
-}: RouteGuardProps): React.ReactNode {
+export function RouteGuard({ checkAbility, children }: RouteGuardProps): React.ReactNode {
   const status = useAuthStore((s) => s.status);
   const user = useAuthStore((s) => s.user);
   const location = useLocation();
   const ability = useAbility();
+  const isAbilityLoading = useAbilityLoading();
 
   // Wait for session initialization
   if (status === 'initializing') {
@@ -33,9 +29,9 @@ export function RouteGuard({
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Check role-based access
-  if (allowedRoles && allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
-    return <Navigate to="/" replace />;
+  // The ability comes from the API: wait for it so a guarded page never flash-redirects.
+  if (isAbilityLoading) {
+    return <PageLoader />;
   }
 
   // Check CASL ability

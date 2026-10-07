@@ -23,6 +23,10 @@ const UsersPage = lazy(() =>
   import('@/features/users').then((module) => ({ default: module.UsersPage })),
 );
 
+const RolesPage = lazy(() =>
+  import('@/features/roles').then((module) => ({ default: module.RolesPage })),
+);
+
 const TenantsPage = lazy(() =>
   import('@/features/tenants').then((module) => ({ default: module.TenantsPage })),
 );
@@ -30,6 +34,7 @@ const TenantsPage = lazy(() =>
 // Route access is decided by the CASL ability from @repo/shared-types, the same
 // source the API enforces, so a role change is made once and not per route.
 const canReadUsers = (ability: AppAbility): boolean => ability.can('read', 'User');
+const canReadRoles = (ability: AppAbility): boolean => ability.can('read', 'Role');
 // Only a platform admin may create tenants; tenant admins can merely read/update their own.
 const canManageTenants = (ability: AppAbility): boolean => ability.can('create', 'Tenant');
 
@@ -46,6 +51,14 @@ export function AppRouter() {
             element={
               <RouteGuard checkAbility={canReadUsers}>
                 <UsersPage />
+              </RouteGuard>
+            }
+          />
+          <Route
+            path="/roles"
+            element={
+              <RouteGuard checkAbility={canReadRoles}>
+                <RolesPage />
               </RouteGuard>
             }
           />

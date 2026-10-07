@@ -3,8 +3,6 @@ import { randomUUID } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 
-import type { UserRole } from '@repo/shared-types';
-
 import { parseDuration } from '@/common/index.js';
 import { AppConfig } from '@/config/index.js';
 import { RedisService } from '@/core/redis/index.js';
@@ -13,8 +11,6 @@ import { RedisService } from '@/core/redis/index.js';
 export interface AccessTokenPayload {
   sub: string;
   email: string;
-  role: UserRole;
-  tenantId?: string;
   jti: string;
 }
 

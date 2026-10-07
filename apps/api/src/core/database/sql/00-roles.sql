@@ -37,6 +37,16 @@ BEGIN
 END
 $$;
 
+-- The authz catalog sync runs as boilerplate_app in 'admin' mode (the same path
+-- the API takes), so the migration connection must be allowed to SET ROLE to it.
+DO $$
+BEGIN
+  IF NOT pg_has_role(current_user, 'boilerplate_app', 'MEMBER') THEN
+    GRANT boilerplate_app TO CURRENT_USER;
+  END IF;
+END
+$$;
+
 ALTER SCHEMA public OWNER TO boilerplate_owner;
 
 -- drizzle keeps its migration journal in its own schema, so the owner role

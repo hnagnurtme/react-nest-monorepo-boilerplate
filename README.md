@@ -2,7 +2,7 @@
 
 A monorepo boilerplate for multi-tenant authentication and user management. It combines a NestJS API, a React SPA, and shared packages for API contracts, types, linting, and TypeScript configuration.
 
-It ships a login flow (access token + rotating refresh cookie, password reset by emailed OTP), tenant isolation enforced by Postgres Row Level Security, CASL/ABAC authorization, an audit log, and admin-managed `tenants` and `users` modules that serve as the reference implementation of a tenant-scoped feature slice. Add your own business entities on top.
+It ships a login flow (access token + rotating refresh cookie, password reset by emailed OTP), tenant isolation enforced by Postgres Row Level Security, database-driven roles and permissions evaluated with CASL, an audit log, and admin-managed `tenants` and `users` modules that serve as the reference implementation of a tenant-scoped feature slice. Add your own business entities on top.
 
 There is **no self sign-up**. Accounts are created only by admins (see below). The API has no register, verify-email, or resend-OTP endpoints, and the web app has no sign-up page and no social login.
 
@@ -45,13 +45,23 @@ Seeded accounts (all use the password `Password123!`):
 
 ## Multi-Tenancy Model
 
-- A `tenants` table holds one row per workspace. Each user belongs to exactly one tenant (`users.tenant_id`); the column is null only for `PLATFORM_ADMIN` (enforced by a CHECK constraint).
-- Roles: `PLATFORM_ADMIN`, `TENANT_ADMIN`, `TENANT_MEMBER`.
+- A `tenants` table holds one row per workspace. Each user belongs to exactly one tenant (`users.tenant_id`); the column is null only for platform users, who hold a platform-scope role.
 - Who creates what:
-  - `PLATFORM_ADMIN` creates tenants (`POST /api/v1/tenants`) and users in any tenant (`POST /api/v1/users` with `tenantId`).
-  - `TENANT_ADMIN` creates `TENANT_ADMIN` / `TENANT_MEMBER` users in its own tenant.
+  - A platform admin creates tenants (`POST /api/v1/tenants`) and users in any tenant (`POST /api/v1/users` with `tenantId` and `roleIds`).
+  - A tenant user with the `create:User` permission (by default `TENANT_ADMIN`) creates users in its own tenant, with roles it is allowed to hand out.
   - Created users are active and email-verified, with the password the admin chose. Users, tenants, and their changes are written to `audit_logs` in the same transaction.
 - Isolation is enforced in Postgres: every query runs inside a transaction that sets `app.access_mode` (`admin` or `tenant`) and `app.tenant_id`, and one RLS policy per table filters on them.
+
+## Roles and Permissions
+
+Permissions live in the database, not in the token. The code owns the catalog (`PERMISSION_CATALOG` and `SYSTEM_ROLES` in `packages/shared-types`); `just db-migrate` syncs it into the `permissions` and `roles` tables. A role is a named set of grants, each an `(action, subject)` pair such as `update:User` plus a reach preset: `any`, `own_tenant`, or `own_record`. Tenants pick presets; they never write conditions.
+
+- System roles: `PLATFORM_ADMIN` (platform scope, full access), `TENANT_ADMIN`, and `TENANT_MEMBER`. They are immutable through the API.
+- Custom roles: a tenant admin creates its own roles (`POST /api/v1/roles`) and edits their permissions (`PUT /api/v1/roles/:id/permissions`) or uses the roles page in the web app. `GET /api/v1/permissions` lists what the caller may put into a role.
+- Roles are assigned with `PUT /api/v1/users/:id/roles` (or `roleIds` when creating a user). Nobody can grant more than they hold or edit their own roles, and a tenant always keeps one active `TENANT_ADMIN`.
+- Every request loads the caller's profile from the database (cached in Redis for 300 seconds, evicted on changes), so role changes and deactivations apply immediately. The web app builds its CASL ability from `GET /api/v1/auth/me/abilities`.
+
+See [docs/03-auth-flow-va-casl-abac.md](docs/03-auth-flow-va-casl-abac.md) and [ADR-0005](docs/adr/0005-permission-luu-trong-co-so-du-lieu.md).
 
 ## API Surface
 
@@ -60,8 +70,9 @@ All routes are under `/api/v1` and wrapped in `{ data, meta? }`; errors are RFC 
 | Area    | Endpoints                                                                                                |
 | :------ | :------------------------------------------------------------------------------------------------------- |
 | auth    | `login`, `refresh`, `logout`, `logout-all`, `me`, `forgot-password`, `reset-password`, `change-password` |
-| users   | list, get, create, update, soft-delete                                                                   |
+| users   | list, get, create, update, soft-delete, set roles (`PUT /users/:id/roles`)                               |
 | tenants | list, get, create, update                                                                                |
+| roles   | `GET /permissions`, list, get, create, rename, set permissions, delete (`/roles`)                        |
 | health  | `/healthz` (liveness), `/readyz` (readiness) outside the `/api` prefix                                   |
 
 ## Repository Layout
@@ -72,7 +83,7 @@ apps/
   web/            React + Vite SPA
 packages/
   api-contract/   Generated OpenAPI types (openapi.json, src/generated.ts)
-  shared-types/   Cross-app types: API envelope, problem details, roles, CASL abilities
+  shared-types/   Cross-app types: API envelope, problem details, permission catalog, CASL abilities
   eslint-config/  Shared ESLint configs (layer boundaries live here)
   tsconfig/       Shared TypeScript configs
 docs/
@@ -109,7 +120,7 @@ Integration tests need a running Postgres and Redis: run `just up` and `just db-
 - The backend is a modular monolith, not microservices ([ADR-0001](docs/adr/0001-modular-monolith.md)).
 - Database access uses Drizzle, not Prisma ([ADR-0002](docs/adr/0002-drizzle-thay-vi-prisma.md)).
 - Tenant isolation is enforced with Postgres RLS, not application-only filtering ([ADR-0003](docs/adr/0003-rls-thay-vi-loc-o-tang-ung-dung.md)).
-- Authorization uses CASL/ABAC, not plain RBAC ([ADR-0004](docs/adr/0004-casl-abac-thay-vi-rbac.md)).
+- Authorization uses CASL/ABAC, not plain RBAC ([ADR-0004](docs/adr/0004-casl-abac-thay-vi-rbac.md)), with roles and permissions stored in the database ([ADR-0005](docs/adr/0005-permission-luu-trong-co-so-du-lieu.md)).
 - The web app is a Vite SPA, not Next.js ([ADR-0006](docs/adr/0006-spa-cho-toan-bo-web.md)).
 
 Docs under `docs/` are written in Vietnamese; this README, `setup.md`, and `AGENTS.md` are in English.

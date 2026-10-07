@@ -1,263 +1,110 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import type { AppAbility } from '@repo/shared-types';
 
 import { RouteGuard } from '@/app/components/route-guard';
 import { useAuthStore } from '@/entities/session';
 import { AbilityProvider } from '@/features/auth';
 
+import {
+  makePlatformAdmin,
+  makeUser,
+  MEMBER_GRANTS,
+  PLATFORM_ADMIN_GRANTS,
+  setSessionUser,
+} from './fixtures/auth';
+import { mockApi } from './providers';
+
 function ProtectedPage() {
   return <div data-testid="protected-page">Protected Content</div>;
 }
 
-function HomePage() {
-  return <div data-testid="home-page">Home</div>;
-}
+const canManageAll = (ability: AppAbility): boolean => ability.can('manage', 'all');
 
-function LoginPage() {
-  return <div data-testid="login-page">Login</div>;
-}
-
-describe('Phase 2: RouteGuard with checkAbility (G1-G4)', () => {
-  beforeEach(() => {
-    useAuthStore.setState({
-      status: 'anonymous',
-      accessToken: null,
-      user: null,
-    });
-  });
-
-  it('G0a: status=initializing → shows PageLoader', () => {
-    useAuthStore.setState({
-      status: 'initializing',
-      accessToken: null,
-      user: null,
-    });
-
-    render(
-      <MemoryRouter initialEntries={['/protected']}>
+function renderGuard(checkAbility?: (ability: AppAbility) => boolean, initialEntry = '/protected') {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={[initialEntry]}>
         <AbilityProvider>
           <Routes>
             <Route
               path="/protected"
               element={
-                <RouteGuard>
+                <RouteGuard {...(checkAbility ? { checkAbility } : {})}>
                   <ProtectedPage />
                 </RouteGuard>
               }
             />
-            <Route path="/login" element={<LoginPage />} />
+            <Route path="/" element={<div data-testid="home-page">Home</div>} />
+            <Route path="/login" element={<div data-testid="login-page">Login</div>} />
           </Routes>
         </AbilityProvider>
-      </MemoryRouter>,
-    );
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
 
-    expect(
-      screen.getByText((_, element) => element?.className.includes('animate-spin') ?? false),
-    ).toBeInTheDocument();
+const isSpinner = (_: string, element: Element | null): boolean =>
+  element?.className.includes('animate-spin') ?? false;
+
+describe('RouteGuard with abilities', () => {
+  beforeEach(() => {
+    useAuthStore.setState({ status: 'anonymous', accessToken: null, user: null });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('status=initializing shows the PageLoader', () => {
+    useAuthStore.setState({ status: 'initializing', accessToken: null, user: null });
+    renderGuard();
+
+    expect(screen.getByText(isSpinner)).toBeInTheDocument();
     expect(screen.queryByTestId('protected-page')).not.toBeInTheDocument();
   });
 
-  it('G0b: status=anonymous → redirects to /login', () => {
-    render(
-      <MemoryRouter initialEntries={['/protected']}>
-        <AbilityProvider>
-          <Routes>
-            <Route
-              path="/protected"
-              element={
-                <RouteGuard>
-                  <ProtectedPage />
-                </RouteGuard>
-              }
-            />
-            <Route path="/login" element={<LoginPage />} />
-          </Routes>
-        </AbilityProvider>
-      </MemoryRouter>,
-    );
+  it('status=anonymous redirects to /login', () => {
+    renderGuard();
 
     expect(screen.getByTestId('login-page')).toBeInTheDocument();
     expect(screen.queryByTestId('protected-page')).not.toBeInTheDocument();
   });
 
-  it('G0c: allowedRoles check fails → redirects to home', () => {
-    useAuthStore.setState({
-      status: 'authenticated',
-      accessToken: 'token-member',
-      user: {
-        id: 'member-1',
-        email: 'member@example.com',
-        fullName: 'Member',
-        role: 'TENANT_MEMBER',
-      },
-    });
+  it('shows the loader (no redirect) while the ability is loading, then renders', async () => {
+    mockApi(makePlatformAdmin(), PLATFORM_ADMIN_GRANTS);
+    renderGuard(canManageAll);
 
-    render(
-      <MemoryRouter initialEntries={['/admin']}>
-        <AbilityProvider>
-          <Routes>
-            <Route
-              path="/admin"
-              element={
-                <RouteGuard allowedRoles={['PLATFORM_ADMIN']}>
-                  <ProtectedPage />
-                </RouteGuard>
-              }
-            />
-            <Route path="/" element={<HomePage />} />
-            <Route path="/login" element={<LoginPage />} />
-          </Routes>
-        </AbilityProvider>
-      </MemoryRouter>,
-    );
+    expect(screen.getByText(isSpinner)).toBeInTheDocument();
+    expect(screen.queryByTestId('home-page')).not.toBeInTheDocument();
 
-    expect(screen.getByTestId('home-page')).toBeInTheDocument();
+    expect(await screen.findByTestId('protected-page')).toBeInTheDocument();
+  });
+
+  it('checkAbility true renders the protected route', async () => {
+    mockApi(makePlatformAdmin(), PLATFORM_ADMIN_GRANTS);
+    renderGuard(canManageAll);
+
+    expect(await screen.findByTestId('protected-page')).toBeInTheDocument();
+  });
+
+  it('checkAbility false redirects to home once the ability has loaded', async () => {
+    mockApi(makeUser(), MEMBER_GRANTS);
+    renderGuard(canManageAll);
+
+    expect(await screen.findByTestId('home-page')).toBeInTheDocument();
     expect(screen.queryByTestId('protected-page')).not.toBeInTheDocument();
   });
 
-  it('G1: checkAbility returns true → renders protected route', () => {
-    useAuthStore.setState({
-      status: 'authenticated',
-      accessToken: 'token-admin',
-      user: {
-        id: 'admin-1',
-        email: 'admin@example.com',
-        fullName: 'Admin User',
-        role: 'PLATFORM_ADMIN',
-      },
-    });
+  it('without checkAbility an authenticated user is let through after the ability loaded', async () => {
+    setSessionUser(makeUser());
+    mockApi(makeUser(), MEMBER_GRANTS);
+    renderGuard();
 
-    render(
-      <MemoryRouter initialEntries={['/admin']}>
-        <AbilityProvider>
-          <Routes>
-            <Route
-              path="/admin"
-              element={
-                <RouteGuard checkAbility={(ability) => ability.can('manage', 'all')}>
-                  <ProtectedPage />
-                </RouteGuard>
-              }
-            />
-            <Route path="/" element={<HomePage />} />
-            <Route path="/login" element={<LoginPage />} />
-          </Routes>
-        </AbilityProvider>
-      </MemoryRouter>,
-    );
-
-    expect(screen.getByTestId('protected-page')).toBeInTheDocument();
-  });
-
-  it('G2: checkAbility returns false → redirects to home', () => {
-    useAuthStore.setState({
-      status: 'authenticated',
-      accessToken: 'token-member',
-      user: {
-        id: 'member-1',
-        email: 'member@example.com',
-        fullName: 'Member',
-        role: 'TENANT_MEMBER',
-      },
-    });
-
-    render(
-      <MemoryRouter initialEntries={['/admin']}>
-        <AbilityProvider>
-          <Routes>
-            <Route
-              path="/admin"
-              element={
-                <RouteGuard checkAbility={(ability) => ability.can('manage', 'all')}>
-                  <ProtectedPage />
-                </RouteGuard>
-              }
-            />
-            <Route path="/" element={<HomePage />} />
-            <Route path="/login" element={<LoginPage />} />
-          </Routes>
-        </AbilityProvider>
-      </MemoryRouter>,
-    );
-
-    expect(screen.getByTestId('home-page')).toBeInTheDocument();
-    expect(screen.queryByTestId('protected-page')).not.toBeInTheDocument();
-  });
-
-  it('G3: both allowedRoles and checkAbility pass → renders protected route', () => {
-    useAuthStore.setState({
-      status: 'authenticated',
-      accessToken: 'token-tadmin',
-      user: {
-        id: 'tenant-admin-1',
-        email: 'tadmin@example.com',
-        fullName: 'Tenant Admin',
-        role: 'TENANT_ADMIN',
-        tenantId: 't1',
-      },
-    });
-
-    render(
-      <MemoryRouter initialEntries={['/users']}>
-        <AbilityProvider>
-          <Routes>
-            <Route
-              path="/users"
-              element={
-                <RouteGuard
-                  allowedRoles={['TENANT_ADMIN']}
-                  checkAbility={(ability) => ability.can('create', 'User')}
-                >
-                  <ProtectedPage />
-                </RouteGuard>
-              }
-            />
-            <Route path="/" element={<HomePage />} />
-            <Route path="/login" element={<LoginPage />} />
-          </Routes>
-        </AbilityProvider>
-      </MemoryRouter>,
-    );
-
-    expect(screen.getByTestId('protected-page')).toBeInTheDocument();
-  });
-
-  it('G4: allowedRoles pass but checkAbility fails → redirects to home', () => {
-    useAuthStore.setState({
-      status: 'authenticated',
-      accessToken: 'token-tadmin',
-      user: {
-        id: 'tenant-admin-1',
-        email: 'tadmin@example.com',
-        fullName: 'Tenant Admin',
-        role: 'TENANT_ADMIN',
-      },
-    });
-
-    render(
-      <MemoryRouter initialEntries={['/users']}>
-        <AbilityProvider>
-          <Routes>
-            <Route
-              path="/users"
-              element={
-                <RouteGuard
-                  allowedRoles={['TENANT_ADMIN']}
-                  checkAbility={(ability) => ability.can('create', 'User')}
-                >
-                  <ProtectedPage />
-                </RouteGuard>
-              }
-            />
-            <Route path="/" element={<HomePage />} />
-            <Route path="/login" element={<LoginPage />} />
-          </Routes>
-        </AbilityProvider>
-      </MemoryRouter>,
-    );
-
-    expect(screen.getByTestId('home-page')).toBeInTheDocument();
-    expect(screen.queryByTestId('protected-page')).not.toBeInTheDocument();
+    expect(await screen.findByTestId('protected-page')).toBeInTheDocument();
   });
 });

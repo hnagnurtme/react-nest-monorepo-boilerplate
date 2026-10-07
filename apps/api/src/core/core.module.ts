@@ -10,6 +10,7 @@ import { AppConfig } from '@/config/index.js';
 
 import { AuditService } from './audit/audit.service.js';
 import { AccessTokenService } from './auth/access-token.service.js';
+import { AuthzRepository, AuthzService } from './authz/index.js';
 import { DrizzleModule } from './database/drizzle.module.js';
 import { CLS_KEYS } from './database/request-context.js';
 import { TransactionManager } from './database/transaction.manager.js';
@@ -77,6 +78,8 @@ const DEFAULT_THROTTLE_LIMIT = 120;
     AppConfig,
     AccessTokenService,
     AuditService,
+    AuthzRepository,
+    AuthzService,
     TransactionManager,
     GlobalExceptionFilter,
     TransformInterceptor,
@@ -88,6 +91,8 @@ const DEFAULT_THROTTLE_LIMIT = 120;
     AppConfig,
     AccessTokenService,
     AuditService,
+    AuthzRepository,
+    AuthzService,
     TransactionManager,
     GlobalExceptionFilter,
     TransformInterceptor,

@@ -39,8 +39,9 @@ src/
 │   └── session/             # Zustand store: user + access token (RAM), đồng bộ giữa các tab
 │
 └── features/                # Từng slice nghiệp vụ độc lập, tự chứa
-    ├── auth/                # Login, quên/đặt lại/đổi mật khẩu, AbilityProvider, CanAction
-    ├── users/               # Danh sách + form tạo user (admin), cập nhật, xóa
+    ├── auth/                # Login, quên/đặt lại/đổi mật khẩu, AbilityProvider (nạp rule từ /auth/me/abilities), CanAction
+    ├── users/               # Danh sách + form tạo user (admin, chọn vai trò), cập nhật, xóa
+    ├── roles/               # Quản lý vai trò tùy biến và ma trận permission (theo quyền `Role`)
     ├── tenants/             # Danh sách + tạo/sửa tenant (PLATFORM_ADMIN)
     ├── home/                # Trang chủ
     └── status/              # Trạng thái hệ thống (healthz/readyz)

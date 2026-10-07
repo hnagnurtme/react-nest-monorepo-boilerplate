@@ -56,6 +56,12 @@ export class ResourceConflictError extends AppError {
   readonly status = HttpStatus.CONFLICT;
 }
 
+/** The request is well-formed but a value breaks a business rule (422). */
+export class InvalidInputError extends AppError {
+  readonly code = ERROR_CODES.VALIDATION_FAILED;
+  readonly status = HttpStatus.UNPROCESSABLE_ENTITY;
+}
+
 export class ForbiddenActionError extends AppError {
   readonly code = ERROR_CODES.FORBIDDEN;
   readonly status = HttpStatus.FORBIDDEN;

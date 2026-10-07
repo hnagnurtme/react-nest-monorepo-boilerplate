@@ -33,16 +33,16 @@ owner: Platform Team
 
 ## 2. Danh mục Công nghệ Chuẩn mực (Tech Stack Matrix)
 
-| Thành phần            | Công nghệ lựa chọn              | Mục đích & Ràng buộc                                                             |
-| :-------------------- | :------------------------------ | :------------------------------------------------------------------------------- |
-| **Monorepo Manager**  | **Turborepo + pnpm workspaces** | Quản lý đa package, build caching siêu tốc, symlink nội bộ                       |
-| **Backend Framework** | **NestJS 11+**                  | Modular Monolith (5 tầng: `config`, `common`, `core`, `integrations`, `modules`) |
-| **Database & ORM**    | **PostgreSQL 16 + Drizzle ORM** | Hỗ trợ RLS tự nhiên, migration SQL thuần, lightweight connection pool            |
-| **Redis**             | **Redis 7**                     | Rate limit (throttler), denylist access token, OTP reset mật khẩu                |
-| **Frontend Web**      | **React 19 + Vite**             | SPA hiệu năng cao, render nhanh, cấu hình build đơn giản                         |
-| **UI & Styling**      | **Tailwind CSS v4**             | CSS-first `@theme`; primitive viết tay trong `apps/web/src/shared/ui`            |
-| **Phân quyền**        | **CASL (`@casl/ability`)**      | ABAC (Attribute-Based Access Control) dùng chung Backend & Frontend              |
-| **Observability**     | **Pino + OpenTelemetry**        | JSON logging tự động inject `traceId`/`userId`/`tenantId`, W3C traceparent       |
+| Thành phần            | Công nghệ lựa chọn              | Mục đích & Ràng buộc                                                                                 |
+| :-------------------- | :------------------------------ | :--------------------------------------------------------------------------------------------------- |
+| **Monorepo Manager**  | **Turborepo + pnpm workspaces** | Quản lý đa package, build caching siêu tốc, symlink nội bộ                                           |
+| **Backend Framework** | **NestJS 11+**                  | Modular Monolith (5 tầng: `config`, `common`, `core`, `integrations`, `modules`)                     |
+| **Database & ORM**    | **PostgreSQL 16 + Drizzle ORM** | Hỗ trợ RLS tự nhiên, migration SQL thuần, lightweight connection pool                                |
+| **Redis**             | **Redis 7**                     | Rate limit (throttler), denylist access token, OTP reset mật khẩu                                    |
+| **Frontend Web**      | **React 19 + Vite**             | SPA hiệu năng cao, render nhanh, cấu hình build đơn giản                                             |
+| **UI & Styling**      | **Tailwind CSS v4**             | CSS-first `@theme`; primitive viết tay trong `apps/web/src/shared/ui`                                |
+| **Phân quyền**        | **CASL (`@casl/ability`)**      | Vai trò/permission lưu trong DB, đánh giá bằng CASL (ABAC qua preset), dùng chung Backend & Frontend |
+| **Observability**     | **Pino + OpenTelemetry**        | JSON logging tự động inject `traceId`/`userId`/`tenantId`, W3C traceparent                           |
 
 ---
 
@@ -52,12 +52,12 @@ owner: Platform Team
 nest-react-turbo-boilerplate/
 ├── apps/
 │   ├── api/                    # NestJS Backend API (modules: auth, users, tenants, health; src/integrations/ để trống)
-│   └── web/                    # React 19 + Vite Frontend SPA (features: auth, users, tenants, home, status)
+│   └── web/                    # React 19 + Vite Frontend SPA (features: auth, users, tenants, roles, home, status)
 │
 ├── packages/
 │   ├── tsconfig/               # Base tsconfigs (strict, noUncheckedIndexedAccess)
 │   ├── eslint-config/          # Quy tắc boundaries và quy chuẩn code
-│   ├── shared-types/           # ApiResponse<T>, ProblemDetails (RFC 9457), UserRole, CASL Ability
+│   ├── shared-types/           # ApiResponse<T>, ProblemDetails (RFC 9457), catalog permission + SYSTEM_ROLES, CASL Ability
 │   └── api-contract/           # Type sinh từ OpenAPI (openapi.json, src/generated.ts)
 │
 ├── docs/                       # Tài liệu thiết kế, rules, ADR
@@ -103,6 +103,6 @@ Khi áp dụng bộ khung này cho một dự án mới (ví dụ: `MyAwesomePro
 
 - [01-monorepo-va-tooling.md](01-monorepo-va-tooling.md): Cấu hình Monorepo, Workspaces, Turborepo, TSConfig & ESLint Boundaries (5 tầng).
 - [02-backend-core-va-drizzle-rls.md](02-backend-core-va-drizzle-rls.md): Cấu trúc 5 tầng NestJS, Drizzle ORM, Postgres RLS, Envelope & Error filters.
-- [03-auth-flow-va-casl-abac.md](03-auth-flow-va-casl-abac.md): Hệ thống xác thực (access token + refresh cookie) và phân quyền CASL ABAC multi-tenant.
+- [03-auth-flow-va-casl-abac.md](03-auth-flow-va-casl-abac.md): Hệ thống xác thực (access token + refresh cookie) và phân quyền (vai trò/permission trong DB + CASL) multi-tenant.
 - [04-frontend-react-va-shadcn.md](04-frontend-react-va-shadcn.md): React 19 Feature-first, Tailwind v4, HTTP Client, TanStack Query.
 - [06-observability-va-ci-cd.md](06-observability-va-ci-cd.md): Pino Logger mixin, OpenTelemetry W3C, GitHub Actions CI (không có CD).

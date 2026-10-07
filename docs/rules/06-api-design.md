@@ -140,7 +140,7 @@ Mọi endpoint bắt đầu bằng `/api/v1` (trừ `/healthz`, `/readyz`).
 
 Trả `403` khi truy cập tài nguyên của tenant khác là **xác nhận tài nguyên đó tồn tại**. Với tài nguyên nhạy cảm, trả `404`.
 
-Quy ước: `403` cho lỗi **vai trò** (TENANT_MEMBER gọi endpoint của admin), `404` cho lỗi **quyền sở hữu** (tenant A chạm dữ liệu tenant B).
+Quy ước: `403` cho lỗi **permission** (người không có grant tương ứng, ví dụ `TENANT_MEMBER`, gọi endpoint quản trị), `404` cho lỗi **quyền sở hữu** (tenant A chạm dữ liệu tenant B).
 
 ### C6. Không rò rỉ trường nội bộ 👀
 

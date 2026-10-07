@@ -98,7 +98,7 @@ Start infrastructure first (`just up`), then apply migrations:
 just db-migrate
 ```
 
-This runs `apps/api/src/core/database/migrate.ts`, which connects with `MIGRATION_DATABASE_URL`, creates the roles (`sql/00-roles.sql`), switches to `boilerplate_owner`, applies the Drizzle migrations (RLS policies are inside them), then runs `sql/99-grants.sql`. It is idempotent.
+This runs `apps/api/src/core/database/migrate.ts`, which connects with `MIGRATION_DATABASE_URL`, creates the roles (`sql/00-roles.sql`), switches to `boilerplate_owner`, applies the Drizzle migrations (RLS policies are inside them), runs `sql/99-grants.sql`, and finally syncs the permission catalog and system roles from `@repo/shared-types` into the database (`authz-sync.ts`). It is idempotent. A new entry in `PERMISSION_CATALOG` is not visible to the API until you run `just db-migrate`; the sync does not run at API startup.
 
 Seed development data (idempotent):
 
@@ -113,7 +113,34 @@ just db-seed
 | `member-a@example.com` | `TENANT_MEMBER`  | Acme Inc.    | `Password123!` |
 | `admin-b@example.com`  | `TENANT_ADMIN`   | Globex Corp. | `Password123!` |
 
-There is no sign-up. Log in as `admin@example.com` to create tenants and users in any tenant, or as a tenant admin to create users in that tenant. New users are active and email-verified with the password you choose.
+There is no sign-up. Log in as `admin@example.com` to create tenants and users in any tenant, or as a tenant admin to create users in that tenant. New users are active and email-verified with the password you choose. The seed assigns the roles through `user_roles`.
+
+### Creating a Custom Role
+
+Roles and permissions live in the database. Log in as a tenant admin (for example `admin-a@example.com`) and either use the roles page in the web app or call the API with the access token:
+
+```bash
+# 0. Log in and copy data.accessToken from the response
+curl -X POST http://localhost:3000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin-a@example.com","password":"Password123!"}'
+export TOKEN=<accessToken>
+
+# 1. What may I put into a role?
+curl -H "Authorization: Bearer $TOKEN" http://localhost:3000/api/v1/permissions
+
+# 2. Create the role (a platform admin must also send "tenantId")
+curl -X POST http://localhost:3000/api/v1/roles \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"name":"Support","permissions":[{"action":"read","subject":"User","preset":"own_tenant"}]}'
+
+# 3. Assign it to a user of the same tenant
+curl -X PUT http://localhost:3000/api/v1/users/<user-id>/roles \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d '{"roleIds":["<role-id>"]}'
+```
+
+You can only grant permissions you hold yourself, and custom roles cannot use the `any` reach or platform-only permissions.
 
 Other database commands:
 
@@ -162,12 +189,12 @@ CI regenerates them and fails if `git diff` is not empty. Add or update tests in
 
 Use the `users` module (`apps/api/src/modules/users/`) as the reference. The sequence mirrors "Feature Implementation Workflow" in the README.
 
-1. **Storage.** Add a Drizzle schema under `apps/api/src/core/database/schema/`, export it from `index.ts`, add indexes (at least on `tenant_id`), run `just db-generate`, then add `ENABLE` + `FORCE ROW LEVEL SECURITY` and one policy to the generated migration and run `just db-migrate`. Full checklist: `docs/02-backend-core-va-drizzle-rls.md`, section 7.
+1. **Storage and permissions.** Add a Drizzle schema under `apps/api/src/core/database/schema/`, export it from `index.ts`, add indexes (at least on `tenant_id`), run `just db-generate`, then add `ENABLE` + `FORCE ROW LEVEL SECURITY` and one policy to the generated migration and run `just db-migrate`. If the entity needs permissions: add the subject to `SubjectShapes` and `conditionsFor`, add catalog entries (and `SYSTEM_ROLES` grants if a system role needs them) in `packages/shared-types/src/authz/`, then run `just db-migrate` so the catalog is synced. Full checklists: `docs/02-backend-core-va-drizzle-rls.md`, section 7, and `docs/03-auth-flow-va-casl-abac.md`, section 2.7.
 2. **Isolation test.** Extend or add an integration test connected as `boilerplate_app` with two tenants.
 3. **Module** under `apps/api/src/modules/<feature>/`: `dto/`, `<feature>.controller.ts`, `.module.ts`, `.openapi.ts`, `.repository.ts`, `.service.ts`, `.types.ts`, `index.ts`. Export only the module surface from `index.ts`.
-4. **DTOs** are Zod schemas via `nestjs-zod`. Use `.strict()` so unknown fields are rejected. Do not put `tenantId` in a DTO unless a platform admin legitimately chooses the tenant (the only case today is `POST /users`).
+4. **DTOs** are Zod schemas via `nestjs-zod`. Use `.strict()` so unknown fields are rejected. Do not put `tenantId` in a DTO unless a platform admin legitimately chooses the tenant (the only cases today are `POST /users` and `POST /roles`).
 5. **Repository** receives a `tx` and never filters `tenant_id` by hand; RLS does it.
-6. **Service** runs every query through `TransactionManager.runInRequestContext`, checks permissions on the loaded record with `subject('Name', entity)`, writes an audit row with `AuditService` for sensitive changes, and throws domain errors.
+6. **Service** runs every query through `TransactionManager.runInRequestContext`, gets the caller's ability from `AuthzService.current()` and checks permissions on the loaded record with `subject('Name', entity)`, writes an audit row with `AuditService` for sensitive changes, and throws domain errors.
 7. **Controller** adds `@CheckPolicies(...)` (role-level), OpenAPI decorators for success and problem responses, `201` plus `Location` for `POST`, and `@Public()` only when intentionally public.
 8. Run `just contract` and `just test`.
 
@@ -188,7 +215,7 @@ Use `apps/web/src/features/auth` and `features/users` as references.
 3. **API hooks** use TanStack Query and the client in `@/lib/http/client` (`apiClient` for single resources, `rawPagedRequest` for lists so `meta` is kept). No raw `fetch` or `axios` in components.
 4. **Forms** use React Hook Form with a Zod schema; map `invalidParams` from API errors to field errors; disable submit while pending.
 5. **Components**: one meaningful component per file, shared primitives in `shared/ui`, no `React.FC`.
-6. **Route** in `apps/web/src/app/router.tsx` last, lazy-loaded and wrapped in `RouteGuard` when protected.
+6. **Route** in `apps/web/src/app/router.tsx` last, lazy-loaded and wrapped in `RouteGuard` (with `checkAbility`) when protected. Show or hide actions with `CanAction`; the ability comes from `GET /api/v1/auth/me/abilities`.
 7. **Tests** in `apps/web/test/` for page states and risky behavior.
 
 ## Verification Before Commit
@@ -248,6 +275,10 @@ just db-migrate
 ```
 
 If queries return no rows while the data is there, the session is missing its RLS context: the code is querying outside `TransactionManager`, or `DATABASE_URL` points at the wrong role.
+
+### A New Permission Does Not Show Up
+
+The permission catalog lives in code but is synced to the database by `just db-migrate`, not at API startup. Run it after adding a `PERMISSION_CATALOG` or `SYSTEM_ROLES` entry. Profiles are cached in Redis for up to 300 seconds; changes made through the API evict the cache, but edits made directly in the database wait for the TTL.
 
 ### Request Validation Seems To Be Skipped
 

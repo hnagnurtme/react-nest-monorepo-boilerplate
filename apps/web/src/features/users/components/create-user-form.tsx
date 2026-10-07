@@ -1,22 +1,26 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
-import type { UserRole } from '@repo/shared-types';
-
 import { useAuthStore } from '@/entities/session';
+import { useRoles, type RoleItem } from '@/features/roles';
 import { useTenants } from '@/features/tenants';
 import { useCreateUser } from '@/features/users/api/use-create-user';
+import { RoleChecklist } from '@/features/users/components/role-checklist';
 import {
   createUserSchema,
+  needsTenant,
   type CreateUserFormValues,
+  type CreateUserSchemaOptions,
 } from '@/features/users/schemas/create-user.schema';
 import type { CreateUserBody } from '@/features/users/types';
 import { Button, Input, useToast } from '@/shared/ui';
 
 const CONFLICT_STATUS = 409;
+const FORBIDDEN_STATUS = 403;
 const TENANT_OPTIONS_LIMIT = 100;
+const ROLE_OPTIONS_LIMIT = 100;
 const SELECT_CLASS =
   'bg-card border-border focus:border-primary focus:ring-primary/20 w-full rounded-xl border px-3.5 py-2.5 text-sm outline-none focus:ring-2';
 
@@ -25,45 +29,58 @@ export interface CreateUserFormProps {
   onCancel?: () => void;
 }
 
-/** Build the POST body: tenantId is sent only by platform admins and never for PLATFORM_ADMIN. */
+/**
+ * Build the POST body: tenantId is sent only by platform actors, and never when every
+ * selected role is a platform role (a platform user has no tenant).
+ */
 export function buildCreateUserBody(
   values: CreateUserFormValues,
-  isPlatformAdmin: boolean,
+  isPlatformActor: boolean,
+  scopeOf: CreateUserSchemaOptions['scopeOf'],
 ): CreateUserBody {
   const body: CreateUserBody = {
     fullName: values.fullName,
     email: values.email,
     password: values.password,
-    role: values.role,
+    roleIds: values.roleIds,
   };
   if (values.phoneNumber !== '') {
     body.phoneNumber = values.phoneNumber;
   }
-  if (isPlatformAdmin && values.role !== 'PLATFORM_ADMIN') {
+  if (isPlatformActor && needsTenant(values.roleIds, scopeOf)) {
     body.tenantId = values.tenantId;
   }
   return body;
 }
 
+/** Roles a platform actor may offer for the chosen tenant (other tenants' custom roles are hidden). */
+function visibleRoles(roles: readonly RoleItem[], tenantId: string): RoleItem[] {
+  return roles.filter(
+    (role) => role.scope === 'platform' || role.tenantId === null || role.tenantId === tenantId,
+  );
+}
+
 export function CreateUserForm({ onCreated, onCancel }: CreateUserFormProps) {
   const { t } = useTranslation('users');
   const { showToast } = useToast();
-  const actorRole = useAuthStore((state) => state.user?.role);
-  const isPlatformAdmin = actorRole === 'PLATFORM_ADMIN';
+  const isPlatformActor = useAuthStore((state) => state.user?.scope === 'platform');
 
-  const roles = useMemo<UserRole[]>(
-    () =>
-      isPlatformAdmin
-        ? ['TENANT_ADMIN', 'TENANT_MEMBER', 'PLATFORM_ADMIN']
-        : ['TENANT_ADMIN', 'TENANT_MEMBER'],
-    [isPlatformAdmin],
+  const rolesQuery = useRoles(1, ROLE_OPTIONS_LIMIT);
+  const allRoles = useMemo(() => rolesQuery.data?.items ?? [], [rolesQuery.data]);
+  const scopeOf = useCallback(
+    (roleId: string) => allRoles.find((role) => role.id === roleId)?.scope,
+    [allRoles],
   );
-  const schema = useMemo(() => createUserSchema({ isPlatformAdmin, t }), [isPlatformAdmin, t]);
+  const schema = useMemo(
+    () => createUserSchema({ isPlatformActor, scopeOf, t }),
+    [isPlatformActor, scopeOf, t],
+  );
 
   const {
     register,
     handleSubmit,
     watch,
+    setValue,
     reset,
     formState: { errors },
   } = useForm<CreateUserFormValues>({
@@ -73,18 +90,33 @@ export function CreateUserForm({ onCreated, onCancel }: CreateUserFormProps) {
       email: '',
       phoneNumber: '',
       password: '',
-      role: 'TENANT_MEMBER',
+      roleIds: [],
       tenantId: '',
     },
   });
 
-  const role = watch('role');
-  const showTenantSelect = isPlatformAdmin && role !== 'PLATFORM_ADMIN';
-  const tenants = useTenants(1, TENANT_OPTIONS_LIMIT, { enabled: isPlatformAdmin });
+  const roleIds = watch('roleIds');
+  const tenantId = watch('tenantId');
+  const roles = useMemo(
+    () => (isPlatformActor ? visibleRoles(allRoles, tenantId) : allRoles),
+    [allRoles, isPlatformActor, tenantId],
+  );
+  const showTenantSelect = isPlatformActor && needsTenant(roleIds, scopeOf);
+  const tenants = useTenants(1, TENANT_OPTIONS_LIMIT, { enabled: isPlatformActor });
   const createUser = useCreateUser();
 
+  const toggleRole = (roleId: string): void => {
+    setValue(
+      'roleIds',
+      roleIds.includes(roleId) ? roleIds.filter((id) => id !== roleId) : [...roleIds, roleId],
+      { shouldValidate: true },
+    );
+  };
+
   const onSubmit = (values: CreateUserFormValues): void => {
-    createUser.mutate(buildCreateUserBody(values, isPlatformAdmin), {
+    const visibleIds = new Set(roles.map((role) => role.id));
+    const submitted = { ...values, roleIds: values.roleIds.filter((id) => visibleIds.has(id)) };
+    createUser.mutate(buildCreateUserBody(submitted, isPlatformActor, scopeOf), {
       onSuccess: () => {
         showToast({ type: 'success', message: t('create.success') });
         reset();
@@ -94,7 +126,11 @@ export function CreateUserForm({ onCreated, onCancel }: CreateUserFormProps) {
         showToast({
           type: 'error',
           message:
-            error.status === CONFLICT_STATUS ? t('create.duplicateEmail') : t('create.error'),
+            error.status === CONFLICT_STATUS
+              ? t('create.duplicateEmail')
+              : error.status === FORBIDDEN_STATUS
+                ? t('actions.rolesForbidden')
+                : t('create.error'),
         });
       },
     });
@@ -142,23 +178,26 @@ export function CreateUserForm({ onCreated, onCancel }: CreateUserFormProps) {
         {...register('password')}
       />
 
-      <div className="space-y-1.5">
-        <label htmlFor="create-user-role" className="text-foreground block text-xs font-semibold">
-          {t('create.role')}
-        </label>
-        <select id="create-user-role" className={SELECT_CLASS} {...register('role')}>
-          {roles.map((value) => (
-            <option key={value} value={value}>
-              {t(`roles.${value}`)}
-            </option>
-          ))}
-        </select>
-        {errors.role?.message ? (
+      <fieldset className="space-y-1.5 sm:col-span-2">
+        <legend className="text-foreground block text-xs font-semibold">{t('create.roles')}</legend>
+        {rolesQuery.isPending ? (
+          <p className="text-muted-foreground text-sm">{t('create.rolesLoading')}</p>
+        ) : roles.length === 0 ? (
+          <p className="text-muted-foreground text-sm">{t('create.rolesEmpty')}</p>
+        ) : (
+          <RoleChecklist
+            idPrefix="create-user-role"
+            roles={roles}
+            selected={roleIds}
+            onToggle={toggleRole}
+          />
+        )}
+        {errors.roleIds?.message ? (
           <p role="alert" className="text-destructive text-xs">
-            {errors.role.message}
+            {errors.roleIds.message}
           </p>
         ) : null}
-      </div>
+      </fieldset>
 
       {showTenantSelect ? (
         <div className="space-y-1.5">

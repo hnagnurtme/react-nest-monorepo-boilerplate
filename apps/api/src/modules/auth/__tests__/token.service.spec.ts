@@ -19,8 +19,9 @@ const user: PublicUser = {
   id: 'u-1',
   email: 'a@example.test',
   fullName: 'A',
-  role: 'TENANT_ADMIN',
   tenantId: 't-1',
+  scope: 'tenant',
+  roles: [{ key: 'TENANT_ADMIN', name: 'Tenant administrator' }],
 };
 
 /** Redis only backs the revocation denylist, which these tests do not exercise. */
@@ -47,16 +48,17 @@ describe('TokenService', () => {
     expect(decode(issued.token, env.JWT_ACCESS_SECRET)).toMatchObject({
       sub: 'u-1',
       email: 'a@example.test',
-      role: 'TENANT_ADMIN',
-      tenantId: 't-1',
       jti: issued.jti,
     });
   });
 
-  it('omits tenantId for a user who has none', async () => {
-    const issued = await makeService().issueAccessToken({ ...user, tenantId: undefined });
+  it('carries no role, scope or tenant: those are read from the database on every request', async () => {
+    const issued = await makeService().issueAccessToken(user);
+    const claims = decode(issued.token, env.JWT_ACCESS_SECRET);
 
-    expect(decode(issued.token, env.JWT_ACCESS_SECRET)).not.toHaveProperty('tenantId');
+    expect(claims).not.toHaveProperty('role');
+    expect(claims).not.toHaveProperty('scope');
+    expect(claims).not.toHaveProperty('tenantId');
   });
 
   it('refuses an access token verified with the refresh secret', async () => {

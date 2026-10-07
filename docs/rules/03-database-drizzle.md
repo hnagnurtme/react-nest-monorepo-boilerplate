@@ -140,6 +140,10 @@ Policy chạy trên **mọi** truy vấn tới bảng đó. Thiếu index trên 
 
 Seed 2 tenant, assert tenant A không đọc/ghi được dữ liệu B, và `admin` mode thấy cả hai. Xem [08-testing.md](08-testing.md).
 
+### D6. Bảng phân quyền: `permissions`, `roles`, `role_permissions`, `user_roles` 👀
+
+Vẫn tuân D1-D5 (mỗi bảng một policy). Ngoài ra: không dùng `pgEnum` hay cột `role` trên `users` (quyền nằm ở `user_roles`); vai trò hệ thống (`tenant_id` NULL, `is_system`) và grant của chúng chỉ đổi bằng `syncAuthzCatalog` trong job migrate (trigger `guard_system_roles` từ chối mọi đường khác); vai trò scope `platform` bị ẩn khỏi `tenant` mode. Không sửa dữ liệu vai trò hệ thống bằng migration SQL tay: sửa `SYSTEM_ROLES` trong `packages/shared-types` rồi chạy `just db-migrate`. Xem [03-auth-flow-va-casl-abac.md](../03-auth-flow-va-casl-abac.md) mục 2 và [ADR-0005](../adr/0005-permission-luu-trong-co-so-du-lieu.md).
+
 ---
 
 ## Phần E. Index

@@ -15,3 +15,4 @@ export interface UsersPage {
 
 export type CreateUserBody = components['schemas']['CreateUserDto'];
 export type UpdateUserBody = components['schemas']['UpdateUserDto'];
+export type SetUserRolesBody = components['schemas']['SetUserRolesDto'];

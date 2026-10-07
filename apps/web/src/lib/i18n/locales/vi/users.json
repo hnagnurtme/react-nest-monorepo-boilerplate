@@ -21,11 +21,6 @@
     "summary": "Trang {{page}} / {{totalPages}} ({{total}} người dùng)"
   },
   "back": "Trang chủ",
-  "roles": {
-    "PLATFORM_ADMIN": "Quản trị nền tảng",
-    "TENANT_ADMIN": "Quản trị tenant",
-    "TENANT_MEMBER": "Thành viên tenant"
-  },
   "actions": {
     "activate": "Kích hoạt",
     "deactivate": "Vô hiệu hóa",
@@ -34,7 +29,11 @@
     "updateSuccess": "Đã cập nhật người dùng.",
     "updateError": "Không thể cập nhật người dùng.",
     "deleteSuccess": "Đã xóa người dùng.",
-    "deleteError": "Không thể xóa người dùng."
+    "deleteError": "Không thể xóa người dùng.",
+    "editRoles": "Sửa vai trò",
+    "rolesSuccess": "Đã cập nhật vai trò.",
+    "rolesError": "Không thể cập nhật vai trò.",
+    "rolesForbidden": "Bạn không được phép gán các vai trò này."
   },
   "create": {
     "open": "Tạo người dùng",
@@ -44,7 +43,6 @@
     "phone": "Số điện thoại (tùy chọn)",
     "phonePlaceholder": "+84901234567",
     "password": "Mật khẩu",
-    "role": "Vai trò",
     "tenant": "Tenant",
     "tenantPlaceholder": "Chọn tenant",
     "cancel": "Hủy",
@@ -59,8 +57,20 @@
       "emailInvalid": "Địa chỉ email không hợp lệ",
       "phone": "Số điện thoại không hợp lệ",
       "passwordMin": "Mật khẩu phải có ít nhất 8 ký tự",
-      "roleNotAllowed": "Bạn không thể gán vai trò này",
-      "tenantRequired": "Vui lòng chọn tenant"
-    }
+      "tenantRequired": "Vui lòng chọn tenant",
+      "rolesRequired": "Chọn ít nhất một vai trò",
+      "mixedScope": "Không được trộn vai trò nền tảng và tenant"
+    },
+    "roles": "Vai trò",
+    "rolesHint": "Chọn ít nhất một vai trò.",
+    "rolesEmpty": "Không có vai trò nào.",
+    "rolesLoading": "Đang tải vai trò...",
+    "systemBadge": "Hệ thống"
+  },
+  "rolesDialog": {
+    "title": "Sửa vai trò của {{email}}",
+    "save": "Lưu vai trò",
+    "cancel": "Hủy",
+    "loading": "Đang tải vai trò..."
   }
 }

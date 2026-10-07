@@ -1,15 +1,21 @@
-import type { UserContext } from '@repo/shared-types';
+import type { RoleScope, UserContext } from '@repo/shared-types';
 
 /**
- * The authenticated caller, as reconstructed from a verified access token.
+ * The authenticated caller. Identity comes from the verified access token;
+ * tenant, scope and roles come from the authorization profile loaded from the
+ * database (so a role change applies immediately, not at token expiry).
  *
- * Extends the shared `UserContext` (which CASL builds abilities from and the
- * frontend also uses) with the two fields that only the API cares about.
+ * Extends the shared `UserContext`, which the CASL ability is built from, with
+ * the fields that only the API cares about.
  */
 export interface AuthContext extends UserContext {
   /** JWT id, so a single access token can be revoked before it expires. */
   jti: string;
   email: string;
+  /** 'platform' users sit above every tenant and run in the 'admin' RLS mode. */
+  scope: RoleScope;
+  /** Role keys, for display and logging only; decisions use the ability. */
+  roles: string[];
 }
 
 /**

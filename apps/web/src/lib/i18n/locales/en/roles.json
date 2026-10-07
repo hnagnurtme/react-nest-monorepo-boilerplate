@@ -1,0 +1,87 @@
+{
+  "title": "Roles",
+  "subtitle": "Who can do what in your workspace.",
+  "back": "Home",
+  "loading": "Loading...",
+  "error": "Could not load roles.",
+  "empty": "No roles found.",
+  "system": "System",
+  "view": "View",
+  "manage": "Edit",
+  "open": "Open role {{name}}",
+  "close": "Close",
+  "cancel": "Cancel",
+  "columns": {
+    "name": "Name",
+    "key": "Key",
+    "scope": "Scope",
+    "permissions": "Permissions",
+    "actions": "Actions"
+  },
+  "scope": {
+    "platform": "Platform",
+    "tenant": "Tenant"
+  },
+  "pagination": {
+    "previous": "Previous",
+    "next": "Next",
+    "summary": "Page {{page}} of {{totalPages}} ({{total}} roles)"
+  },
+  "subjects": {
+    "User": "User",
+    "Tenant": "Tenant",
+    "Role": "Role",
+    "all": "Everything"
+  },
+  "actions": {
+    "manage": "Manage",
+    "create": "Create",
+    "read": "Read",
+    "update": "Update",
+    "delete": "Delete"
+  },
+  "presets": {
+    "none": "None",
+    "own_record": "Own record only",
+    "own_tenant": "Whole tenant",
+    "any": "Everything"
+  },
+  "matrix": {
+    "rowLabel": "{{action}} {{subject}}"
+  },
+  "create": {
+    "open": "Create role",
+    "title": "Create role",
+    "name": "Name",
+    "tenant": "Tenant",
+    "tenantPlaceholder": "Select a tenant",
+    "submit": "Create role",
+    "success": "Role created.",
+    "error": "Could not create the role.",
+    "validation": {
+      "nameMin": "Name must be at least 2 characters",
+      "tenantRequired": "Please select a tenant"
+    }
+  },
+  "editor": {
+    "title": "Role: {{name}}",
+    "name": "Role name",
+    "rename": "Rename",
+    "save": "Save permissions",
+    "delete": "Delete role",
+    "systemNotice": "System roles are read-only.",
+    "loadError": "Could not load the role.",
+    "confirmDelete": "Delete role {{name}}? This cannot be undone.",
+    "renameSuccess": "Role renamed.",
+    "renameError": "Could not rename the role.",
+    "saveSuccess": "Permissions saved.",
+    "saveError": "Could not save the permissions.",
+    "deleteSuccess": "Role deleted.",
+    "deleteError": "Could not delete the role."
+  },
+  "errors": {
+    "forbidden": "You are not allowed to do this.",
+    "conflict": "A role with this name already exists, or the role is still assigned to users.",
+    "invalid": "The request is invalid. Check the name and permissions."
+  }
+}

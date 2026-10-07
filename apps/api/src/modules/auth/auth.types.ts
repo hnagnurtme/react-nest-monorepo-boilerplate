@@ -1,4 +1,4 @@
-import type { UserRole } from '@repo/shared-types';
+import type { RoleScope } from '@repo/shared-types';
 
 /**
  * The user as the outside world may see them. Built explicitly rather than by
@@ -9,8 +9,10 @@ export interface PublicUser {
   id: string;
   email: string;
   fullName: string;
-  role: UserRole;
   tenantId: string | undefined;
+  /** 'platform' users sit above every tenant. */
+  scope: RoleScope;
+  roles: { key: string; name: string }[];
 }
 
 export interface AuthBody {

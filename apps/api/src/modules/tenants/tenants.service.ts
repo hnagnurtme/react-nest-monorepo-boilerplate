@@ -1,7 +1,7 @@
 import { subject } from '@casl/ability';
 import { Inject, Injectable } from '@nestjs/common';
 
-import { defineAbilityFor, type Action } from '@repo/shared-types';
+import type { Action } from '@repo/shared-types';
 
 import {
   buildPaginationMeta,
@@ -11,6 +11,7 @@ import {
   type PaginationMeta,
 } from '@/common/index.js';
 import { AuditService } from '@/core/audit/audit.service.js';
+import { AuthzService } from '@/core/authz/index.js';
 import type { Tenant } from '@/core/database/schema/index.js';
 import { TransactionManager } from '@/core/database/transaction.manager.js';
 import { ForbiddenActionError, ResourceNotFoundError } from '@/core/errors/index.js';
@@ -25,6 +26,7 @@ export class TenantsService {
     @Inject(TransactionManager) private readonly transactions: TransactionManager,
     @Inject(TenantsRepository) private readonly repository: TenantsRepository,
     @Inject(AuditService) private readonly audit: AuditService,
+    @Inject(AuthzService) private readonly authz: AuthzService,
   ) {}
 
   async list(query: PageQuery): Promise<{ items: TenantResponse[]; meta: PaginationMeta }> {
@@ -41,16 +43,16 @@ export class TenantsService {
     return { items: rows.map(toTenantResponse), meta: buildPaginationMeta(query, total) };
   }
 
-  async findOrThrow(actor: AuthContext, id: string): Promise<TenantResponse> {
+  async findOrThrow(id: string): Promise<TenantResponse> {
     const tenant = await this.loadOrThrow(id);
-    this.assertCan(actor, 'read', tenant);
+    this.assertCan('read', tenant);
 
     return toTenantResponse(tenant);
   }
 
   /** Only a platform admin (`manage all`) holds the `create` ability on Tenant. */
   async create(actor: AuthContext, dto: CreateTenantDto): Promise<TenantResponse> {
-    if (!defineAbilityFor(actor).can('create', 'Tenant')) {
+    if (!this.authz.current().can('create', 'Tenant')) {
       throw new ForbiddenActionError('create', 'Tenant');
     }
 
@@ -72,9 +74,9 @@ export class TenantsService {
 
   async update(actor: AuthContext, id: string, dto: UpdateTenantDto): Promise<TenantResponse> {
     const existing = await this.loadOrThrow(id);
-    this.assertCan(actor, 'update', existing);
+    this.assertCan('update', existing);
     // Switching a tenant on or off is a platform decision, not a tenant one.
-    if (dto.isActive !== undefined && actor.role !== 'PLATFORM_ADMIN') {
+    if (dto.isActive !== undefined && actor.scope !== 'platform') {
       throw new ForbiddenActionError('update', 'Tenant');
     }
 
@@ -110,8 +112,8 @@ export class TenantsService {
   }
 
   /** Layer 2: a bare `'Tenant'` string would ignore every condition (see CheckPolicies). */
-  private assertCan(actor: AuthContext, action: Action, tenant: Tenant): void {
-    if (!defineAbilityFor(actor).can(action, subject('Tenant', { id: tenant.id }))) {
+  private assertCan(action: Action, tenant: Tenant): void {
+    if (!this.authz.current().can(action, subject('Tenant', { id: tenant.id }))) {
       throw new ForbiddenActionError(action, 'Tenant');
     }
   }

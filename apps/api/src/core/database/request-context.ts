@@ -1,6 +1,7 @@
 import type { ClsStore } from 'nestjs-cls';
 
 import type { AuthContext } from '@/common/index.js';
+import type { AuthzProfile } from '@/core/authz/authz.types.js';
 
 /**
  * Keys in the request-scoped CLS (AsyncLocalStorage) namespace.
@@ -12,6 +13,7 @@ import type { AuthContext } from '@/common/index.js';
 export const CLS_KEYS = {
   accessContext: 'accessContext',
   authContext: 'authContext',
+  profile: 'profile',
   userId: 'userId',
   tenantId: 'tenantId',
   traceId: 'traceId',
@@ -33,6 +35,7 @@ export type AccessContext =
 export interface AppClsStore extends ClsStore {
   [CLS_KEYS.accessContext]?: AccessContext;
   [CLS_KEYS.authContext]?: AuthContext;
+  [CLS_KEYS.profile]?: AuthzProfile;
   [CLS_KEYS.userId]?: string;
   [CLS_KEYS.tenantId]?: string;
   [CLS_KEYS.traceId]?: string;

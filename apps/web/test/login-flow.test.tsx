@@ -7,7 +7,7 @@ import { makeRefreshResponse, makeUser, problem } from './fixtures/auth';
 import { renderApp } from './utils/render-app';
 
 describe('Phase 1: Login Flow (L1-L7)', () => {
-  const mockUser = makeUser({ email: 'admin@example.com', role: 'TENANT_MEMBER' });
+  const mockUser = makeUser({ email: 'admin@example.com' });
   const mockAccessToken = 'login-token';
 
   beforeEach(() => {

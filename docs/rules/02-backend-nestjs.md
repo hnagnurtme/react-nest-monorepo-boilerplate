@@ -178,7 +178,7 @@ Không dùng type suy từ Drizzle làm DTO request. Client không được phé
 
 ### E3. Không bao giờ tin `tenantId` do client gửi 👀
 
-**Quy tắc:** `tenantId` **luôn** lấy từ JWT qua `@CurrentUser()`, không bao giờ từ body hay query. **Ngoại lệ duy nhất:** `POST /users` nhận `tenantId` tùy chọn vì `PLATFORM_ADMIN` chọn tenant; với `TENANT_ADMIN` giá trị khác tenant trong token bị `403`, vắng thì lấy từ token.
+**Quy tắc:** `tenantId` **luôn** lấy từ hồ sơ của người gọi qua `@CurrentUser()` (nạp từ DB, không nằm trong token), không bao giờ từ body hay query. **Ngoại lệ duy nhất:** `POST /users` và `POST /roles` nhận `tenantId` vì người dùng scope `platform` chọn tenant; với người dùng tenant, giá trị khác tenant của họ bị `403`, vắng thì lấy từ hồ sơ.
 
 ```typescript
 // ❌ Tenant A gửi tenantId của B ➔ ghi đè dữ liệu người khác

@@ -1,23 +1,29 @@
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 
+import { SYSTEM_ROLES, buildAbility, type PermissionGrant } from '@repo/shared-types';
+
 import type { AuthContext } from '@/common/index.js';
+import type { RoleWithGrants } from '@/core/authz/index.js';
 import type { User } from '@/core/database/schema/index.js';
-import type { TransactionManager } from '@/core/database/transaction.manager.js';
-import { ForbiddenActionError, ResourceNotFoundError } from '@/core/errors/index.js';
-import type { CredentialsService } from '@/modules/auth/index.js';
+import {
+  ForbiddenActionError,
+  ResourceConflictError,
+  ResourceNotFoundError,
+} from '@/core/errors/index.js';
 import { UsersService } from '@/modules/users/users.service.js';
 
 const NOW = new Date('2026-01-01T00:00:00.000Z');
+const TENANT = '11111111-1111-4111-8111-111111111111';
+const OTHER_TENANT = '22222222-2222-4222-8222-222222222222';
 
-function makeUser(overrides: Partial<User>): User {
+function makeUser(overrides: Partial<User> = {}): User {
   return {
     id: 'u-1',
     email: 'u1@example.com',
     passwordHash: 'x',
     fullName: 'User One',
     phoneNumber: null,
-    role: 'TENANT_MEMBER',
-    tenantId: 't-1',
+    tenantId: TENANT,
     isActive: true,
     isEmailVerified: true,
     createdAt: NOW,
@@ -27,28 +33,93 @@ function makeUser(overrides: Partial<User>): User {
   };
 }
 
-function makeActor(overrides: Partial<AuthContext>): AuthContext {
+const ROLE_ADMIN: RoleWithGrants = {
+  id: SYSTEM_ROLES.TENANT_ADMIN.id,
+  key: 'TENANT_ADMIN',
+  name: 'Tenant administrator',
+  scope: 'tenant',
+  tenantId: null,
+  isSystem: true,
+  grants: [...SYSTEM_ROLES.TENANT_ADMIN.grants],
+};
+const ROLE_MEMBER: RoleWithGrants = {
+  id: SYSTEM_ROLES.TENANT_MEMBER.id,
+  key: 'TENANT_MEMBER',
+  name: 'Tenant member',
+  scope: 'tenant',
+  tenantId: null,
+  isSystem: true,
+  grants: [...SYSTEM_ROLES.TENANT_MEMBER.grants],
+};
+const ROLE_PLATFORM: RoleWithGrants = {
+  id: SYSTEM_ROLES.PLATFORM_ADMIN.id,
+  key: 'PLATFORM_ADMIN',
+  name: 'Platform administrator',
+  scope: 'platform',
+  tenantId: null,
+  isSystem: true,
+  grants: [...SYSTEM_ROLES.PLATFORM_ADMIN.grants],
+};
+
+interface Actor {
+  auth: AuthContext;
+  grants: PermissionGrant[];
+}
+
+function tenantAdmin(id = 'actor'): Actor {
   return {
-    id: 'actor',
-    email: 'actor@example.com',
-    role: 'TENANT_ADMIN',
-    tenantId: 't-1',
-    jti: 'jti',
-    ...overrides,
+    auth: {
+      id,
+      email: 'a@x.test',
+      tenantId: TENANT,
+      scope: 'tenant',
+      roles: ['TENANT_ADMIN'],
+      jti: 'j',
+    },
+    grants: [...SYSTEM_ROLES.TENANT_ADMIN.grants],
+  };
+}
+function tenantMember(id = 'u-1'): Actor {
+  return {
+    auth: {
+      id,
+      email: 'm@x.test',
+      tenantId: TENANT,
+      scope: 'tenant',
+      roles: ['TENANT_MEMBER'],
+      jti: 'j',
+    },
+    grants: [...SYSTEM_ROLES.TENANT_MEMBER.grants],
+  };
+}
+function platformAdmin(): Actor {
+  return {
+    auth: { id: 'root', email: 'r@x.test', scope: 'platform', roles: ['PLATFORM_ADMIN'], jti: 'j' },
+    grants: [...SYSTEM_ROLES.PLATFORM_ADMIN.grants],
   };
 }
 
 describe('UsersService', () => {
   let service: UsersService;
-  let repository: {
-    findById: Mock;
-    update: Mock;
-    softDelete: Mock;
-    list: Mock;
-    count: Mock;
-    create: Mock;
-  };
+  let repository: Record<'findById' | 'update' | 'softDelete' | 'list' | 'count' | 'create', Mock>;
+  let authzRepository: Record<
+    'loadRolesWithGrants' | 'rolesForUsers' | 'replaceUserRoles' | 'countActiveWithRoleKey',
+    Mock
+  >;
+  let authz: { current: Mock; currentProfile: Mock; invalidateUsers: Mock };
   let audit: { record: Mock };
+
+  function act(actor: Actor): AuthContext {
+    authz.current.mockReturnValue(
+      buildAbility(actor.grants, { id: actor.auth.id, tenantId: actor.auth.tenantId }),
+    );
+    authz.currentProfile.mockReturnValue({
+      userId: actor.auth.id,
+      tenantId: actor.auth.tenantId ?? null,
+      grants: actor.grants,
+    });
+    return actor.auth;
+  }
 
   beforeEach(() => {
     repository = {
@@ -61,144 +132,263 @@ describe('UsersService', () => {
         Promise.resolve(makeUser({ id: 'new-id', ...values })),
       ),
     };
+    authzRepository = {
+      loadRolesWithGrants: vi.fn(),
+      rolesForUsers: vi.fn(() => Promise.resolve(new Map())),
+      replaceUserRoles: vi.fn(),
+      countActiveWithRoleKey: vi.fn(() => Promise.resolve(1)),
+    };
+    authz = { current: vi.fn(), currentProfile: vi.fn(), invalidateUsers: vi.fn() };
     audit = { record: vi.fn() };
     const transactions = {
-      runInRequestContext: vi.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn({})),
+      runInRequestContext: vi.fn((fn: (tx: unknown) => Promise<unknown>) => fn({})),
     };
-
     const credentials = { hash: vi.fn(() => Promise.resolve('hashed')) };
 
     service = new UsersService(
-      transactions as unknown as TransactionManager,
-      repository,
-      credentials as unknown as CredentialsService,
+      transactions as never,
+      repository as never,
+      credentials as never,
       audit,
+      authz as never,
+      authzRepository as never,
     );
   });
 
-  it('throws not found when the row is invisible (other tenant or missing)', async () => {
-    repository.findById.mockResolvedValue(undefined);
+  const body = { email: 'new@example.com', fullName: 'New User', password: 'Password123!' };
 
-    await expect(service.findOrThrow(makeActor({}), 'u-9')).rejects.toBeInstanceOf(
-      ResourceNotFoundError,
-    );
-  });
+  describe('read / update / delete', () => {
+    it('throws not found when the row is invisible (other tenant or missing)', async () => {
+      act(tenantAdmin());
+      repository.findById.mockResolvedValue(undefined);
 
-  it('refuses a read the ability denies even if RLS let the row through', async () => {
-    repository.findById.mockResolvedValue(makeUser({ id: 'u-2', tenantId: 't-2' }));
-
-    await expect(service.findOrThrow(makeActor({}), 'u-2')).rejects.toBeInstanceOf(
-      ForbiddenActionError,
-    );
-  });
-
-  it('lets a member update itself but not change isActive', async () => {
-    const member = makeActor({ id: 'u-1', role: 'TENANT_MEMBER' });
-    repository.findById.mockResolvedValue(makeUser({ id: 'u-1' }));
-    repository.update.mockResolvedValue(makeUser({ id: 'u-1', fullName: 'Renamed' }));
-
-    await expect(service.update(member, 'u-1', { fullName: 'Renamed' })).resolves.toMatchObject({
-      fullName: 'Renamed',
+      await expect(service.findOrThrow('u-9')).rejects.toBeInstanceOf(ResourceNotFoundError);
     });
-    await expect(service.update(member, 'u-1', { isActive: false })).rejects.toBeInstanceOf(
-      ForbiddenActionError,
-    );
-  });
 
-  it('does not let an admin delete its own account', async () => {
-    repository.findById.mockResolvedValue(makeUser({ id: 'actor' }));
+    it('refuses a read the ability denies even if RLS let the row through', async () => {
+      act(tenantAdmin());
+      repository.findById.mockResolvedValue(makeUser({ id: 'u-2', tenantId: OTHER_TENANT }));
 
-    await expect(service.remove(makeActor({}), 'actor')).rejects.toBeInstanceOf(
-      ForbiddenActionError,
-    );
-    expect(repository.softDelete).not.toHaveBeenCalled();
-  });
+      await expect(service.findOrThrow('u-2')).rejects.toBeInstanceOf(ForbiddenActionError);
+    });
 
-  it('lets an admin soft-delete a tenant member', async () => {
-    repository.findById.mockResolvedValue(makeUser({ id: 'u-2' }));
-    repository.softDelete.mockResolvedValue(true);
+    it('lets a member update itself but not change isActive', async () => {
+      const member = act(tenantMember('u-1'));
+      repository.findById.mockResolvedValue(makeUser({ id: 'u-1' }));
+      repository.update.mockResolvedValue(makeUser({ id: 'u-1', fullName: 'Renamed' }));
 
-    await service.remove(makeActor({}), 'u-2');
+      await expect(service.update(member, 'u-1', { fullName: 'Renamed' })).resolves.toMatchObject({
+        fullName: 'Renamed',
+      });
+      await expect(service.update(member, 'u-1', { isActive: false })).rejects.toBeInstanceOf(
+        ForbiddenActionError,
+      );
+    });
 
-    expect(repository.softDelete).toHaveBeenCalledWith(expect.anything(), 'u-2');
-  });
+    it('evicts the cached profile when a user is deactivated', async () => {
+      const admin = act(tenantAdmin());
+      repository.findById.mockResolvedValue(makeUser({ id: 'u-2' }));
+      repository.update.mockResolvedValue(makeUser({ id: 'u-2', isActive: false }));
 
-  it('paginates and never exposes the password hash', async () => {
-    repository.list.mockResolvedValue([makeUser({})]);
-    repository.count.mockResolvedValue(1);
+      await service.update(admin, 'u-2', { isActive: false });
 
-    const result = await service.list({ page: 1, limit: 20, sortOrder: 'desc' });
+      expect(authz.invalidateUsers).toHaveBeenCalledWith(['u-2']);
+    });
 
-    expect(result.meta).toEqual({ page: 1, limit: 20, total: 1, totalPages: 1 });
-    expect(result.items[0]).not.toHaveProperty('passwordHash');
+    it('does not let an admin delete or deactivate its own account', async () => {
+      const admin = act(tenantAdmin('actor'));
+      repository.findById.mockResolvedValue(makeUser({ id: 'actor' }));
+
+      await expect(service.remove(admin, 'actor')).rejects.toBeInstanceOf(ForbiddenActionError);
+      await expect(service.update(admin, 'actor', { isActive: false })).rejects.toBeInstanceOf(
+        ForbiddenActionError,
+      );
+      expect(repository.softDelete).not.toHaveBeenCalled();
+    });
+
+    it('soft-deletes a member and evicts its profile', async () => {
+      const admin = act(tenantAdmin());
+      repository.findById.mockResolvedValue(makeUser({ id: 'u-2' }));
+
+      await service.remove(admin, 'u-2');
+
+      expect(repository.softDelete).toHaveBeenCalledWith(expect.anything(), 'u-2');
+      expect(authz.invalidateUsers).toHaveBeenCalledWith(['u-2']);
+    });
+
+    it('refuses to remove the last active tenant admin', async () => {
+      const admin = act(tenantAdmin('actor'));
+      repository.findById.mockResolvedValue(makeUser({ id: 'u-2' }));
+      authzRepository.rolesForUsers.mockResolvedValue(new Map([['u-2', [ROLE_ADMIN]]]));
+      authzRepository.countActiveWithRoleKey.mockResolvedValue(0);
+
+      await expect(service.remove(admin, 'u-2')).rejects.toBeInstanceOf(ResourceConflictError);
+      expect(repository.softDelete).not.toHaveBeenCalled();
+    });
+
+    it('paginates, attaches roles and never exposes the password hash', async () => {
+      act(tenantAdmin());
+      repository.list.mockResolvedValue([makeUser()]);
+      repository.count.mockResolvedValue(1);
+      authzRepository.rolesForUsers.mockResolvedValue(new Map([['u-1', [ROLE_MEMBER]]]));
+
+      const result = await service.list({ page: 1, limit: 20, sortOrder: 'desc' });
+
+      expect(result.meta).toEqual({ page: 1, limit: 20, total: 1, totalPages: 1 });
+      expect(result.items[0]).not.toHaveProperty('passwordHash');
+      expect(result.items[0]?.roles).toEqual([
+        { id: ROLE_MEMBER.id, key: 'TENANT_MEMBER', name: 'Tenant member' },
+      ]);
+    });
   });
 
   describe('create', () => {
-    const base = {
-      email: 'new@example.com',
-      fullName: 'New User',
-      password: 'Password123!',
-      role: 'TENANT_MEMBER',
-    } as const;
+    it("puts a tenant admin's new user in the admin's own tenant, verified, with the role", async () => {
+      const admin = act(tenantAdmin());
+      authzRepository.loadRolesWithGrants.mockResolvedValue([ROLE_MEMBER]);
 
-    it("puts a tenant admin's new user in the admin's own tenant, verified and active", async () => {
-      const result = await service.create(makeActor({}), { ...base });
+      const result = await service.create(admin, { ...body, roleIds: [ROLE_MEMBER.id] });
 
       expect(repository.create).toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({
-          tenantId: 't-1',
+          tenantId: TENANT,
           passwordHash: 'hashed',
           isActive: true,
           isEmailVerified: true,
         }),
       );
+      expect(authzRepository.replaceUserRoles).toHaveBeenCalledWith(
+        expect.anything(),
+        'new-id',
+        [ROLE_MEMBER.id],
+        'actor',
+      );
       expect(result).not.toHaveProperty('passwordHash');
       expect(audit.record).toHaveBeenCalledWith(
         expect.anything(),
-        expect.objectContaining({ action: 'user.create', tenantId: 't-1' }),
+        expect.objectContaining({ action: 'user.create', tenantId: TENANT }),
       );
     });
 
-    it('refuses a tenant admin creating in another tenant or a platform admin', async () => {
+    it('rejects an unknown or invisible role as not found', async () => {
+      const admin = act(tenantAdmin());
+      authzRepository.loadRolesWithGrants.mockResolvedValue([]);
+
       await expect(
-        service.create(makeActor({}), {
-          ...base,
-          tenantId: '11111111-1111-4111-8111-111111111111',
-        }),
+        service.create(admin, { ...body, roleIds: [ROLE_MEMBER.id] }),
+      ).rejects.toBeInstanceOf(ResourceNotFoundError);
+    });
+
+    it('stops a tenant admin from creating in another tenant or a platform user', async () => {
+      const admin = act(tenantAdmin());
+      authzRepository.loadRolesWithGrants.mockResolvedValue([ROLE_MEMBER]);
+      await expect(
+        service.create(admin, { ...body, roleIds: [ROLE_MEMBER.id], tenantId: OTHER_TENANT }),
       ).rejects.toBeInstanceOf(ForbiddenActionError);
+
+      authzRepository.loadRolesWithGrants.mockResolvedValue([ROLE_PLATFORM]);
       await expect(
-        service.create(makeActor({}), { ...base, role: 'PLATFORM_ADMIN' }),
+        service.create(admin, { ...body, roleIds: [ROLE_PLATFORM.id] }),
       ).rejects.toBeInstanceOf(ForbiddenActionError);
       expect(repository.create).not.toHaveBeenCalled();
     });
 
-    it('refuses a member', async () => {
+    it('stops privilege escalation: a member-level creator cannot hand out admin', async () => {
+      // A custom "user manager" can create users but only holds member-level reach.
+      const manager: Actor = {
+        auth: tenantAdmin('mgr').auth,
+        grants: [
+          { action: 'create', subject: 'User', preset: 'own_tenant' },
+          ...SYSTEM_ROLES.TENANT_MEMBER.grants,
+        ],
+      };
+      const auth = act(manager);
+      authzRepository.loadRolesWithGrants.mockResolvedValue([ROLE_ADMIN]);
+
       await expect(
-        service.create(makeActor({ role: 'TENANT_MEMBER' }), { ...base }),
+        service.create(auth, { ...body, roleIds: [ROLE_ADMIN.id] }),
+      ).rejects.toBeInstanceOf(ForbiddenActionError);
+    });
+
+    it('refuses a member', async () => {
+      const member = act(tenantMember());
+      authzRepository.loadRolesWithGrants.mockResolvedValue([ROLE_MEMBER]);
+
+      await expect(
+        service.create(member, { ...body, roleIds: [ROLE_MEMBER.id] }),
       ).rejects.toBeInstanceOf(ForbiddenActionError);
     });
 
     it('lets a platform admin pick the tenant, and requires one for tenant roles', async () => {
-      const admin = makeActor({ role: 'PLATFORM_ADMIN', tenantId: undefined });
-      const tenantId = '22222222-2222-4222-8222-222222222222';
+      const admin = act(platformAdmin());
+      authzRepository.loadRolesWithGrants.mockResolvedValue([ROLE_ADMIN]);
 
-      await service.create(admin, { ...base, tenantId });
+      await service.create(admin, { ...body, roleIds: [ROLE_ADMIN.id], tenantId: OTHER_TENANT });
       expect(repository.create).toHaveBeenCalledWith(
         expect.anything(),
-        expect.objectContaining({ tenantId }),
+        expect.objectContaining({ tenantId: OTHER_TENANT }),
       );
-      await expect(service.create(admin, { ...base })).rejects.toBeInstanceOf(ForbiddenActionError);
+      await expect(
+        service.create(admin, { ...body, roleIds: [ROLE_ADMIN.id] }),
+      ).rejects.toBeInstanceOf(ForbiddenActionError);
     });
 
-    it('creates a tenant-less platform admin only for a platform admin', async () => {
-      const admin = makeActor({ role: 'PLATFORM_ADMIN', tenantId: undefined });
+    it('creates a tenant-less platform user only for a platform admin', async () => {
+      const admin = act(platformAdmin());
+      authzRepository.loadRolesWithGrants.mockResolvedValue([ROLE_PLATFORM]);
 
-      await service.create(admin, { ...base, role: 'PLATFORM_ADMIN' });
+      await service.create(admin, { ...body, roleIds: [ROLE_PLATFORM.id] });
+
       expect(repository.create).toHaveBeenCalledWith(
         expect.anything(),
-        expect.objectContaining({ tenantId: null, role: 'PLATFORM_ADMIN' }),
+        expect.objectContaining({ tenantId: null }),
       );
+    });
+  });
+
+  describe('setRoles', () => {
+    it('replaces roles, audits, and evicts the profile', async () => {
+      const admin = act(tenantAdmin());
+      repository.findById.mockResolvedValue(makeUser({ id: 'u-2' }));
+      authzRepository.rolesForUsers.mockResolvedValue(new Map([['u-2', [ROLE_MEMBER]]]));
+      authzRepository.loadRolesWithGrants.mockResolvedValue([ROLE_ADMIN]);
+
+      await service.setRoles(admin, 'u-2', { roleIds: [ROLE_ADMIN.id] });
+
+      expect(authzRepository.replaceUserRoles).toHaveBeenCalledWith(
+        expect.anything(),
+        'u-2',
+        [ROLE_ADMIN.id],
+        'actor',
+      );
+      expect(audit.record).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ action: 'user.roles.update' }),
+      );
+      expect(authz.invalidateUsers).toHaveBeenCalledWith(['u-2']);
+    });
+
+    it('never lets anyone change their own roles', async () => {
+      const admin = act(tenantAdmin('actor'));
+      repository.findById.mockResolvedValue(makeUser({ id: 'actor' }));
+
+      await expect(
+        service.setRoles(admin, 'actor', { roleIds: [ROLE_MEMBER.id] }),
+      ).rejects.toBeInstanceOf(ForbiddenActionError);
+    });
+
+    it('keeps the last tenant admin: dropping the admin role is refused', async () => {
+      const admin = act(tenantAdmin('actor'));
+      repository.findById.mockResolvedValue(makeUser({ id: 'u-2' }));
+      authzRepository.rolesForUsers.mockResolvedValue(new Map([['u-2', [ROLE_ADMIN]]]));
+      authzRepository.loadRolesWithGrants.mockResolvedValue([ROLE_MEMBER]);
+      authzRepository.countActiveWithRoleKey.mockResolvedValue(0);
+
+      await expect(
+        service.setRoles(admin, 'u-2', { roleIds: [ROLE_MEMBER.id] }),
+      ).rejects.toBeInstanceOf(ResourceConflictError);
+      expect(authzRepository.replaceUserRoles).not.toHaveBeenCalled();
     });
   });
 });

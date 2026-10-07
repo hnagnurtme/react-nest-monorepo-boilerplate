@@ -9,6 +9,7 @@ import { useDeleteUser } from '@/features/users/api/use-delete-user';
 import { useUpdateUser } from '@/features/users/api/use-update-user';
 import { useUsers } from '@/features/users/api/use-users';
 import { CreateUserForm } from '@/features/users/components/create-user-form';
+import { EditUserRolesDialog } from '@/features/users/components/edit-user-roles-dialog';
 import type { UserListItem } from '@/features/users/types';
 import { Button, useToast } from '@/shared/ui';
 
@@ -29,8 +30,10 @@ export function UsersPage() {
   const ability = useAbility();
   const currentUserId = useAuthStore((state) => state.user?.id);
   const [isCreating, setIsCreating] = useState(false);
+  const [editingRolesId, setEditingRolesId] = useState<string | null>(null);
 
   const { data, isPending, isError } = useUsers(page, PAGE_SIZE);
+  const editingRoles = data?.items.find((user) => user.id === editingRolesId);
   const updateUser = useUpdateUser();
   const deleteUser = useDeleteUser();
 
@@ -141,11 +144,34 @@ export function UsersPage() {
                       <tr key={user.id} className="border-border border-t">
                         <td className="px-4 py-2">{user.fullName}</td>
                         <td className="px-4 py-2">{user.email}</td>
-                        <td className="px-4 py-2">{t(`roles.${user.role}`)}</td>
+                        <td className="px-4 py-2">
+                          <div className="flex flex-wrap gap-1">
+                            {user.roles.map((role) => (
+                              <span
+                                key={role.id}
+                                className="bg-muted text-foreground rounded-full px-2 py-0.5 text-xs"
+                              >
+                                {role.name}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
                         <td className="px-4 py-2">
                           {user.isActive ? t('status.active') : t('status.inactive')}
                         </td>
                         <td className="px-4 py-2">
+                          {user.id !== currentUserId && ability.can('update', toTarget(user)) ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setEditingRolesId(user.id);
+                              }}
+                            >
+                              {t('actions.editRoles')}
+                            </Button>
+                          ) : null}{' '}
                           {user.id !== currentUserId && ability.can('update', toTarget(user)) ? (
                             <Button
                               type="button"
@@ -214,6 +240,16 @@ export function UsersPage() {
           </>
         ) : null}
       </div>
+
+      {editingRoles ? (
+        <EditUserRolesDialog
+          key={editingRoles.id}
+          user={editingRoles}
+          onClose={() => {
+            setEditingRolesId(null);
+          }}
+        />
+      ) : null}
     </div>
   );
 }
