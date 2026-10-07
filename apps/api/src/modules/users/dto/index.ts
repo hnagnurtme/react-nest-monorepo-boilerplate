@@ -2,6 +2,8 @@ export {
   CreateUserDto,
   createUserSchema,
   ListUsersDto,
+  listUsersSchema,
+  type ListUsersQuery,
   SetUserRolesDto,
   UpdateUserDto,
   setUserRolesSchema,

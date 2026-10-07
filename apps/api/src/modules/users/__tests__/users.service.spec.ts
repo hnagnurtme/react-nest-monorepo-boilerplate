@@ -240,6 +240,36 @@ describe('UsersService', () => {
         { id: ROLE_MEMBER.id, key: 'TENANT_MEMBER', name: 'Tenant member' },
       ]);
     });
+
+    it('passes the search filter to both the page query and the count', async () => {
+      act(tenantAdmin());
+      repository.list.mockResolvedValue([makeUser()]);
+      repository.count.mockResolvedValue(1);
+
+      await service.list({ page: 1, limit: 20, sortOrder: 'desc', search: 'ada' });
+
+      // The count must use the same predicate, or meta.total contradicts the page.
+      expect(repository.list).toHaveBeenCalledWith({}, { limit: 20, offset: 0 }, undefined, {
+        search: 'ada',
+      });
+      expect(repository.count).toHaveBeenCalledWith({}, { search: 'ada' });
+    });
+
+    it('leaves the filter empty when no search term is given', async () => {
+      act(tenantAdmin());
+      repository.list.mockResolvedValue([]);
+      repository.count.mockResolvedValue(0);
+
+      await service.list({ page: 2, limit: 10, sortOrder: 'asc', sortBy: 'email' });
+
+      expect(repository.list).toHaveBeenCalledWith(
+        {},
+        { limit: 10, offset: 10 },
+        { field: 'email', direction: 'asc' },
+        { search: undefined },
+      );
+      expect(repository.count).toHaveBeenCalledWith({}, { search: undefined });
+    });
   });
 
   describe('create', () => {

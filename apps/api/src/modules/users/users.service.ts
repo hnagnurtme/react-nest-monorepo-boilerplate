@@ -8,7 +8,6 @@ import {
   parseSort,
   toOffset,
   type AuthContext,
-  type PageQuery,
   type PaginationMeta,
 } from '@/common/index.js';
 import { AuditService } from '@/core/audit/audit.service.js';
@@ -28,7 +27,7 @@ import {
 } from '@/core/errors/index.js';
 import { CredentialsService } from '@/modules/auth/index.js';
 
-import type { CreateUserDto, SetUserRolesDto, UpdateUserDto } from './dto/index.js';
+import type { CreateUserDto, ListUsersQuery, SetUserRolesDto, UpdateUserDto } from './dto/index.js';
 import { USER_SORT_FIELDS, UsersRepository, type UserPatch } from './users.repository.js';
 import type { UserResponse } from './users.types.js';
 
@@ -45,18 +44,20 @@ export class UsersService {
     @Inject(AuthzRepository) private readonly authzRepository: AuthzRepository,
   ) {}
 
-  async list(query: PageQuery): Promise<{ items: UserResponse[]; meta: PaginationMeta }> {
+  async list(query: ListUsersQuery): Promise<{ items: UserResponse[]; meta: PaginationMeta }> {
     const sort = parseSort(query, USER_SORT_FIELDS);
+    const filter = { search: query.search };
 
     const [rows, total, roles] = await this.transactions.runInRequestContext(async (tx) => {
       const page = await this.repository.list(
         tx,
         { limit: query.limit, offset: toOffset(query.page, query.limit) },
         sort,
+        filter,
       );
       return [
         page,
-        await this.repository.count(tx),
+        await this.repository.count(tx, filter),
         await this.authzRepository.rolesForUsers(
           tx,
           page.map((u) => u.id),
