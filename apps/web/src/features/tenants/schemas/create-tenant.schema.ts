@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next';
 import { z } from 'zod';
 
 export const SLUG_REGEX = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -7,7 +8,7 @@ export interface CreateTenantFormValues {
   slug: string;
 }
 
-export function createTenantSchema(t: (key: string) => string): z.ZodType<CreateTenantFormValues> {
+export function createTenantSchema(t: TFunction<'tenants'>): z.ZodType<CreateTenantFormValues> {
   return z.object({
     name: z
       .string()

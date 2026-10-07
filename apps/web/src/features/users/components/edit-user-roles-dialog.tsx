@@ -5,7 +5,8 @@ import { useRoles } from '@/features/roles';
 import { useSetUserRoles } from '@/features/users/api/use-set-user-roles';
 import { RoleChecklist } from '@/features/users/components/role-checklist';
 import type { UserListItem } from '@/features/users/types';
-import { Dialog } from '@/shared/components/dialog';
+import { Dialog } from '@/shared/components';
+import { useApiErrorMessage } from '@/shared/hooks';
 import { Button, useToast } from '@/shared/ui';
 
 const ROLE_OPTIONS_LIMIT = 100;
@@ -19,6 +20,7 @@ export interface EditUserRolesDialogProps {
 export function EditUserRolesDialog({ user, onClose }: EditUserRolesDialogProps) {
   const { t } = useTranslation('users');
   const { showToast } = useToast();
+  const toMessage = useApiErrorMessage();
   const rolesQuery = useRoles(1, ROLE_OPTIONS_LIMIT);
   const setUserRoles = useSetUserRoles();
   const [selected, setSelected] = useState<string[]>(() => user.roles.map((role) => role.id));
@@ -55,7 +57,7 @@ export function EditUserRolesDialog({ user, onClose }: EditUserRolesDialogProps)
             message:
               error.status === FORBIDDEN_STATUS
                 ? t('actions.rolesForbidden')
-                : t('actions.rolesError'),
+                : toMessage(error, t('actions.rolesError')),
           });
         },
       },

@@ -18,6 +18,12 @@ export { useLogin } from './api/use-login';
 export { useForgotPassword } from './api/use-forgot-password';
 export { useResetPassword } from './api/use-reset-password';
 export { useChangePassword } from './api/use-change-password';
+export {
+  useForgotPasswordFlow,
+  RESEND_COOLDOWN_SECONDS,
+  type ForgotPasswordFlow,
+  type ForgotPasswordStep,
+} from './hooks/use-forgot-password-flow';
 
 export { createLoginSchema } from './schemas/login.schema';
 export {

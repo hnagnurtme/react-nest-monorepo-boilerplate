@@ -24,7 +24,7 @@
   "pagination": {
     "previous": "Trước",
     "next": "Sau",
-    "summary": "Trang {{page}} / {{totalPages}} ({{total}} tenant)"
+    "summary": "Trang {{page}} / {{totalPages}} ({{total, number}} tenant)"
   },
   "create": {
     "name": "Tên",

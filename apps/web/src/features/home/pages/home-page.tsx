@@ -4,6 +4,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/entities/session';
 import { CanAction } from '@/features/auth';
 import { useBrand } from '@/shared/hooks';
+import { Card, LanguageSwitcher, ThemeToggle } from '@/shared/ui';
 
 export function HomePage() {
   const { t } = useTranslation('auth');
@@ -18,8 +19,13 @@ export function HomePage() {
     'bg-primary text-primary-foreground hover:bg-primary-hover inline-flex w-full justify-center rounded-xl py-3 text-sm font-semibold shadow-sm';
 
   return (
-    <div className="bg-background flex min-h-screen flex-col items-center justify-center p-6 text-center">
-      <div className="border-border bg-card max-w-md rounded-2xl border p-8 shadow-sm">
+    <div className="bg-background relative flex min-h-screen flex-col items-center justify-center p-6 text-center">
+      <div className="absolute right-6 top-6 flex items-center gap-3">
+        <LanguageSwitcher />
+        <ThemeToggle />
+      </div>
+
+      <Card className="max-w-md p-8 shadow-sm">
         {brand.thumbnailUrl ? (
           <img
             src={brand.thumbnailUrl}
@@ -75,7 +81,7 @@ export function HomePage() {
             </Link>
           </div>
         )}
-      </div>
+      </Card>
     </div>
   );
 }

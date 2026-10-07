@@ -1,0 +1,38 @@
+{
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "delete": "Delete",
+    "confirm": "Confirm",
+    "retry": "Try again",
+    "back": "Back"
+  },
+  "state": {
+    "loading": "Loading...",
+    "saving": "Saving...",
+    "empty": "No data yet",
+    "error": "Could not load the data."
+  },
+  "pagination": {
+    "previous": "Previous",
+    "next": "Next"
+  },
+  "language": {
+    "label": "Language",
+    "en": "English",
+    "vi": "Vietnamese"
+  },
+  "theme": {
+    "label": "Theme",
+    "toLight": "Switch to light theme",
+    "toDark": "Switch to dark theme"
+  },
+  "errors": {
+    "forbidden": "You do not have permission to do that.",
+    "conflict": "That conflicts with existing data.",
+    "invalid": "The data sent is invalid.",
+    "notFound": "The item no longer exists.",
+    "unexpected": "Something went wrong. Please try again."
+  }
+}

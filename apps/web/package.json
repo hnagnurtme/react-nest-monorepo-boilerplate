@@ -19,6 +19,7 @@
     "@repo/api-contract": "workspace:*",
     "@repo/shared-types": "workspace:*",
     "@tanstack/react-query": "^5.102.8",
+    "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "i18next": "^26.4.2",
     "lucide-react": "^1.46.0",

@@ -6,6 +6,7 @@
     "email": "Email",
     "role": "Vai trò",
     "status": "Trạng thái",
+    "createdAt": "Ngày tạo",
     "actions": "Thao tác"
   },
   "status": {
@@ -18,14 +19,21 @@
   "pagination": {
     "previous": "Trước",
     "next": "Sau",
-    "summary": "Trang {{page}} / {{totalPages}} ({{total}} người dùng)"
+    "summary": "Trang {{page}} / {{totalPages}} ({{total, number}} người dùng)"
   },
   "back": "Trang chủ",
+  "search": {
+    "label": "Tìm người dùng",
+    "placeholder": "Tìm theo tên hoặc email",
+    "clear": "Xoá từ khoá",
+    "empty": "Không có người dùng nào khớp \"{{term}}\"."
+  },
   "actions": {
     "activate": "Kích hoạt",
     "deactivate": "Vô hiệu hóa",
     "delete": "Xóa",
     "confirmDelete": "Xóa người dùng {{email}}? Hành động này không thể hoàn tác.",
+    "confirmDeleteTitle": "Xoá người dùng",
     "updateSuccess": "Đã cập nhật người dùng.",
     "updateError": "Không thể cập nhật người dùng.",
     "deleteSuccess": "Đã xóa người dùng.",

@@ -6,6 +6,20 @@ import '@/lib/i18n';
 import { useAuthStore } from '@/entities/session/store';
 import { resetHttpClientForTests } from '@/lib/http/client';
 
+// jsdom has no matchMedia; ThemeProvider and useMediaQuery need it.
+if (typeof window.matchMedia !== 'function') {
+  window.matchMedia = (query: string): MediaQueryList => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: () => undefined,
+    removeListener: () => undefined,
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+    dispatchEvent: () => false,
+  });
+}
+
 // Stub fetch to fail by default — tests must explicitly mock endpoints
 const defaultFetchStub = vi.fn((url: string) => {
   if (url.includes('/api/v1/auth/refresh')) {

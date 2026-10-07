@@ -8,13 +8,11 @@ import type { CreateRoleBody, PermissionOption } from '@/features/roles/types';
 import { roleErrorMessage } from '@/features/roles/utils/error-message';
 import { permissionsFromSelection, type PresetSelection } from '@/features/roles/utils/permissions';
 import { useTenants } from '@/features/tenants';
-import { Dialog } from '@/shared/components/dialog';
-import { Button, Input, useToast } from '@/shared/ui';
+import { Dialog } from '@/shared/components';
+import { Button, Input, Select, useToast } from '@/shared/ui';
 
 const TENANT_OPTIONS_LIMIT = 100;
 const MIN_NAME_LENGTH = 2;
-const SELECT_CLASS =
-  'bg-card border-border focus:border-primary focus:ring-primary/20 w-full rounded-xl border px-3.5 py-2.5 text-sm outline-none focus:ring-2';
 
 export interface CreateRoleDialogProps {
   options: readonly PermissionOption[];
@@ -74,34 +72,20 @@ export function CreateRoleDialog({ options, onClose }: CreateRoleDialogProps) {
           }}
         />
         {isPlatformActor ? (
-          <div className="space-y-1.5">
-            <label
-              htmlFor="create-role-tenant"
-              className="text-foreground block text-xs font-semibold"
-            >
-              {t('create.tenant')}
-            </label>
-            <select
-              id="create-role-tenant"
-              className={SELECT_CLASS}
-              value={tenantId}
-              onChange={(event) => {
-                setTenantId(event.target.value);
-              }}
-            >
-              <option value="">{t('create.tenantPlaceholder')}</option>
-              {(tenants.data?.items ?? []).map((tenant) => (
-                <option key={tenant.id} value={tenant.id}>
-                  {tenant.name}
-                </option>
-              ))}
-            </select>
-            {tenantError ? (
-              <p role="alert" className="text-destructive text-xs">
-                {tenantError}
-              </p>
-            ) : null}
-          </div>
+          <Select
+            id="create-role-tenant"
+            label={t('create.tenant')}
+            placeholder={t('create.tenantPlaceholder')}
+            value={tenantId}
+            error={tenantError}
+            options={(tenants.data?.items ?? []).map((tenant) => ({
+              value: tenant.id,
+              label: tenant.name,
+            }))}
+            onChange={(event) => {
+              setTenantId(event.target.value);
+            }}
+          />
         ) : null}
 
         <PermissionMatrix

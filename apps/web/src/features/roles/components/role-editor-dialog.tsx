@@ -16,7 +16,7 @@ import {
   toRoleSubject,
   type PresetSelection,
 } from '@/features/roles/utils/permissions';
-import { Dialog } from '@/shared/components/dialog';
+import { ConfirmDialog, Dialog } from '@/shared/components';
 import { Button, Input, useToast } from '@/shared/ui';
 
 const MIN_NAME_LENGTH = 2;
@@ -55,6 +55,7 @@ interface RoleEditorBodyProps extends RoleEditorDialogProps {
 
 function RoleEditorBody({ role, options, onClose }: RoleEditorBodyProps) {
   const { t } = useTranslation('roles');
+  const { t: tCommon } = useTranslation('common');
   const { showToast } = useToast();
   const ability = useAbility();
   const updateRole = useUpdateRole();
@@ -66,6 +67,7 @@ function RoleEditorBody({ role, options, onClose }: RoleEditorBodyProps) {
   const [selection, setSelection] = useState<PresetSelection>(() =>
     selectionFromPermissions(role.permissions),
   );
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
 
   const rows = useMemo(() => mergeOptions(options, role.permissions), [options, role.permissions]);
   // System roles are immutable; the ability enforces it too, this keeps the intent explicit.
@@ -109,14 +111,15 @@ function RoleEditorBody({ role, options, onClose }: RoleEditorBodyProps) {
   };
 
   const onDelete = (): void => {
-    if (!window.confirm(t('editor.confirmDelete', { name: role.name }))) return;
     deleteRole.mutate(role.id, {
       onSuccess: () => {
         showToast({ type: 'success', message: t('editor.deleteSuccess') });
+        setIsConfirmingDelete(false);
         onClose();
       },
       onError: (error) => {
         showToast({ type: 'error', message: roleErrorMessage(t, error, 'editor.deleteError') });
+        setIsConfirmingDelete(false);
       },
     });
   };
@@ -165,7 +168,9 @@ function RoleEditorBody({ role, options, onClose }: RoleEditorBodyProps) {
               type="button"
               variant="destructive"
               isLoading={deleteRole.isPending}
-              onClick={onDelete}
+              onClick={() => {
+                setIsConfirmingDelete(true);
+              }}
             >
               {t('editor.delete')}
             </Button>
@@ -182,6 +187,21 @@ function RoleEditorBody({ role, options, onClose }: RoleEditorBodyProps) {
           ) : null}
         </div>
       </div>
+
+      {isConfirmingDelete ? (
+        <ConfirmDialog
+          title={t('editor.confirmDeleteTitle')}
+          message={t('editor.confirmDelete', { name: role.name })}
+          confirmLabel={tCommon('actions.confirm')}
+          cancelLabel={tCommon('actions.cancel')}
+          closeLabel={tCommon('actions.close')}
+          isPending={deleteRole.isPending}
+          onConfirm={onDelete}
+          onCancel={() => {
+            setIsConfirmingDelete(false);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

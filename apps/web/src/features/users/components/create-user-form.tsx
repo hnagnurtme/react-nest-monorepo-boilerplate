@@ -15,14 +15,12 @@ import {
   type CreateUserSchemaOptions,
 } from '@/features/users/schemas/create-user.schema';
 import type { CreateUserBody } from '@/features/users/types';
-import { Button, Input, useToast } from '@/shared/ui';
+import { Button, Input, Select, useToast } from '@/shared/ui';
 
 const CONFLICT_STATUS = 409;
 const FORBIDDEN_STATUS = 403;
 const TENANT_OPTIONS_LIMIT = 100;
 const ROLE_OPTIONS_LIMIT = 100;
-const SELECT_CLASS =
-  'bg-card border-border focus:border-primary focus:ring-primary/20 w-full rounded-xl border px-3.5 py-2.5 text-sm outline-none focus:ring-2';
 
 export interface CreateUserFormProps {
   onCreated?: () => void;
@@ -200,27 +198,17 @@ export function CreateUserForm({ onCreated, onCancel }: CreateUserFormProps) {
       </fieldset>
 
       {showTenantSelect ? (
-        <div className="space-y-1.5">
-          <label
-            htmlFor="create-user-tenant"
-            className="text-foreground block text-xs font-semibold"
-          >
-            {t('create.tenant')}
-          </label>
-          <select id="create-user-tenant" className={SELECT_CLASS} {...register('tenantId')}>
-            <option value="">{t('create.tenantPlaceholder')}</option>
-            {(tenants.data?.items ?? []).map((tenant) => (
-              <option key={tenant.id} value={tenant.id}>
-                {tenant.name}
-              </option>
-            ))}
-          </select>
-          {errors.tenantId?.message ? (
-            <p role="alert" className="text-destructive text-xs">
-              {errors.tenantId.message}
-            </p>
-          ) : null}
-        </div>
+        <Select
+          id="create-user-tenant"
+          label={t('create.tenant')}
+          placeholder={t('create.tenantPlaceholder')}
+          error={errors.tenantId?.message}
+          options={(tenants.data?.items ?? []).map((tenant) => ({
+            value: tenant.id,
+            label: tenant.name,
+          }))}
+          {...register('tenantId')}
+        />
       ) : null}
 
       <div className="flex justify-end gap-2 sm:col-span-2">

@@ -1,0 +1,38 @@
+{
+  "actions": {
+    "save": "Lưu",
+    "cancel": "Huỷ",
+    "close": "Đóng",
+    "delete": "Xoá",
+    "confirm": "Xác nhận",
+    "retry": "Thử lại",
+    "back": "Quay lại"
+  },
+  "state": {
+    "loading": "Đang tải...",
+    "saving": "Đang lưu...",
+    "empty": "Chưa có dữ liệu",
+    "error": "Không tải được dữ liệu."
+  },
+  "pagination": {
+    "previous": "Trước",
+    "next": "Sau"
+  },
+  "language": {
+    "label": "Ngôn ngữ",
+    "en": "Tiếng Anh",
+    "vi": "Tiếng Việt"
+  },
+  "theme": {
+    "label": "Giao diện",
+    "toLight": "Chuyển sang giao diện sáng",
+    "toDark": "Chuyển sang giao diện tối"
+  },
+  "errors": {
+    "forbidden": "Bạn không có quyền thực hiện việc này.",
+    "conflict": "Dữ liệu bị trùng với dữ liệu đã có.",
+    "invalid": "Dữ liệu gửi lên không hợp lệ.",
+    "notFound": "Mục này không còn tồn tại.",
+    "unexpected": "Đã có lỗi xảy ra. Vui lòng thử lại."
+  }
+}

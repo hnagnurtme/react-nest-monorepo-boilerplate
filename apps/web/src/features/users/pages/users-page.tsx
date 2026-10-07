@@ -1,7 +1,8 @@
 import { subject } from '@casl/ability';
+import { Search, X } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 import { useAuthStore } from '@/entities/session';
 import { CanAction, useAbility } from '@/features/auth';
@@ -11,37 +12,61 @@ import { useUsers } from '@/features/users/api/use-users';
 import { CreateUserForm } from '@/features/users/components/create-user-form';
 import { EditUserRolesDialog } from '@/features/users/components/edit-user-roles-dialog';
 import type { UserListItem } from '@/features/users/types';
-import { Button, useToast } from '@/shared/ui';
+import { ConfirmDialog } from '@/shared/components';
+import {
+  useApiErrorMessage,
+  useDebouncedSearchParam,
+  useDisclosure,
+  useFormatters,
+  usePageParam,
+} from '@/shared/hooks';
+import {
+  Badge,
+  Button,
+  Card,
+  DataTable,
+  Input,
+  PageHeader,
+  Pagination,
+  useToast,
+  type DataTableColumn,
+} from '@/shared/ui';
 
-const DEFAULT_PAGE = 1;
 const PAGE_SIZE = 20;
-
-function parsePage(value: string | null): number {
-  const parsed = Number.parseInt(value ?? '', 10);
-  return Number.isInteger(parsed) && parsed >= DEFAULT_PAGE ? parsed : DEFAULT_PAGE;
-}
 
 export function UsersPage() {
   const { t } = useTranslation('users');
-  const [searchParams, setSearchParams] = useSearchParams();
-  const page = parsePage(searchParams.get('page'));
+  const { t: tCommon } = useTranslation('common');
+  const { page, goToPage } = usePageParam();
+  const search = useDebouncedSearchParam();
 
   const { showToast } = useToast();
+  const toMessage = useApiErrorMessage();
+  const format = useFormatters();
   const ability = useAbility();
   const currentUserId = useAuthStore((state) => state.user?.id);
-  const [isCreating, setIsCreating] = useState(false);
+  const createForm = useDisclosure();
   const [editingRolesId, setEditingRolesId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<UserListItem | null>(null);
 
-  const { data, isPending, isError } = useUsers(page, PAGE_SIZE);
+  const { data, isPending, isError, isFetching } = useUsers(page, PAGE_SIZE, search.value);
   const editingRoles = data?.items.find((user) => user.id === editingRolesId);
   const updateUser = useUpdateUser();
   const deleteUser = useDeleteUser();
 
+  /** CASL needs the loaded record: a string subject would ignore every condition. */
   const toTarget = (user: UserListItem) =>
     subject('User', {
       id: user.id,
       ...(user.tenantId !== null ? { tenantId: user.tenantId } : {}),
     });
+
+  // Nobody edits or deletes their own account from this list.
+  const isSelf = (user: UserListItem): boolean => user.id === currentUserId;
+  const canUpdate = (user: UserListItem): boolean =>
+    !isSelf(user) && ability.can('update', toTarget(user));
+  const canDelete = (user: UserListItem): boolean =>
+    !isSelf(user) && ability.can('delete', toTarget(user));
 
   const toggleActive = (user: UserListItem): void => {
     updateUser.mutate(
@@ -50,69 +75,161 @@ export function UsersPage() {
         onSuccess: () => {
           showToast({ type: 'success', message: t('actions.updateSuccess') });
         },
-        onError: () => {
-          showToast({ type: 'error', message: t('actions.updateError') });
+        onError: (error) => {
+          showToast({ type: 'error', message: toMessage(error, t('actions.updateError')) });
         },
       },
     );
   };
 
-  const removeUser = (user: UserListItem): void => {
-    if (!window.confirm(t('actions.confirmDelete', { email: user.email }))) return;
-    deleteUser.mutate(user.id, {
+  const confirmDelete = (): void => {
+    if (!pendingDelete) return;
+    deleteUser.mutate(pendingDelete.id, {
       onSuccess: () => {
         showToast({ type: 'success', message: t('actions.deleteSuccess') });
+        setPendingDelete(null);
       },
-      onError: () => {
-        showToast({ type: 'error', message: t('actions.deleteError') });
+      onError: (error) => {
+        showToast({ type: 'error', message: toMessage(error, t('actions.deleteError')) });
+        setPendingDelete(null);
       },
     });
   };
 
-  const goToPage = (nextPage: number): void => {
-    setSearchParams({ page: String(nextPage) });
-  };
+  const columns: readonly DataTableColumn<UserListItem>[] = [
+    { key: 'fullName', header: t('columns.fullName'), cell: (user) => user.fullName },
+    { key: 'email', header: t('columns.email'), cell: (user) => user.email },
+    {
+      key: 'roles',
+      header: t('columns.role'),
+      cell: (user) => (
+        <div className="flex flex-wrap gap-1">
+          {user.roles.map((role) => (
+            <Badge key={role.id}>{role.name}</Badge>
+          ))}
+        </div>
+      ),
+    },
+    {
+      key: 'createdAt',
+      header: t('columns.createdAt'),
+      cell: (user) => format.date(user.createdAt),
+    },
+    {
+      key: 'status',
+      header: t('columns.status'),
+      cell: (user) => (
+        <Badge tone={user.isActive ? 'success' : 'neutral'}>
+          {user.isActive ? t('status.active') : t('status.inactive')}
+        </Badge>
+      ),
+    },
+    {
+      key: 'actions',
+      header: t('columns.actions'),
+      cell: (user) => (
+        <div className="flex flex-wrap gap-2">
+          {canUpdate(user) ? (
+            <>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setEditingRolesId(user.id);
+                }}
+              >
+                {t('actions.editRoles')}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={updateUser.isPending}
+                onClick={() => {
+                  toggleActive(user);
+                }}
+              >
+                {user.isActive ? t('actions.deactivate') : t('actions.activate')}
+              </Button>
+            </>
+          ) : null}
+          {canDelete(user) ? (
+            <Button
+              size="sm"
+              variant="destructive"
+              disabled={deleteUser.isPending}
+              onClick={() => {
+                setPendingDelete(user);
+              }}
+            >
+              {t('actions.delete')}
+            </Button>
+          ) : null}
+        </div>
+      ),
+    },
+  ];
 
   return (
     <div className="bg-background min-h-screen p-6">
       <div className="mx-auto max-w-4xl space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-foreground text-2xl font-bold">{t('title')}</h1>
-            <p className="text-muted-foreground text-sm">{t('subtitle')}</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <CanAction I="create" a="User">
-              <Button
-                type="button"
-                size="sm"
-                onClick={() => {
-                  setIsCreating((previous) => !previous);
-                }}
-              >
-                {t('create.open')}
-              </Button>
-            </CanAction>
-            <Link to="/" className="text-primary text-sm font-semibold hover:underline">
-              {t('back')}
-            </Link>
-          </div>
-        </div>
+        <PageHeader
+          title={t('title')}
+          subtitle={t('subtitle')}
+          actions={
+            <>
+              <CanAction I="create" a="User">
+                <Button size="sm" onClick={createForm.toggle}>
+                  {t('create.open')}
+                </Button>
+              </CanAction>
+              <Link to="/" className="text-primary text-sm font-semibold hover:underline">
+                {t('back')}
+              </Link>
+            </>
+          }
+        />
 
-        {isCreating ? (
-          <CanAction I="create" a="User">
-            <CreateUserForm
-              onCreated={() => {
-                setIsCreating(false);
+        <Card>
+          <div className="relative">
+            <span className="text-muted-foreground pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
+              <Search className="h-4 w-4" aria-hidden="true" />
+            </span>
+            <Input
+              id="users-search"
+              type="search"
+              autoComplete="off"
+              aria-label={t('search.label')}
+              placeholder={t('search.placeholder')}
+              value={search.inputValue}
+              onChange={(event) => {
+                search.setInputValue(event.target.value);
               }}
-              onCancel={() => {
-                setIsCreating(false);
-              }}
+              className="h-11 pl-10 pr-10"
             />
+            {search.inputValue === '' ? null : (
+              <button
+                type="button"
+                aria-label={t('search.clear')}
+                onClick={search.clear}
+                className="text-muted-foreground hover:text-foreground absolute inset-y-0 right-0 flex cursor-pointer items-center pr-3"
+              >
+                <X className="h-4 w-4" aria-hidden="true" />
+              </button>
+            )}
+          </div>
+        </Card>
+
+        {createForm.isOpen ? (
+          <CanAction I="create" a="User">
+            <CreateUserForm onCreated={createForm.close} onCancel={createForm.close} />
           </CanAction>
         ) : null}
 
-        {isPending ? <p className="text-muted-foreground text-sm">{t('loading')}</p> : null}
+        {isPending || isFetching ? (
+          <p role="status" className="text-muted-foreground text-sm">
+            {t('loading')}
+          </p>
+        ) : null}
         {isError ? (
           <p role="alert" className="text-destructive text-sm">
             {t('error')}
@@ -121,122 +238,26 @@ export function UsersPage() {
 
         {data ? (
           <>
-            <div className="border-border bg-card overflow-x-auto rounded-xl border">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-muted text-muted-foreground">
-                  <tr>
-                    <th className="px-4 py-2 font-medium">{t('columns.fullName')}</th>
-                    <th className="px-4 py-2 font-medium">{t('columns.email')}</th>
-                    <th className="px-4 py-2 font-medium">{t('columns.role')}</th>
-                    <th className="px-4 py-2 font-medium">{t('columns.status')}</th>
-                    <th className="px-4 py-2 font-medium">{t('columns.actions')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.items.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="text-muted-foreground px-4 py-6 text-center">
-                        {t('empty')}
-                      </td>
-                    </tr>
-                  ) : (
-                    data.items.map((user) => (
-                      <tr key={user.id} className="border-border border-t">
-                        <td className="px-4 py-2">{user.fullName}</td>
-                        <td className="px-4 py-2">{user.email}</td>
-                        <td className="px-4 py-2">
-                          <div className="flex flex-wrap gap-1">
-                            {user.roles.map((role) => (
-                              <span
-                                key={role.id}
-                                className="bg-muted text-foreground rounded-full px-2 py-0.5 text-xs"
-                              >
-                                {role.name}
-                              </span>
-                            ))}
-                          </div>
-                        </td>
-                        <td className="px-4 py-2">
-                          {user.isActive ? t('status.active') : t('status.inactive')}
-                        </td>
-                        <td className="px-4 py-2">
-                          {user.id !== currentUserId && ability.can('update', toTarget(user)) ? (
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                setEditingRolesId(user.id);
-                              }}
-                            >
-                              {t('actions.editRoles')}
-                            </Button>
-                          ) : null}{' '}
-                          {user.id !== currentUserId && ability.can('update', toTarget(user)) ? (
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              disabled={updateUser.isPending}
-                              onClick={() => {
-                                toggleActive(user);
-                              }}
-                            >
-                              {user.isActive ? t('actions.deactivate') : t('actions.activate')}
-                            </Button>
-                          ) : null}{' '}
-                          {user.id !== currentUserId && ability.can('delete', toTarget(user)) ? (
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="destructive"
-                              disabled={deleteUser.isPending}
-                              onClick={() => {
-                                removeUser(user);
-                              }}
-                            >
-                              {t('actions.delete')}
-                            </Button>
-                          ) : null}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground text-sm">
-                {t('pagination.summary', {
-                  page: data.meta.page,
-                  totalPages: Math.max(data.meta.totalPages, 1),
-                  total: data.meta.total,
-                })}
-              </span>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={data.meta.page <= DEFAULT_PAGE}
-                  onClick={() => {
-                    goToPage(data.meta.page - 1);
-                  }}
-                >
-                  {t('pagination.previous')}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={data.meta.page >= data.meta.totalPages}
-                  onClick={() => {
-                    goToPage(data.meta.page + 1);
-                  }}
-                >
-                  {t('pagination.next')}
-                </Button>
-              </div>
-            </div>
+            <DataTable
+              columns={columns}
+              rows={data.items}
+              rowKey={(user) => user.id}
+              emptyLabel={
+                search.value === '' ? t('empty') : t('search.empty', { term: search.value })
+              }
+            />
+            <Pagination
+              page={data.meta.page}
+              totalPages={data.meta.totalPages}
+              summary={t('pagination.summary', {
+                page: data.meta.page,
+                totalPages: Math.max(data.meta.totalPages, 1),
+                total: data.meta.total,
+              })}
+              previousLabel={t('pagination.previous')}
+              nextLabel={t('pagination.next')}
+              onPageChange={goToPage}
+            />
           </>
         ) : null}
       </div>
@@ -247,6 +268,21 @@ export function UsersPage() {
           user={editingRoles}
           onClose={() => {
             setEditingRolesId(null);
+          }}
+        />
+      ) : null}
+
+      {pendingDelete ? (
+        <ConfirmDialog
+          title={t('actions.confirmDeleteTitle')}
+          message={t('actions.confirmDelete', { email: pendingDelete.email })}
+          confirmLabel={tCommon('actions.confirm')}
+          cancelLabel={tCommon('actions.cancel')}
+          closeLabel={tCommon('actions.close')}
+          isPending={deleteUser.isPending}
+          onConfirm={confirmDelete}
+          onCancel={() => {
+            setPendingDelete(null);
           }}
         />
       ) : null}

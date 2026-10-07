@@ -6,6 +6,7 @@
     "email": "Email",
     "role": "Roles",
     "status": "Status",
+    "createdAt": "Created",
     "actions": "Actions"
   },
   "status": {
@@ -18,14 +19,21 @@
   "pagination": {
     "previous": "Previous",
     "next": "Next",
-    "summary": "Page {{page}} of {{totalPages}} ({{total}} users)"
+    "summary": "Page {{page}} of {{totalPages}} ({{total, number}} users)"
   },
   "back": "Home",
+  "search": {
+    "label": "Search users",
+    "placeholder": "Search by name or email",
+    "clear": "Clear search",
+    "empty": "No user matches \"{{term}}\"."
+  },
   "actions": {
     "activate": "Activate",
     "deactivate": "Deactivate",
     "delete": "Delete",
     "confirmDelete": "Delete user {{email}}? This cannot be undone.",
+    "confirmDeleteTitle": "Delete user",
     "updateSuccess": "User updated.",
     "updateError": "Could not update the user.",
     "deleteSuccess": "User deleted.",

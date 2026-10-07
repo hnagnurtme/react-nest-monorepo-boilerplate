@@ -25,7 +25,7 @@
   "pagination": {
     "previous": "Trước",
     "next": "Sau",
-    "summary": "Trang {{page}} / {{totalPages}} ({{total}} vai trò)"
+    "summary": "Trang {{page}} / {{totalPages}} ({{total, number}} vai trò)"
   },
   "subjects": {
     "User": "Người dùng",
@@ -72,6 +72,7 @@
     "systemNotice": "Vai trò hệ thống chỉ được xem.",
     "loadError": "Không thể tải vai trò.",
     "confirmDelete": "Xóa vai trò {{name}}? Không thể hoàn tác.",
+    "confirmDeleteTitle": "Xoá vai trò",
     "renameSuccess": "Đã đổi tên vai trò.",
     "renameError": "Không thể đổi tên vai trò.",
     "saveSuccess": "Đã lưu quyền.",
