@@ -11,6 +11,8 @@ export interface RoleSummary {
 export interface TenantMembership {
   id: string;
   name: string;
+  /** Stable, human-readable handle. The web puts it in the URL as `?tenant=<slug>`. */
+  slug: string;
 }
 
 export interface ProfileRole extends RoleSummary {

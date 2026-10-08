@@ -34,7 +34,7 @@ export class AuthzRepository {
     if (user === undefined) return undefined;
 
     const membershipRows = await tx
-      .select({ id: tenants.id, name: tenants.name })
+      .select({ id: tenants.id, name: tenants.name, slug: tenants.slug })
       .from(userTenants)
       .innerJoin(tenants, eq(tenants.id, userTenants.tenantId))
       .where(and(eq(userTenants.userId, userId), isNull(tenants.deletedAt)));

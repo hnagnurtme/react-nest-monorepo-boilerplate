@@ -20,7 +20,7 @@ const user: PublicUser = {
   email: 'a@example.test',
   fullName: 'A',
   tenantId: 't-1',
-  tenants: [{ id: 't-1', name: 'Acme' }],
+  tenants: [{ id: 't-1', name: 'Acme', slug: 'acme' }],
   scope: 'tenant',
   roles: [{ key: 'TENANT_ADMIN', name: 'Tenant administrator' }],
 };

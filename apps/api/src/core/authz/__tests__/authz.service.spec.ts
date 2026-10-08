@@ -10,7 +10,7 @@ const profileRows = {
   userId: 'u-1',
   email: 'a@x.test',
   homeTenantId: 't-1',
-  tenants: [{ id: 't-1', name: 'Acme' }],
+  tenants: [{ id: 't-1', name: 'Acme', slug: 'acme' }],
   roles: [
     {
       id: SYSTEM_ROLES.TENANT_ADMIN.id,

@@ -510,6 +510,7 @@ export interface components {
                     tenants: {
                         id: string;
                         name: string;
+                        slug: string;
                     }[];
                     /** @enum {string} */
                     scope: "platform" | "tenant";
@@ -573,6 +574,7 @@ export interface components {
                 tenants: {
                     id: string;
                     name: string;
+                    slug: string;
                 }[];
                 /** @enum {string} */
                 scope: "platform" | "tenant";

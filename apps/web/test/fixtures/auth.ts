@@ -23,7 +23,7 @@ export function makeUser(overrides?: Partial<PublicUser>): PublicUser {
     scope: 'tenant',
     roles: [{ key: 'TENANT_MEMBER', name: 'Tenant member' }],
     tenantId: 'tenant-1',
-    tenants: [{ id: 'tenant-1', name: 'Acme' }],
+    tenants: [{ id: 'tenant-1', name: 'Acme', slug: 'acme' }],
     ...overrides,
   };
 }
