@@ -15,7 +15,7 @@ import {
   type CreateUserSchemaOptions,
 } from '@/features/users/schemas/create-user.schema';
 import type { CreateUserBody } from '@/features/users/types';
-import { Button, CheckboxField, Input, Select, useToast } from '@/shared/ui';
+import { Button, CheckboxField, FieldError, Input, Select, useToast } from '@/shared/ui';
 
 const CONFLICT_STATUS = 409;
 const FORBIDDEN_STATUS = 403;
@@ -149,7 +149,7 @@ export function CreateUserForm({ onCreated, onCancel }: CreateUserFormProps) {
         void handleSubmit(onSubmit)(event);
       }}
       noValidate
-      className="border-border bg-card grid gap-3 rounded-xl border p-4 sm:grid-cols-2"
+      className="border-border bg-card rounded-surface grid gap-3 border p-4 sm:grid-cols-2"
     >
       <Input
         id="create-user-full-name"
@@ -192,17 +192,19 @@ export function CreateUserForm({ onCreated, onCancel }: CreateUserFormProps) {
           label={t('create.sendInvitation')}
           {...register('sendInvitation')}
         />
-        <p className="text-muted-foreground mt-1 text-xs">
+        <p className="text-muted-foreground text-label mt-1">
           {sendInvitation ? t('create.sendInvitationHint') : t('create.manualPasswordHint')}
         </p>
       </div>
 
       <fieldset className="space-y-1.5 sm:col-span-2">
-        <legend className="text-foreground block text-xs font-semibold">{t('create.roles')}</legend>
+        <legend className="text-foreground text-label block font-semibold">
+          {t('create.roles')}
+        </legend>
         {rolesQuery.isPending ? (
-          <p className="text-muted-foreground text-sm">{t('create.rolesLoading')}</p>
+          <p className="text-muted-foreground text-body">{t('create.rolesLoading')}</p>
         ) : roles.length === 0 ? (
-          <p className="text-muted-foreground text-sm">{t('create.rolesEmpty')}</p>
+          <p className="text-muted-foreground text-body">{t('create.rolesEmpty')}</p>
         ) : (
           <RoleChecklist
             idPrefix="create-user-role"
@@ -211,11 +213,9 @@ export function CreateUserForm({ onCreated, onCancel }: CreateUserFormProps) {
             onToggle={toggleRole}
           />
         )}
-        {errors.roleIds?.message ? (
-          <p role="alert" className="text-destructive text-xs">
-            {errors.roleIds.message}
-          </p>
-        ) : null}
+        {errors.roleIds?.message === undefined ? null : (
+          <FieldError>{errors.roleIds.message}</FieldError>
+        )}
       </fieldset>
 
       {showTenantSelect ? (

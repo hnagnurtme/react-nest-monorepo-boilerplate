@@ -166,10 +166,7 @@ describe('Phase 1: Auth Rehydration (H1-H8)', () => {
       </MemoryRouter>,
     );
 
-    const loader = screen.getByText((_, element) => {
-      return element?.className.includes('animate-spin') ?? false;
-    });
-    expect(loader).toBeInTheDocument();
+    expect(screen.getByRole('status')).toBeInTheDocument();
 
     await waitFor(() => {
       expect(useAuthStore.getState().status).toBe('authenticated');

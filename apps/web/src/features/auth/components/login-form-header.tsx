@@ -5,8 +5,8 @@ export function LoginFormHeader() {
 
   return (
     <div className="space-y-1">
-      <h1 className="text-foreground text-3xl font-bold tracking-tight">{t('form.title')}</h1>
-      <p className="text-muted-foreground text-sm">{t('form.subtitle')}</p>
+      <h1 className="text-foreground text-display font-bold tracking-tight">{t('form.title')}</h1>
+      <p className="text-muted-foreground text-body">{t('form.subtitle')}</p>
     </div>
   );
 }

@@ -44,21 +44,21 @@ export function AcceptInvitationPage() {
       </div>
 
       <main className="flex flex-1 items-center justify-center px-6 pb-12">
-        <div className="border-border bg-card w-full max-w-md rounded-2xl border p-6 sm:p-8">
+        <div className="border-border bg-card rounded-overlay w-full max-w-md border p-6 sm:p-8">
           {preview.isPending && token !== '' ? (
-            <p className="text-muted-foreground text-sm">{t('acceptInvitation.loading')}</p>
+            <p className="text-muted-foreground text-body">{t('acceptInvitation.loading')}</p>
           ) : preview.isError || token === '' ? (
             <div className="space-y-2">
-              <h1 className="text-lg font-semibold">{t('acceptInvitation.invalidTitle')}</h1>
-              <p className="text-muted-foreground text-sm">{t('acceptInvitation.invalidBody')}</p>
+              <h1 className="text-heading font-semibold">{t('acceptInvitation.invalidTitle')}</h1>
+              <p className="text-muted-foreground text-body">{t('acceptInvitation.invalidBody')}</p>
             </div>
           ) : (
             <div className="space-y-6">
               <div className="space-y-2">
-                <h1 className="text-xl font-semibold">
+                <h1 className="text-heading font-semibold">
                   {t('acceptInvitation.title', { tenant: preview.data?.tenantName ?? '' })}
                 </h1>
-                <p className="text-muted-foreground text-sm">
+                <p className="text-muted-foreground text-body">
                   {t('acceptInvitation.subtitle', { email: preview.data?.email ?? '' })}
                 </p>
               </div>

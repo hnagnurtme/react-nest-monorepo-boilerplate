@@ -1,17 +1,25 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { KeyRound } from 'lucide-react';
+import { KeyRound, Search, X } from 'lucide-react';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  Alert,
   Badge,
   Button,
   CheckboxField,
   DataTable,
   DividerLabel,
+  EmptyState,
+  ErrorState,
+  IconButton,
+  Input,
+  LinkButton,
   PageHeader,
   Pagination,
   SegmentedControl,
   Select,
+  SkeletonTable,
+  Textarea,
   type DataTableColumn,
 } from '@/shared/ui';
 
@@ -31,7 +39,7 @@ describe('shared UI primitives', () => {
         onValueChange={handleChange}
         options={[
           { value: 'member', label: 'Member' },
-          { value: 'admin', label: 'Admin', icon: <KeyRound className="h-4 w-4" /> },
+          { value: 'admin', label: 'Admin', icon: <KeyRound className="size-4" /> },
         ]}
       />,
     );
@@ -159,5 +167,123 @@ describe('Select', () => {
     expect(select).toHaveAttribute('aria-describedby', 'tenant-error');
     expect(screen.getByRole('option', { name: 'Acme' })).toBeInTheDocument();
     expect(screen.getByRole('alert')).toHaveTextContent('Please select a tenant');
+  });
+});
+
+describe('IconButton', () => {
+  it('takes its accessible name from the label, not the icon', () => {
+    const onClick = vi.fn();
+    render(<IconButton label="Clear the search" icon={<X />} onClick={onClick} />);
+
+    const button = screen.getByRole('button', { name: 'Clear the search' });
+    fireEvent.click(button);
+
+    expect(onClick).toHaveBeenCalledOnce();
+  });
+});
+
+describe('LinkButton', () => {
+  it('is a button, so it reports a disabled state instead of looking like a dead link', () => {
+    render(
+      <LinkButton disabled onClick={vi.fn()}>
+        Resend
+      </LinkButton>,
+    );
+
+    expect(screen.getByRole('button', { name: 'Resend' })).toBeDisabled();
+  });
+});
+
+describe('Input adornments', () => {
+  it('keeps the trailing action reachable and links the error to the field', () => {
+    render(
+      <Input
+        id="search"
+        label="Search"
+        error="Too short"
+        startIcon={<Search />}
+        endAction={<IconButton label="Clear" icon={<X />} />}
+      />,
+    );
+
+    const input = screen.getByLabelText('Search');
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    expect(input).toHaveAttribute('aria-describedby', 'search-error');
+    expect(screen.getByRole('alert')).toHaveTextContent('Too short');
+    expect(screen.getByRole('button', { name: 'Clear' })).toBeInTheDocument();
+  });
+
+  it('omits aria-describedby when there is no error', () => {
+    render(<Input id="plain" label="Name" />);
+
+    expect(screen.getByLabelText('Name')).not.toHaveAttribute('aria-describedby');
+  });
+});
+
+describe('Textarea', () => {
+  it('labels the control and reports its error', () => {
+    render(<Textarea id="notes" label="Notes" error="Required" />);
+
+    expect(screen.getByLabelText('Notes')).toHaveAttribute('aria-describedby', 'notes-error');
+    expect(screen.getByRole('alert')).toHaveTextContent('Required');
+  });
+});
+
+describe('state primitives', () => {
+  it('announces a problem through Alert and a failure through ErrorState', () => {
+    render(
+      <>
+        <Alert>Could not save</Alert>
+        <ErrorState title="Could not load users" />
+      </>,
+    );
+
+    const alerts = screen.getAllByRole('alert');
+    expect(alerts).toHaveLength(2);
+    expect(alerts[0]).toHaveTextContent('Could not save');
+    expect(alerts[1]).toHaveTextContent('Could not load users');
+  });
+
+  it('does not interrupt with role=alert for a success note', () => {
+    render(<Alert tone="success">Saved</Alert>);
+
+    expect(screen.getByRole('status')).toHaveTextContent('Saved');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('shows the empty state with its one action', () => {
+    render(
+      <EmptyState
+        title="No users found"
+        description="Invite someone to get started."
+        action={<Button size="sm">Invite</Button>}
+      />,
+    );
+
+    expect(screen.getByText('No users found')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Invite' })).toBeInTheDocument();
+  });
+
+  it('announces the table skeleton as busy', () => {
+    render(<SkeletonTable columns={3} rows={2} label="Loading users..." />);
+
+    const status = screen.getByRole('status');
+    expect(status).toHaveAttribute('aria-busy', 'true');
+    expect(status).toHaveTextContent('Loading users...');
+  });
+});
+
+describe('DataTable responsive layout', () => {
+  it('stamps each cell with its column header so phones can stack the row', () => {
+    render(
+      <DataTable
+        columns={ROW_COLUMNS}
+        rows={[{ id: '1', name: 'Ada' }]}
+        rowKey={(row) => row.id}
+        emptyLabel="No rows"
+      />,
+    );
+
+    expect(screen.getByText('Ada')).toHaveAttribute('data-label', 'Name');
   });
 });

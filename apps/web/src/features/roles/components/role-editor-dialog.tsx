@@ -16,8 +16,7 @@ import {
   toRoleSubject,
   type PresetSelection,
 } from '@/features/roles/utils/permissions';
-import { ConfirmDialog, Dialog } from '@/shared/components';
-import { Button, Input, useToast } from '@/shared/ui';
+import { Button, ConfirmDialog, Dialog, Input, useToast } from '@/shared/ui';
 
 const MIN_NAME_LENGTH = 2;
 
@@ -41,7 +40,7 @@ export function RoleEditorDialog({ role, options, onClose }: RoleEditorDialogPro
       {detail.data ? (
         <RoleEditorBody role={detail.data} options={options} onClose={onClose} />
       ) : (
-        <p className="text-muted-foreground text-sm">
+        <p className="text-muted-foreground text-body">
           {detail.isError ? t('editor.loadError') : t('loading')}
         </p>
       )}
@@ -127,7 +126,7 @@ function RoleEditorBody({ role, options, onClose }: RoleEditorBodyProps) {
   return (
     <div className="space-y-4">
       {role.isSystem ? (
-        <p className="bg-muted text-muted-foreground rounded-lg px-3 py-2 text-xs">
+        <p className="bg-muted text-muted-foreground rounded-inner text-label px-3 py-2">
           {t('editor.systemNotice')}
         </p>
       ) : null}

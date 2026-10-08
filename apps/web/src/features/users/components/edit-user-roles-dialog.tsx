@@ -5,9 +5,8 @@ import { useRoles } from '@/features/roles';
 import { useSetUserRoles } from '@/features/users/api/use-set-user-roles';
 import { RoleChecklist } from '@/features/users/components/role-checklist';
 import type { UserListItem } from '@/features/users/types';
-import { Dialog } from '@/shared/components';
 import { useApiErrorMessage } from '@/shared/hooks';
-import { Button, useToast } from '@/shared/ui';
+import { Button, Dialog, useToast } from '@/shared/ui';
 
 const ROLE_OPTIONS_LIMIT = 100;
 const FORBIDDEN_STATUS = 403;
@@ -71,9 +70,9 @@ export function EditUserRolesDialog({ user, onClose }: EditUserRolesDialogProps)
       onClose={onClose}
     >
       {rolesQuery.isPending ? (
-        <p className="text-muted-foreground text-sm">{t('rolesDialog.loading')}</p>
+        <p className="text-muted-foreground text-body">{t('rolesDialog.loading')}</p>
       ) : assignable.length === 0 ? (
-        <p className="text-muted-foreground text-sm">{t('create.rolesEmpty')}</p>
+        <p className="text-muted-foreground text-body">{t('create.rolesEmpty')}</p>
       ) : (
         <RoleChecklist
           idPrefix="edit-user-role"

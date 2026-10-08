@@ -3,8 +3,7 @@ import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { AbilityProvider } from '@/features/auth';
-import { ThemeProvider } from '@/shared/components';
-import { ToastProvider } from '@/shared/ui';
+import { ThemeProvider, ToastProvider } from '@/shared/ui';
 
 import { ErrorBoundary } from './components/error-boundary';
 

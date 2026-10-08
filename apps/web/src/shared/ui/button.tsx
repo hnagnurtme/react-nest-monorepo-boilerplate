@@ -1,31 +1,38 @@
 import { cva, type VariantProps } from 'class-variance-authority';
-import { Loader2 } from 'lucide-react';
 import { type ButtonHTMLAttributes } from 'react';
 
 import { cn } from '@/lib/utils';
 
+import { CONTROL_HEIGHT, CONTROL_PADDING, CONTROL_TEXT } from './control';
+import { FOCUS_RING } from './focus-ring';
+import { Spinner } from './spinner';
+
 /**
  * One definition for the whole matrix: cva builds the class string once at
  * module load and resolves the defaults, so a caller cannot forget a variant.
- * Padding grows monotonically with the size; `xs` used to be taller than `sm`.
+ * Height, padding and type step all come from the shared control scale, so a
+ * Button lines up with an Input of the same size with nobody measuring.
  */
 export const buttonVariants = cva(
-  'inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl font-semibold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-50',
+  cn(
+    'inline-flex cursor-pointer items-center justify-center gap-2 rounded-control font-semibold transition-colors',
+    'disabled:cursor-not-allowed disabled:opacity-50',
+    FOCUS_RING,
+  ),
   {
     variants: {
       variant: {
         primary:
-          'bg-primary text-primary-foreground shadow-md hover:bg-primary-hover active:bg-primary-active',
+          'bg-primary text-primary-foreground shadow-raised hover:bg-primary-hover active:bg-primary-active',
         secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
-        outline: 'border border-border bg-card text-foreground hover:bg-muted',
+        outline: 'border-border bg-card text-foreground hover:bg-muted border',
         ghost: 'text-foreground hover:bg-muted',
         destructive: 'bg-destructive text-destructive-foreground hover:opacity-90',
       },
       size: {
-        xs: 'px-2.5 py-1 text-xs',
-        sm: 'px-3 py-1.5 text-xs',
-        md: 'px-4 py-2.5 text-sm',
-        lg: 'px-6 py-3 text-base',
+        sm: cn(CONTROL_HEIGHT.sm, CONTROL_PADDING.sm, CONTROL_TEXT.sm),
+        md: cn(CONTROL_HEIGHT.md, CONTROL_PADDING.md, CONTROL_TEXT.md),
+        lg: cn(CONTROL_HEIGHT.lg, CONTROL_PADDING.lg, CONTROL_TEXT.lg),
       },
       isFullWidth: {
         true: 'w-full',
@@ -73,7 +80,7 @@ export function Button({
       className={cn(buttonVariants({ variant, size, isFullWidth }), className)}
       {...props}
     >
-      {isLoading && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+      {isLoading ? <Spinner size="sm" /> : null}
       {children}
     </button>
   );

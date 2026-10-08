@@ -6,7 +6,7 @@ import { EmailStep } from '@/features/auth/components/forgot-password/email-step
 import { ResetStep } from '@/features/auth/components/forgot-password/reset-step';
 import { SuccessStep } from '@/features/auth/components/forgot-password/success-step';
 import { useForgotPasswordFlow } from '@/features/auth/hooks/use-forgot-password-flow';
-import { Dialog } from '@/shared/components';
+import { Dialog } from '@/shared/ui';
 
 export interface ForgotPasswordModalProps {
   isOpen: boolean;

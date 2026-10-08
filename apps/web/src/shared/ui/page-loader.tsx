@@ -1,10 +1,15 @@
-/**
- * Full-page loading spinner.
- */
-export function PageLoader() {
+import { Spinner } from './spinner';
+
+export interface PageLoaderProps {
+  /** Announced to assistive tech while the route or data loads. */
+  label?: string;
+}
+
+/** Full-page busy indicator, used by route-level Suspense boundaries. */
+export function PageLoader({ label = 'Loading' }: PageLoaderProps) {
   return (
     <div className="flex min-h-screen items-center justify-center">
-      <div className="border-primary h-8 w-8 animate-spin rounded-full border-4 border-t-transparent" />
+      <Spinner size="lg" className="text-primary" label={label} />
     </div>
   );
 }

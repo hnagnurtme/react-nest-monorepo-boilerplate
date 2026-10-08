@@ -18,9 +18,13 @@ import {
   Button,
   Card,
   DataTable,
+  ErrorState,
   Input,
   PageHeader,
+  PageShell,
   Pagination,
+  SkeletonTable,
+  TEXT_LINK,
   useToast,
   type DataTableColumn,
 } from '@/shared/ui';
@@ -30,11 +34,12 @@ const CONFLICT_STATUS = 409;
 
 export function TenantsPage() {
   const { t } = useTranslation('tenants');
+  const { t: tCommon } = useTranslation('common');
   const { showToast } = useToast();
   const toMessage = useApiErrorMessage();
   const { page, goToPage } = usePageParam();
 
-  const { data, isPending, isError } = useTenants(page, PAGE_SIZE);
+  const { data, isPending, isError, refetch } = useTenants(page, PAGE_SIZE);
   const createTenant = useCreateTenant();
   const updateTenant = useUpdateTenant();
 
@@ -113,77 +118,86 @@ export function TenantsPage() {
   ];
 
   return (
-    <div className="bg-background min-h-screen p-6">
-      <div className="mx-auto max-w-4xl space-y-4">
-        <PageHeader
-          title={t('title')}
-          subtitle={t('subtitle')}
-          actions={
-            <Link to="/" className="text-primary text-sm font-semibold hover:underline">
-              {t('back')}
-            </Link>
+    <PageShell>
+      <PageHeader
+        title={t('title')}
+        subtitle={t('subtitle')}
+        actions={
+          <Link to="/" className={TEXT_LINK}>
+            {t('back')}
+          </Link>
+        }
+      />
+
+      <Card>
+        <form
+          onSubmit={(event) => {
+            void handleSubmit(onSubmit)(event);
+          }}
+          noValidate
+          className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-start"
+        >
+          <Input
+            id="tenant-name"
+            label={t('create.name')}
+            autoComplete="off"
+            error={errors.name?.message}
+            {...register('name')}
+          />
+          <Input
+            id="tenant-slug"
+            label={t('create.slug')}
+            placeholder={t('create.slugPlaceholder')}
+            autoComplete="off"
+            error={errors.slug?.message}
+            {...register('slug')}
+          />
+          <Button type="submit" isLoading={createTenant.isPending} className="sm:mt-5">
+            {t('create.submit')}
+          </Button>
+        </form>
+      </Card>
+
+      {isPending ? <SkeletonTable columns={columns.length} label={t('loading')} /> : null}
+      {isError ? (
+        <ErrorState
+          title={t('error')}
+          action={
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                void refetch();
+              }}
+            >
+              {tCommon('actions.retry')}
+            </Button>
           }
         />
+      ) : null}
 
-        <Card>
-          <form
-            onSubmit={(event) => {
-              void handleSubmit(onSubmit)(event);
-            }}
-            noValidate
-            className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-start"
-          >
-            <Input
-              id="tenant-name"
-              label={t('create.name')}
-              autoComplete="off"
-              error={errors.name?.message}
-              {...register('name')}
-            />
-            <Input
-              id="tenant-slug"
-              label={t('create.slug')}
-              placeholder={t('create.slugPlaceholder')}
-              autoComplete="off"
-              error={errors.slug?.message}
-              {...register('slug')}
-            />
-            <Button type="submit" isLoading={createTenant.isPending} className="sm:mt-5">
-              {t('create.submit')}
-            </Button>
-          </form>
-        </Card>
-
-        {isPending ? <p className="text-muted-foreground text-sm">{t('loading')}</p> : null}
-        {isError ? (
-          <p role="alert" className="text-destructive text-sm">
-            {t('error')}
-          </p>
-        ) : null}
-
-        {data ? (
-          <>
-            <DataTable
-              columns={columns}
-              rows={data.items}
-              rowKey={(tenant) => tenant.id}
-              emptyLabel={t('empty')}
-            />
-            <Pagination
-              page={data.meta.page}
-              totalPages={data.meta.totalPages}
-              summary={t('pagination.summary', {
-                page: data.meta.page,
-                totalPages: Math.max(data.meta.totalPages, 1),
-                total: data.meta.total,
-              })}
-              previousLabel={t('pagination.previous')}
-              nextLabel={t('pagination.next')}
-              onPageChange={goToPage}
-            />
-          </>
-        ) : null}
-      </div>
-    </div>
+      {data ? (
+        <>
+          <DataTable
+            columns={columns}
+            rows={data.items}
+            rowKey={(tenant) => tenant.id}
+            emptyLabel={t('empty')}
+          />
+          <Pagination
+            page={data.meta.page}
+            totalPages={data.meta.totalPages}
+            summary={t('pagination.summary', {
+              page: data.meta.page,
+              totalPages: Math.max(data.meta.totalPages, 1),
+              total: data.meta.total,
+            })}
+            previousLabel={t('pagination.previous')}
+            nextLabel={t('pagination.next')}
+            onPageChange={goToPage}
+          />
+        </>
+      ) : null}
+    </PageShell>
   );
 }

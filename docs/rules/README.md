@@ -41,8 +41,9 @@ Mỗi quy tắc được trình bày theo đúng 4 phần:
 | 08  | [Testing](08-testing.md)                     | Toàn bộ codebase                              |
 | 09  | [Git & CI](09-git-va-ci.md)                  | Quy trình làm việc                            |
 | 10  | [Infra & DevOps](10-infra-devops.md)         | Hạ tầng, triển khai                           |
+| 11  | [UI & Design System](11-ui-design-system.md) | `apps/web` — token, primitive, Tailwind, icon |
 
-> Không có file `05` (từng dành cho mobile, nay không còn trong repo; số cũ không được tái sử dụng). ADR-0005 là [permission lưu trong DB](../adr/0005-permission-luu-trong-co-so-du-lieu.md).
+> Không có file `05` (từng dành cho mobile, nay không còn trong repo; số cũ không được tái sử dụng — đó là lý do design system mang số `11`). ADR-0005 là [permission lưu trong DB](../adr/0005-permission-luu-trong-co-so-du-lieu.md).
 
 ## Khi quy tắc cản trở công việc
 

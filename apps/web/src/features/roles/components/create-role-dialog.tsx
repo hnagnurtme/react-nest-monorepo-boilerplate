@@ -8,8 +8,7 @@ import type { CreateRoleBody, PermissionOption } from '@/features/roles/types';
 import { roleErrorMessage } from '@/features/roles/utils/error-message';
 import { permissionsFromSelection, type PresetSelection } from '@/features/roles/utils/permissions';
 import { useTenants } from '@/features/tenants';
-import { Dialog } from '@/shared/components';
-import { Button, Input, Select, useToast } from '@/shared/ui';
+import { Button, Dialog, Input, Select, useToast } from '@/shared/ui';
 
 const TENANT_OPTIONS_LIMIT = 100;
 const MIN_NAME_LENGTH = 2;

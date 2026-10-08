@@ -3,8 +3,9 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 
 import type { AppAbility } from '@repo/shared-types';
 
+import { PageLoader } from '@/shared/ui';
+
 import { ErrorBoundary } from './components/error-boundary';
-import { PageLoader } from './components/page-loader';
 import { RouteGuard } from './components/route-guard';
 
 const HomePage = lazy(() =>

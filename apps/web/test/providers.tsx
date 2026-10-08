@@ -8,8 +8,7 @@ import type { PermissionGrant } from '@repo/shared-types';
 
 import type { PublicUser } from '@/entities/session';
 import { AbilityProvider, useAbilityLoading } from '@/features/auth';
-import { ThemeProvider } from '@/shared/components';
-import { ToastProvider } from '@/shared/ui';
+import { ThemeProvider, ToastProvider } from '@/shared/ui';
 
 import { abilitiesResponse, ABILITIES_URL, setSessionUser } from './fixtures/auth';
 

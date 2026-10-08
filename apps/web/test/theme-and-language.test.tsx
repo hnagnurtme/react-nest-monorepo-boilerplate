@@ -4,9 +4,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import i18n from '@/lib/i18n';
 import { LANGUAGE_STORAGE_KEY } from '@/lib/i18n/languages';
-import { ThemeProvider } from '@/shared/components';
 import { THEME_STORAGE_KEY } from '@/shared/hooks';
-import { LanguageSwitcher, ThemeToggle } from '@/shared/ui';
+import { LanguageSwitcher, ThemeProvider, ThemeToggle } from '@/shared/ui';
 
 afterEach(async () => {
   cleanup();

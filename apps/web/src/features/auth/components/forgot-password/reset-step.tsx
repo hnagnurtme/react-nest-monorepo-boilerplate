@@ -1,14 +1,13 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowRight, CheckCircle2, Clock, KeyRound } from 'lucide-react';
+import { ArrowRight, Clock, KeyRound } from 'lucide-react';
 import { useMemo, type ChangeEvent } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
 import { createResetPasswordSchema } from '@/features/auth/schemas/forgot-password.schema';
 import type { ResetPasswordFormValues } from '@/features/auth/types';
-import { Button, Input } from '@/shared/ui';
+import { Alert, Button, Input, LinkButton } from '@/shared/ui';
 
-import { IconField } from './icon-field';
 import { PasswordField } from './password-field';
 
 const OTP_LENGTH = 6;
@@ -52,35 +51,30 @@ export function ResetStep({
         void handleSubmit(onSubmit)(event);
       }}
     >
-      <div className="bg-success-light border-success-border text-success flex items-start gap-2.5 rounded-xl border p-3.5">
-        <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
-        <p className="text-xs leading-relaxed sm:text-sm">
+      <Alert tone="success">
+        <p className="leading-relaxed">
           {t('forgotPasswordModal.codeSentTo')} <strong className="font-semibold">{email}</strong>
         </p>
-      </div>
+      </Alert>
 
-      <IconField
+      <Input
         id="reset-otp"
         label={t('forgotPasswordModal.otpLabel')}
-        icon={<KeyRound className="h-4 w-4" />}
-      >
-        <Input
-          id="reset-otp"
-          type="text"
-          inputMode="numeric"
-          autoComplete="one-time-code"
-          maxLength={OTP_LENGTH}
-          placeholder={t('forgotPasswordModal.otpInputPlaceholder')}
-          error={errors.otp?.message}
-          className="h-11 pl-10 font-semibold tracking-widest"
-          {...otpRegistration}
-          onChange={(event: ChangeEvent<HTMLInputElement>) => {
-            void otpRegistration.onChange(event);
-            // Keep the field digits-only so a pasted code with spaces still works.
-            setValue('otp', event.target.value.replace(DIGITS_ONLY, '').slice(0, OTP_LENGTH));
-          }}
-        />
-      </IconField>
+        type="text"
+        inputMode="numeric"
+        autoComplete="one-time-code"
+        maxLength={OTP_LENGTH}
+        placeholder={t('forgotPasswordModal.otpInputPlaceholder')}
+        error={errors.otp?.message}
+        startIcon={<KeyRound className="size-4" />}
+        className="font-semibold tracking-widest"
+        {...otpRegistration}
+        onChange={(event: ChangeEvent<HTMLInputElement>) => {
+          void otpRegistration.onChange(event);
+          // Keep the field digits-only so a pasted code with spaces still works.
+          setValue('otp', event.target.value.replace(DIGITS_ONLY, '').slice(0, OTP_LENGTH));
+        }}
+      />
 
       <PasswordField
         id="reset-new-password"
@@ -98,10 +92,10 @@ export function ResetStep({
         registration={register('confirmPassword')}
       />
 
-      <div className="text-muted-foreground flex items-center justify-center text-xs sm:text-sm">
+      <div className="text-muted-foreground text-body flex items-center justify-center">
         {countdown > 0 ? (
           <span className="inline-flex items-center gap-1.5">
-            <Clock className="h-4 w-4" aria-hidden="true" />
+            <Clock className="size-4" aria-hidden="true" />
             <span>
               {t('forgotPasswordModal.resendAfter')}{' '}
               <strong className="text-foreground font-semibold">{countdown}s</strong>
@@ -110,21 +104,16 @@ export function ResetStep({
         ) : (
           <span>
             {t('forgotPasswordModal.resendPrompt')}{' '}
-            <button
-              type="button"
-              onClick={onResend}
-              disabled={isResending}
-              className="text-primary hover:text-primary-hover cursor-pointer font-semibold transition-colors disabled:opacity-50"
-            >
+            <LinkButton onClick={onResend} disabled={isResending}>
               {isResending ? t('forgotPasswordModal.resending') : t('forgotPasswordModal.resend')}
-            </button>
+            </LinkButton>
           </span>
         )}
       </div>
 
       <Button type="submit" isLoading={isPending} isFullWidth className="mt-2 gap-2">
         <span>{t('forgotPasswordModal.resetSubmit')}</span>
-        <ArrowRight className="h-4 w-4" aria-hidden="true" />
+        <ArrowRight className="size-4" aria-hidden="true" />
       </Button>
     </form>
   );

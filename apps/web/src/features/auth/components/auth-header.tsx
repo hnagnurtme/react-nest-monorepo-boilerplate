@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 
 import { cn } from '@/lib/utils';
-import { LanguageSwitcher, ThemeToggle } from '@/shared/ui';
+import { LanguageSwitcher, TEXT_LINK, ThemeToggle } from '@/shared/ui';
 
 import { HeaderBrand } from './header-brand';
 
@@ -18,10 +18,7 @@ export function AuthHeader({ className }: AuthHeaderProps) {
       <div className="flex items-center gap-3">
         <LanguageSwitcher />
         <ThemeToggle />
-        <a
-          href="#support"
-          className="text-foreground/80 hover:text-primary cursor-pointer text-sm font-medium transition-colors"
-        >
+        <a href="#support" className={TEXT_LINK}>
           {t('header.needHelp')}
         </a>
       </div>

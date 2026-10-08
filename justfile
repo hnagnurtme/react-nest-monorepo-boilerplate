@@ -26,6 +26,10 @@ format-check:
 lint:
   pnpm lint
 
+# Design-system conventions for apps/web (docs/rules/11-ui-design-system.md).
+lint-ui:
+  pnpm lint:ui
+
 typecheck:
   pnpm typecheck
 
@@ -35,7 +39,7 @@ test:
 build:
   pnpm build
 
-verify: format-check lint typecheck test build audit
+verify: format-check lint lint-ui typecheck test build audit
 
 audit:
   pnpm audit:ci
