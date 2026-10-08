@@ -1,3 +1,4 @@
+import { ChevronDown } from 'lucide-react';
 import { type SelectHTMLAttributes } from 'react';
 
 import { cn } from '@/lib/utils';
@@ -34,30 +35,46 @@ export function Select({
   const hasError = error !== undefined && error !== '';
 
   return (
-    <div className="w-full space-y-1.5">
+    /*
+     * `className` sizes the whole control, not the `<select>` inside it: the
+     * chevron is positioned against this box, so a width or a `hidden` landing
+     * on the inner element alone would leave the icon floating beside nothing.
+     */
+    <div className={cn('w-full space-y-1.5', className)}>
       {label === undefined ? null : <Label htmlFor={id}>{label}</Label>}
-      <select
-        id={id}
-        aria-invalid={hasError}
-        aria-describedby={fieldErrorId(id, hasError)}
-        className={cn(
-          FIELD_BASE,
-          fieldBorder(hasError),
-          CONTROL_HEIGHT[size],
-          CONTROL_PADDING[size],
-          CONTROL_TEXT[size],
-          'cursor-pointer',
-          className,
-        )}
-        {...props}
-      >
-        {placeholder === undefined ? null : <option value="">{placeholder}</option>}
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+      {/*
+        The native arrow is drawn by the platform: a different glyph per OS, in a
+        colour the theme cannot reach, hard against the right edge. `appearance-none`
+        removes it and the chevron below replaces it — one icon set, one colour
+        token, and `pr-9` reserves room so the text cannot run underneath it.
+      */}
+      <div className="relative">
+        <select
+          id={id}
+          aria-invalid={hasError}
+          aria-describedby={fieldErrorId(id, hasError)}
+          className={cn(
+            FIELD_BASE,
+            fieldBorder(hasError),
+            CONTROL_HEIGHT[size],
+            CONTROL_PADDING[size],
+            CONTROL_TEXT[size],
+            'cursor-pointer appearance-none pr-9',
+          )}
+          {...props}
+        >
+          {placeholder === undefined ? null : <option value="">{placeholder}</option>}
+          {options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <ChevronDown
+          aria-hidden="true"
+          className="text-muted-foreground pointer-events-none absolute inset-y-0 right-3 my-auto size-4"
+        />
+      </div>
       {hasError ? <FieldError id={fieldErrorId(id, true)}>{error}</FieldError> : null}
     </div>
   );

@@ -22,7 +22,6 @@
     "next": "Next",
     "summary": "Page {{page}} of {{totalPages}} ({{total, number}} users)"
   },
-  "back": "Home",
   "search": {
     "label": "Search users",
     "placeholder": "Search by name or email",

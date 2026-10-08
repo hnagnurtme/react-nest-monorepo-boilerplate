@@ -22,7 +22,6 @@
     "next": "Sau",
     "summary": "Trang {{page}} / {{totalPages}} ({{total, number}} người dùng)"
   },
-  "back": "Trang chủ",
   "search": {
     "label": "Tìm người dùng",
     "placeholder": "Tìm theo tên hoặc email",

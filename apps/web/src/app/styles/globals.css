@@ -1,159 +1,356 @@
 @import 'tailwindcss';
 
 /*
+ * Self-hosted, no CDN. Inter is the variable ("wght") build, so every weight the
+ * product uses ships in one file; JetBrains Mono is loaded at 400 only, which is
+ * the single weight a monospace column ever needs. Both include the vietnamese
+ * subset — the product ships vi, and a missing subset falls back mid-sentence.
+ */
+@import '@fontsource-variable/inter/wght.css';
+@import '@fontsource/jetbrains-mono/latin-400.css';
+@import '@fontsource/jetbrains-mono/latin-ext-400.css';
+@import '@fontsource/jetbrains-mono/vietnamese-400.css';
+
+/*
  * Dark mode is driven by a class on <html> so the user's choice can override the
  * OS preference; ThemeProvider writes that class. The default `dark:` variant in
- * Tailwind v4 reads prefers-color-scheme only, which cannot be overridden.
+ * Tailwind reads prefers-color-scheme only, which cannot be overridden.
  */
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
+  /*
+   * The palette is closed: clearing --color-* drops Tailwind's default families,
+   * so `bg-slate-500` stops compiling instead of merely failing review. The four
+   * keywords below are re-declared because they carry no theme opinion.
+   */
+  --color-*: initial;
+  --color-transparent: transparent;
+  --color-current: currentColor;
+  --color-white: #ffffff;
+  --color-black: #000000;
+
+  /*
+   * ── Layer 1: the scales ────────────────────────────────────────────────────
+   * Raw ramps. Product code never names one of these directly; it names a
+   * semantic token from layer 2. A scale exists so layer 2 can pick a *step*
+   * rather than invent a hex, which is what keeps hover, border and background
+   * of the same family in tune.
+   */
+
+  /* Brand green, anchored so 600 is the original #006a43. */
+  --color-primary-50: #f0f9f4;
+  --color-primary-100: #d7f0e3;
+  --color-primary-200: #afe1c8;
+  --color-primary-300: #7dcba7;
+  --color-primary-400: #45ad83;
+  --color-primary-500: #178d62;
+  --color-primary-600: #006a43;
+  --color-primary-700: #005636;
+  --color-primary-800: #00452c;
+  --color-primary-900: #003723;
+  --color-primary-950: #002116;
+
+  /*
+   * Neutrals carry a trace of the brand's green rather than Tailwind's blue, so
+   * grey next to green reads as the same family — but only a trace: the old
+   * tokens were tinted hard enough (#f3faf6, #e1ebe2) that the whole page looked
+   * washed. 925 and 975 are off-ramp steps that exist for dark surfaces, where
+   * the gap between 900 and 950 is too wide for a card to sit in.
+   */
+  --color-base-50: #f7f9f8;
+  --color-base-100: #eef2f0;
+  --color-base-200: #e0e6e3;
+  --color-base-300: #cbd3ce;
+  --color-base-400: #a6b0aa;
+  --color-base-500: #7c8780;
+  /* Tuned so supporting text clears AA on the `sunken` step, its worst case. */
+  --color-base-600: #5c675f;
+  --color-base-700: #46504a;
+  --color-base-800: #343c37;
+  --color-base-900: #232925;
+  --color-base-925: #1a1f1c;
+  --color-base-950: #131614;
+  --color-base-975: #0d100e;
+
+  /* Status ramps. Success is a yellower green than the brand on purpose. */
+  --color-success-50: #effaf0;
+  --color-success-100: #dcf4e0;
+  --color-success-200: #bdeac5;
+  --color-success-300: #92d8a0;
+  --color-success-400: #5fbc76;
+  --color-success-500: #2e9e52;
+  --color-success-600: #02853c;
+  --color-success-700: #026e30;
+  --color-success-800: #015725;
+  --color-success-900: #00421a;
+  --color-success-950: #012a0e;
+
+  --color-warning-50: #fef5ec;
+  --color-warning-100: #fee9d4;
+  --color-warning-200: #fed3ab;
+  --color-warning-300: #f6b574;
+  --color-warning-400: #e18f30;
+  --color-warning-500: #be7204;
+  --color-warning-600: #9d5d03;
+  --color-warning-700: #824c03;
+  --color-warning-800: #673c03;
+  --color-warning-900: #4f2c00;
+  --color-warning-950: #341b00;
+
+  --color-danger-50: #fff4f3;
+  --color-danger-100: #fee7e4;
+  --color-danger-200: #ffcfcb;
+  --color-danger-300: #ffaba3;
+  --color-danger-400: #ff726b;
+  --color-danger-500: #e64343;
+  --color-danger-600: #c9222b;
+  --color-danger-700: #ac011a;
+  --color-danger-800: #8a0013;
+  --color-danger-900: #6a000b;
+  --color-danger-950: #460105;
+
+  --color-info-50: #eef9fe;
+  --color-info-100: #d8f2ff;
+  --color-info-200: #b5e4fc;
+  --color-info-300: #84d0f4;
+  --color-info-400: #47b2e0;
+  --color-info-500: #0993c1;
+  --color-info-600: #0779a0;
+  --color-info-700: #016485;
+  --color-info-800: #034f6a;
+  --color-info-900: #003b50;
+  --color-info-950: #002635;
+
+  /*
+   * ── Layer 2: the semantic tokens ───────────────────────────────────────────
+   * The only names a component may use. Dark mode redefines this layer and
+   * nothing else, so a primitive written against these follows both themes with
+   * no `dark:` class of its own.
+   */
+
+  /*
+   * Four surface levels, not two. The old theme had `background` and `card` both
+   * at #ffffff, so a card was invisible on the page and only its hairline border
+   * said anything was there. The ladder now reads: page → card → muted → sunken.
+   */
+  --color-background: var(--color-base-50);
+  --color-card: var(--color-white);
+  --color-card-foreground: var(--color-base-900);
+  /* Table headers, row hover, segmented-control track. Sits on a card. */
+  --color-muted: var(--color-base-100);
+  /* Inset wells: code blocks, disabled control fills, empty drop targets. */
+  --color-sunken: var(--color-base-200);
+  /* Selected row / active nav item. */
+  --color-selected: var(--color-primary-50);
+
+  /* Four text levels: title, body, supporting, unavailable. */
+  --color-foreground: var(--color-base-900);
+  --color-foreground-secondary: var(--color-base-700);
+  --color-muted-foreground: var(--color-base-600);
+  --color-foreground-disabled: var(--color-base-400);
+
+  /* Three line weights: default hairline, emphasised, control outline. */
+  --color-border: var(--color-base-200);
+  --color-border-strong: var(--color-base-300);
+  --color-input: var(--color-base-300);
+  --color-input-focus: var(--color-primary-600);
+  /* One focus ring for the whole product; see FOCUS_RING in shared/ui. */
+  --color-ring: var(--color-primary-600);
+
+  --color-primary: var(--color-primary-600);
+  --color-primary-hover: var(--color-primary-700);
+  --color-primary-active: var(--color-primary-800);
+  --color-primary-light: var(--color-primary-100);
+  --color-primary-subtle: var(--color-primary-50);
+  --color-primary-foreground: var(--color-white);
+
+  --color-secondary: var(--color-primary-50);
+  --color-secondary-foreground: var(--color-primary-700);
+
+  --color-destructive: var(--color-danger-600);
+  --color-destructive-hover: var(--color-danger-700);
+  --color-destructive-foreground: var(--color-white);
+  --color-destructive-light: var(--color-danger-50);
+  /* The tinted edge of an Alert or a Badge on a destructive-light fill. */
+  --color-destructive-border: var(--color-danger-200);
+  /*
+   * The edge of the solid destructive button. A filled button with no stroke
+   * ends where its fill ends, so next to an outline button its edge reads as
+   * missing; a step darker than the fill draws it without adding a second tone.
+   */
+  --color-destructive-stroke: var(--color-danger-700);
+
+  /*
+   * 700, not 600: a success-600 label on success-50 measures 4.43:1, just under
+   * AA, and this token is painted as text on that tint by every success badge.
+   */
+  --color-success: var(--color-success-700);
+  --color-success-foreground: var(--color-white);
+  --color-success-light: var(--color-success-50);
+  --color-success-border: var(--color-success-200);
+
+  --color-warning: var(--color-warning-600);
+  --color-warning-foreground: var(--color-white);
+  --color-warning-light: var(--color-warning-50);
+  --color-warning-border: var(--color-warning-200);
+
+  --color-info: var(--color-info-600);
+  --color-info-foreground: var(--color-white);
+  --color-info-light: var(--color-info-50);
+  --color-info-border: var(--color-info-200);
+
+  /* Modal scrim. Carries its own alpha so `bg-overlay` needs no opacity utility. */
+  --color-overlay: rgb(20 24 22 / 0.48);
+  /* Tooltips invert: dark chip in light mode, and the reverse. */
+  --color-tooltip: var(--color-base-900);
+  --color-tooltip-foreground: var(--color-base-50);
+
   --font-sans:
-    system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    'Inter Variable', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
     sans-serif;
+  /* IDs, emails, tokens and error codes: proportional digits make them unscannable. */
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 
   /*
    * Type scale by role, not by size: `text-body` keeps its name when the design
-   * decides body copy should be a step larger. Five steps, no more — two of them
-   * (body, label) carry most of the product.
+   * decides body copy should be a step larger. Tracking is part of the step —
+   * display and title tighten, label and caption open up, because that is what
+   * separates a typeset interface from a default one.
    */
   --text-display: 1.875rem;
   --text-display--line-height: 2.25rem;
+  --text-display--letter-spacing: -0.021em;
+  --text-display--font-weight: 650;
   --text-title: 1.5rem;
   --text-title--line-height: 2rem;
+  --text-title--letter-spacing: -0.019em;
+  --text-title--font-weight: 650;
   --text-heading: 1.125rem;
   --text-heading--line-height: 1.75rem;
+  --text-heading--letter-spacing: -0.014em;
+  --text-heading--font-weight: 600;
   --text-body: 0.875rem;
-  --text-body--line-height: 1.25rem;
-  --text-label: 0.75rem;
-  --text-label--line-height: 1rem;
+  --text-body--line-height: 1.375rem;
+  --text-body--letter-spacing: -0.006em;
+  --text-label: 0.8125rem;
+  --text-label--line-height: 1.125rem;
+  --text-label--letter-spacing: 0;
   --text-caption: 0.6875rem;
   --text-caption--line-height: 1rem;
+  --text-caption--letter-spacing: 0.04em;
+  --text-caption--font-weight: 600;
 
   /*
-   * Radius by role. `rounded-md`/`rounded-xl` and friends still exist in Tailwind
-   * but are banned in product code (rule 11, section A2) so "which radius does a
-   * card use" has exactly one answer.
+   * Radius by role, and now actually graded: control (6px) sits inside surface
+   * (8px) sits inside overlay (12px), so nesting reads correctly. The old scale
+   * gave a button and its card the same 12px, which is why an h-10 button looked
+   * like a pill and the hierarchy read flat.
    */
-  --radius-control: 0.75rem;
-  --radius-surface: 0.75rem;
-  --radius-overlay: 1rem;
-  --radius-inner: 0.5rem;
+  --radius-inner: 0.25rem;
+  --radius-control: 0.375rem;
+  --radius-surface: 0.5rem;
+  --radius-overlay: 0.75rem;
   --radius-pill: 9999px;
+
+  /*
+   * Table row heights. A row shorter than the control inside it clips the focus
+   * ring; these two are the only heights a row may have.
+   */
+  --spacing-row: 3rem;
+  --spacing-row-compact: 2.5rem;
 
   /* Named widths so no layout needs an arbitrary `max-w-[...]`. */
   --container-form: 26rem;
-  --container-page: 56rem;
+  --container-page: 80rem;
+  --container-dialog-sm: 25rem;
+  --container-dialog-md: 32rem;
+  --container-dialog-lg: 45rem;
   /* The app shell: full sidebar, and the collapsed rail that shows icons only. */
   --container-sidebar: 16rem;
-  --container-rail: 4.5rem;
-
-  --color-primary: #006a43;
-  --color-primary-hover: #005233;
-  --color-primary-active: #1e6915;
-  --color-primary-light: #eaf7f0;
-  --color-primary-subtle: #f3faf6;
-  --color-primary-foreground: #ffffff;
-
-  --color-secondary: #eaf7f0;
-  --color-secondary-foreground: #006a43;
-
-  --color-background: #ffffff;
-  --color-surface-subtlest: #f8faf8;
-  --color-foreground: #151e19;
-
-  --color-card: #ffffff;
-  --color-card-foreground: #151e19;
-
-  --color-muted: #f3faf6;
-  /* #6e7a71 read at 4.48:1 on white — just under WCAG AA for body text. */
-  --color-muted-foreground: #68736b;
-
-  --color-border: #e1ebe2;
-  --color-input: #e1ebe2;
-  --color-input-focus: #006a43;
-  /* One focus ring for the whole product; see FOCUS_RING in shared/ui. */
-  --color-ring: #006a43;
-
-  --color-destructive: #d32f2f;
-  --color-destructive-foreground: #ffffff;
-  /* Lightened from #ffdad6 so `text-destructive` on it clears AA (was 3.85:1). */
-  --color-destructive-light: #fff5f5;
-  --color-destructive-border: #f5bdbd;
-
-  --color-success: #15803d;
-  --color-success-foreground: #ffffff;
-  --color-success-light: #f0fdf4;
-  --color-success-border: #dcfce7;
-
-  --color-warning: #b45309;
-  --color-warning-foreground: #ffffff;
-  --color-warning-light: #fffbeb;
-  --color-warning-border: #fde68a;
-
-  /* Modal scrim. Carries its own alpha so `bg-overlay` needs no opacity utility. */
-  --color-overlay: rgb(9 20 15 / 0.45);
+  --container-rail: 4rem;
 }
 
 /*
- * Dark palette: the same token names, so every component that already uses a
- * semantic class (bg-card, text-muted-foreground, ...) follows with no edit.
+ * Dark palette: layer 2 only, so every component that already uses a semantic
+ * class (bg-card, text-muted-foreground, ...) follows with no edit. The scales
+ * above are not touched — a ramp that flips per theme stops being a ramp.
  */
 :root.dark {
-  --color-primary: #2fa36f;
-  --color-primary-hover: #3cb47e;
-  --color-primary-active: #278c5e;
-  --color-primary-light: #13281f;
-  --color-primary-subtle: #101c17;
-  --color-primary-foreground: #04150d;
+  --color-background: var(--color-base-975);
+  --color-card: var(--color-base-925);
+  --color-card-foreground: var(--color-base-100);
+  --color-muted: var(--color-base-900);
+  --color-sunken: var(--color-base-950);
+  --color-selected: var(--color-primary-950);
 
-  --color-secondary: #16211c;
-  --color-secondary-foreground: #8fe0b8;
+  --color-foreground: var(--color-base-100);
+  --color-foreground-secondary: var(--color-base-300);
+  --color-muted-foreground: var(--color-base-400);
+  --color-foreground-disabled: var(--color-base-600);
 
-  --color-background: #0b100d;
-  --color-surface-subtlest: #0b100d;
-  --color-foreground: #e6ede8;
+  --color-border: var(--color-base-800);
+  --color-border-strong: var(--color-base-700);
+  --color-input: var(--color-base-700);
+  --color-input-focus: var(--color-primary-400);
+  --color-ring: var(--color-primary-400);
 
-  --color-card: #121916;
-  --color-card-foreground: #e6ede8;
+  /*
+   * A 600-step fill on a near-black page is a dark smudge, so dark mode moves the
+   * brand up the ramp and takes its text colour from the bottom of it.
+   */
+  --color-primary: var(--color-primary-400);
+  --color-primary-hover: var(--color-primary-300);
+  --color-primary-active: var(--color-primary-500);
+  --color-primary-light: var(--color-primary-900);
+  --color-primary-subtle: var(--color-primary-950);
+  --color-primary-foreground: var(--color-primary-950);
 
-  --color-muted: #16211c;
-  --color-muted-foreground: #93a39a;
+  --color-secondary: var(--color-primary-950);
+  --color-secondary-foreground: var(--color-primary-300);
 
-  --color-border: #233029;
-  --color-input: #233029;
-  --color-input-focus: #2fa36f;
-  --color-ring: #3cb47e;
+  --color-destructive: var(--color-danger-400);
+  /* Up the ramp, not down: on a dark surface hover has to brighten. */
+  --color-destructive-hover: var(--color-danger-300);
+  --color-destructive-foreground: var(--color-danger-950);
+  --color-destructive-light: var(--color-danger-950);
+  --color-destructive-border: var(--color-danger-800);
+  --color-destructive-stroke: var(--color-danger-500);
 
-  --color-destructive: #f87171;
-  --color-destructive-foreground: #1a0a0a;
-  --color-destructive-light: #3a1414;
-  --color-destructive-border: #5a1f1f;
+  --color-success: var(--color-success-400);
+  --color-success-foreground: var(--color-success-950);
+  --color-success-light: var(--color-success-950);
+  --color-success-border: var(--color-success-800);
 
-  --color-success: #34d399;
-  --color-success-foreground: #052e1b;
-  --color-success-light: #0f2a20;
-  --color-success-border: #1d4336;
+  --color-warning: var(--color-warning-400);
+  --color-warning-foreground: var(--color-warning-950);
+  --color-warning-light: var(--color-warning-950);
+  --color-warning-border: var(--color-warning-800);
 
-  --color-warning: #fbbf24;
-  --color-warning-foreground: #241a04;
-  --color-warning-light: #2a2008;
-  --color-warning-border: #4a3a10;
+  --color-info: var(--color-info-400);
+  --color-info-foreground: var(--color-info-950);
+  --color-info-light: var(--color-info-950);
+  --color-info-border: var(--color-info-800);
 
-  --color-overlay: rgb(0 0 0 / 0.65);
+  --color-overlay: rgb(0 0 0 / 0.7);
+  --color-tooltip: var(--color-base-100);
+  --color-tooltip-foreground: var(--color-base-950);
 }
 
 /*
- * Elevation deliberately does NOT live in `@theme`. Tailwind v4 inlines a
+ * Elevation deliberately does NOT live in `@theme`. Tailwind inlines a
  * `--shadow-*` theme value into the utility at build time (so `shadow-color`
  * modifiers can work), which means a `:root.dark` override of that variable is
  * never read. These are plain custom properties plus `@utility`, so the value is
  * resolved at use time and dark mode can redefine it.
+ *
+ * Two layers per level, not one: the tight shadow draws the edge, the wide one
+ * casts the shade. A single blurred layer is what makes a card look smudged.
  */
 :root {
-  --elevation-raised: 0 1px 2px 0 rgb(9 20 15 / 0.06);
-  --elevation-floating: 0 4px 12px -2px rgb(9 20 15 / 0.1);
-  --elevation-overlay: 0 16px 40px -8px rgb(9 20 15 / 0.25);
+  --elevation-raised: 0 1px 2px -1px rgb(20 24 22 / 0.08), 0 1px 1px 0 rgb(20 24 22 / 0.04);
+  --elevation-floating: 0 4px 12px -2px rgb(20 24 22 / 0.1), 0 2px 4px -2px rgb(20 24 22 / 0.06);
+  --elevation-overlay: 0 16px 32px -8px rgb(20 24 22 / 0.18), 0 4px 8px -4px rgb(20 24 22 / 0.08);
 }
 
 /*
@@ -161,11 +358,11 @@
  * elevation budget on a lifted edge instead of a cast shadow.
  */
 :root.dark {
-  --elevation-raised: 0 0 0 1px rgb(255 255 255 / 0.04);
+  --elevation-raised: 0 0 0 1px rgb(255 255 255 / 0.05);
   --elevation-floating:
-    0 4px 16px -4px rgb(0 0 0 / 0.6), 0 0 0 1px rgb(255 255 255 / 0.05);
+    0 4px 16px -4px rgb(0 0 0 / 0.6), 0 0 0 1px rgb(255 255 255 / 0.06);
   --elevation-overlay:
-    0 20px 48px -12px rgb(0 0 0 / 0.8), 0 0 0 1px rgb(255 255 255 / 0.06);
+    0 20px 48px -12px rgb(0 0 0 / 0.8), 0 0 0 1px rgb(255 255 255 / 0.07);
 }
 
 @utility shadow-raised {
@@ -183,8 +380,16 @@
 :root {
   font-family: var(--font-sans);
   color: var(--color-foreground);
-  background-color: var(--color-surface-subtlest);
+  background-color: var(--color-background);
   color-scheme: light;
+  /*
+   * Inter's defaults leave `1` narrow and the quotes typewriter-straight. `cv05`
+   * gives a single-storey `l`, `ss03` the curved `g`, and `tnum` is off here on
+   * purpose — numeric columns opt into `tabular-nums` themselves.
+   */
+  font-feature-settings:
+    'cv05' 1,
+    'ss03' 1;
 }
 
 :root.dark {
@@ -195,6 +400,17 @@ body {
   margin: 0;
   padding: 0;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background-color: var(--color-primary-100);
+  color: var(--color-primary-900);
+}
+
+:root.dark ::selection {
+  background-color: var(--color-primary-900);
+  color: var(--color-primary-100);
 }
 
 /*
@@ -237,7 +453,9 @@ body {
     width: 100%;
   }
 
+  /* A stacked row is as tall as its cells; the desktop `h-row` must not pin it. */
   table[data-stacked] tr {
+    height: auto;
     padding: 0.5rem 0;
   }
 

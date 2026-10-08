@@ -2,7 +2,6 @@ import { Menu } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 
-import { TenantSwitcher } from '@/features/auth';
 import { IconButton, LanguageSwitcher, ThemeToggle } from '@/shared/ui';
 
 import { allLeaves } from './nav';
@@ -16,6 +15,11 @@ export interface HeaderProps {
  * The app bar: where you are on the left, who you are and how things look on
  * the right. Each page used to place the language and theme controls itself,
  * which is how two pages ended up with a different set of them.
+ *
+ * The tenant is not here. It used to be a select in this row, which put a
+ * destructive action — moving the whole tab to another tenant's data, throwing
+ * away every cached query — one stray click away from the theme toggle. It now
+ * sits in the account menu, where the rest of the session-wide actions are.
  */
 export function Header({ onOpenSidebar }: HeaderProps) {
   const { t } = useTranslation('nav');
@@ -38,7 +42,6 @@ export function Header({ onOpenSidebar }: HeaderProps) {
         {current === undefined ? '' : t(current.labelKey)}
       </h1>
 
-      <TenantSwitcher className="hidden sm:block" />
       <LanguageSwitcher />
       <ThemeToggle />
       <UserMenu />

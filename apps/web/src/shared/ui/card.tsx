@@ -12,7 +12,7 @@ export function Card({ isFlush = false, className, children, ...props }: CardPro
   return (
     <div
       className={cn(
-        'border-border bg-card rounded-surface border',
+        'border-border bg-card rounded-surface shadow-raised border',
         isFlush ? 'overflow-hidden' : 'p-4',
         className,
       )}

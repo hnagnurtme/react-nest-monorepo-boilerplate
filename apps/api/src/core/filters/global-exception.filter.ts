@@ -57,6 +57,17 @@ const PG_ERROR_MAP: Record<string, Mapped> = {
     code: ERROR_CODES.VALIDATION_FAILED,
     detail: 'A value violates a database constraint',
   },
+  /*
+   * An RLS policy refused the row, or a trigger raised 42501 because the user or
+   * role it was given is not visible to the caller. Either way the request asked
+   * for something this caller may not have, which is a 403 — reporting it as a
+   * 500 sends an operator hunting for a server fault that does not exist.
+   */
+  '42501': {
+    status: HttpStatus.FORBIDDEN,
+    code: ERROR_CODES.FORBIDDEN,
+    detail: 'You are not allowed to perform this action',
+  },
 };
 
 const TIMEOUT_SYSCALL_CODES = new Set(['ETIMEDOUT', 'ESOCKETTIMEDOUT', 'ECONNABORTED']);

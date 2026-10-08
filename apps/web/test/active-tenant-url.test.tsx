@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { RouteGuard } from '@/app/components/route-guard';
 import { useAuthStore } from '@/entities/session';
-import { AbilityProvider, TenantSwitcher, useActiveTenant } from '@/features/auth';
+import { AbilityProvider, useActiveTenant } from '@/features/auth';
 
 import { makeTenantAdmin, TENANT_ADMIN_GRANTS } from './fixtures/auth';
 import { mockApi } from './providers';
@@ -18,12 +18,19 @@ const TWO_TENANTS = [
 
 function Probe() {
   const location = useLocation();
-  const { activeTenant } = useActiveTenant();
+  const { activeTenant, switchTenant } = useActiveTenant();
   return (
     <div>
       <span data-testid="search">{location.search}</span>
       <span data-testid="active">{activeTenant?.slug ?? 'none'}</span>
-      <TenantSwitcher />
+      <button
+        type="button"
+        onClick={() => {
+          switchTenant('tenant-2');
+        }}
+      >
+        To Globex
+      </button>
     </div>
   );
 }
@@ -101,14 +108,14 @@ describe('the tenant in the URL', () => {
     expect(await screen.findByTestId('select-tenant')).toBeInTheDocument();
   });
 
-  it('moves the URL when the switcher moves the tenant', async () => {
+  it('moves the URL when the tenant is switched', async () => {
     const user = makeTenantAdmin({ tenants: TWO_TENANTS });
     mockApi(user, TENANT_ADMIN_GRANTS);
     useAuthStore.setState({ activeTenantId: 'tenant-1' });
     renderProbe('/users?tenant=acme');
 
     expect(await screen.findByTestId('active')).toHaveTextContent('acme');
-    await userEvent.selectOptions(screen.getByRole('combobox'), 'tenant-2');
+    await userEvent.click(screen.getByRole('button', { name: 'To Globex' }));
 
     expect(await screen.findByTestId('search')).toHaveTextContent('tenant=globex');
     expect(screen.getByTestId('active')).toHaveTextContent('globex');

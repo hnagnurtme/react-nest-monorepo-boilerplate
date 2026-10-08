@@ -175,6 +175,49 @@ describe('tenant isolation', () => {
     expect(rowCount).toBe(0);
   });
 
+  /*
+   * Postgres applies a policy's USING clause to the row an INSERT returns, and
+   * the users policy resolves tenant visibility through `user_tenants`. The
+   * membership has a foreign key to the row being inserted, so it cannot exist
+   * yet: `INSERT ... RETURNING` is refused, and `UsersRepository.create` must
+   * not use one. This pair is the regression guard — the refusal arrived as a
+   * 500 from `POST /users` for every tenant-scope caller.
+   */
+  it('refuses to return the row an insert just created, because the membership is not in yet', async () => {
+    await expect(
+      withContext({ accessMode: 'tenant', tenantId: tenantA.id }, async (client) =>
+        client.query(
+          `INSERT INTO users (email, password_hash, full_name, tenant_id)
+           VALUES ($1, 'x', 'Returning', $2) RETURNING id`,
+          [`returning-${randomUUID()}@example.test`, tenantA.id],
+        ),
+      ),
+    ).rejects.toThrow(/row-level security/iu);
+  });
+
+  it('accepts the same insert without RETURNING, then sees it once the membership exists', async () => {
+    const email = `no-returning-${randomUUID()}@example.test`;
+    const id = randomUUID();
+
+    const rows = await withContext(
+      { accessMode: 'tenant', tenantId: tenantA.id },
+      async (client) => {
+        await client.query(
+          `INSERT INTO users (id, email, password_hash, full_name, tenant_id)
+           VALUES ($1, $2, 'x', 'No Returning', $3)`,
+          [id, email, tenantA.id],
+        );
+        await client.query('INSERT INTO user_tenants (user_id, tenant_id) VALUES ($1, $2)', [
+          id,
+          tenantA.id,
+        ]);
+        return (await client.query<IdRow>('SELECT id FROM users WHERE id = $1', [id])).rows;
+      },
+    );
+
+    expect(rows).toEqual([{ id }]);
+  });
+
   it('a tenant cannot insert a row belonging to another tenant', async () => {
     await expect(
       withContext({ accessMode: 'tenant', tenantId: tenantA.id }, async (client) =>

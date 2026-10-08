@@ -2,7 +2,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
 
 import { useCreateTenant } from '@/features/tenants/api/use-create-tenant';
 import { useTenants } from '@/features/tenants/api/use-tenants';
@@ -12,24 +11,44 @@ import {
   type CreateTenantFormValues,
 } from '@/features/tenants/schemas/create-tenant.schema';
 import type { Tenant } from '@/features/tenants/types';
-import { useApiErrorMessage, usePageParam } from '@/shared/hooks';
 import {
+  urlNumber,
+  useApiErrorMessage,
+  usePageParam,
+  useUrlState,
+  type UrlStateSchema,
+} from '@/shared/hooks';
+import {
+  ActionsCell,
   Badge,
   Button,
   Card,
+  CodeCell,
+  ColumnVisibilityMenu,
   DataTable,
+  EmptyState,
   ErrorState,
   Input,
   PageHeader,
   PageShell,
   Pagination,
-  SkeletonTable,
-  TEXT_LINK,
+  TableToolbar,
+  TextCell,
+  useColumnVisibility,
   useToast,
   type DataTableColumn,
+  type DataTableState,
 } from '@/shared/ui';
 
-const PAGE_SIZE = 20;
+const DEFAULT_PAGE_SIZE = 20;
+
+/**
+ * `GET /tenants` takes neither `search` nor `sortBy`, so the page size is the
+ * only view state worth a URL param, and no column declares `sortable`.
+ */
+const VIEW_SCHEMA: UrlStateSchema<{ limit: number }> = {
+  limit: urlNumber(DEFAULT_PAGE_SIZE),
+};
 const CONFLICT_STATUS = 409;
 
 export function TenantsPage() {
@@ -39,7 +58,8 @@ export function TenantsPage() {
   const toMessage = useApiErrorMessage();
   const { page, goToPage } = usePageParam();
 
-  const { data, isPending, isError, refetch } = useTenants(page, PAGE_SIZE);
+  const [view, setView] = useUrlState(VIEW_SCHEMA, { resetPageOn: ['limit'] });
+  const { data, isPending, isError, isFetching, refetch } = useTenants(page, view.limit);
   const createTenant = useCreateTenant();
   const updateTenant = useUpdateTenant();
 
@@ -88,11 +108,25 @@ export function TenantsPage() {
   };
 
   const columns: readonly DataTableColumn<Tenant>[] = [
-    { key: 'name', header: t('columns.name'), cell: (tenant) => tenant.name },
-    { key: 'slug', header: t('columns.slug'), cell: (tenant) => tenant.slug },
     {
-      key: 'status',
+      id: 'name',
+      header: t('columns.name'),
+      kind: 'identity',
+      hideable: false,
+      cell: (tenant) => <TextCell value={tenant.name} />,
+    },
+    {
+      id: 'slug',
+      header: t('columns.slug'),
+      kind: 'code',
+      width: 'md',
+      cell: (tenant) => <CodeCell value={tenant.slug} />,
+    },
+    {
+      id: 'status',
       header: t('columns.status'),
+      kind: 'status',
+      width: 'sm',
       cell: (tenant) => (
         <Badge tone={tenant.isActive ? 'success' : 'neutral'}>
           {tenant.isActive ? t('status.active') : t('status.inactive')}
@@ -100,34 +134,44 @@ export function TenantsPage() {
       ),
     },
     {
-      key: 'actions',
+      id: 'actions',
       header: t('columns.actions'),
+      kind: 'actions',
+      width: 'sm',
+      hideable: false,
       cell: (tenant) => (
-        <Button
-          size="sm"
-          variant="outline"
-          disabled={updateTenant.isPending}
-          onClick={() => {
-            toggleActive(tenant);
-          }}
-        >
-          {tenant.isActive ? t('toggle.deactivate') : t('toggle.activate')}
-        </Button>
+        <ActionsCell>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={updateTenant.isPending}
+            onClick={() => {
+              toggleActive(tenant);
+            }}
+          >
+            {tenant.isActive ? t('toggle.deactivate') : t('toggle.activate')}
+          </Button>
+        </ActionsCell>
       ),
     },
   ];
 
+  const columnVisibility = useColumnVisibility('tenants-list', columns);
+
+  const tableState: DataTableState = isError
+    ? 'error'
+    : isPending
+      ? 'loading'
+      : data.items.length === 0
+        ? 'empty'
+        : isFetching
+          ? 'reloading'
+          : 'ready';
+
   return (
     <PageShell>
-      <PageHeader
-        title={t('title')}
-        subtitle={t('subtitle')}
-        actions={
-          <Link to="/" className={TEXT_LINK}>
-            {t('back')}
-          </Link>
-        }
-      />
+      {/* No `title`: the app bar already shows "Tenants" from the nav entry. */}
+      <PageHeader subtitle={t('subtitle')} />
 
       <Card>
         <form
@@ -158,46 +202,71 @@ export function TenantsPage() {
         </form>
       </Card>
 
-      {isPending ? <SkeletonTable columns={columns.length} label={t('loading')} /> : null}
-      {isError ? (
-        <ErrorState
-          title={t('error')}
-          action={
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                void refetch();
+      <DataTable
+        caption={t('title')}
+        columns={columnVisibility.visibleColumns}
+        rows={data?.items ?? []}
+        rowKey={(tenant) => tenant.id}
+        state={tableState}
+        pageSize={view.limit}
+        isRowDimmed={(tenant) => !tenant.isActive}
+        toolbar={
+          <TableToolbar
+            onReload={() => {
+              void refetch();
+            }}
+            reloadLabel={tCommon('actions.reload')}
+            isReloading={isFetching}
+            columnsControl={
+              <ColumnVisibilityMenu
+                {...columnVisibility}
+                label={tCommon('table.columns')}
+                resetLabel={tCommon('table.showAllColumns')}
+              />
+            }
+          />
+        }
+        footer={
+          data === undefined ? undefined : (
+            <Pagination
+              page={data.meta.page}
+              totalPages={data.meta.totalPages}
+              summary={t('pagination.summary', {
+                page: data.meta.page,
+                totalPages: Math.max(data.meta.totalPages, 1),
+                total: data.meta.total,
+              })}
+              previousLabel={t('pagination.previous')}
+              nextLabel={t('pagination.next')}
+              pageLabel={tCommon('pagination.page')}
+              onPageChange={goToPage}
+              pageSize={view.limit}
+              pageSizeLabel={tCommon('pagination.rowsPerPage')}
+              onPageSizeChange={(limit) => {
+                setView({ limit });
               }}
-            >
-              {tCommon('actions.retry')}
-            </Button>
-          }
-        />
-      ) : null}
-
-      {data ? (
-        <>
-          <DataTable
-            columns={columns}
-            rows={data.items}
-            rowKey={(tenant) => tenant.id}
-            emptyLabel={t('empty')}
+            />
+          )
+        }
+        emptyState={<EmptyState isInline title={t('empty')} />}
+        errorState={
+          <ErrorState
+            isInline
+            title={t('error')}
+            action={
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  void refetch();
+                }}
+              >
+                {tCommon('actions.retry')}
+              </Button>
+            }
           />
-          <Pagination
-            page={data.meta.page}
-            totalPages={data.meta.totalPages}
-            summary={t('pagination.summary', {
-              page: data.meta.page,
-              totalPages: Math.max(data.meta.totalPages, 1),
-              total: data.meta.total,
-            })}
-            previousLabel={t('pagination.previous')}
-            nextLabel={t('pagination.next')}
-            onPageChange={goToPage}
-          />
-        </>
-      ) : null}
+        }
+      />
     </PageShell>
   );
 }

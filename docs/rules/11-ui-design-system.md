@@ -35,19 +35,19 @@ Năm nhóm token bắt buộc:
 Tên token nói công dụng, không nói kích thước. Khi thiết kế đổi, giá trị đổi mà call site không phải sửa.
 
 ```css
-/* ❌ --radius-xl: 0.75rem;        tên nói hình dạng */
-/* ✅ --radius-control: 0.75rem;   tên nói công dụng */
+/* ❌ --radius-xl: 0.5rem;         tên nói hình dạng */
+/* ✅ --radius-control: 0.375rem;  tên nói công dụng */
 ```
 
-Bộ bán kính chuẩn hoá — thay cho việc trộn `rounded-md/lg/xl/2xl` tuỳ chỗ:
+Bộ bán kính chuẩn hoá — thay cho việc trộn `rounded-md/lg/xl/2xl` tuỳ chỗ. Năm bậc **có thứ bậc thật**: control nằm trong surface nằm trong overlay, nên lồng nhau đọc đúng lớp. Hai bậc bằng nhau (control = surface) làm phân cấp đọc phẳng, và 12px trên một control cao 36px nhìn thành viên thuốc:
 
 ```css
 @theme {
-  --radius-control: 0.75rem; /* button, input, select  */
-  --radius-surface: 0.75rem; /* card, panel            */
-  --radius-overlay: 1rem; /* dialog, popover        */
+  --radius-inner: 0.25rem; /* phần tử lồng trong control */
+  --radius-control: 0.375rem; /* button, input, select  */
+  --radius-surface: 0.5rem; /* card, panel            */
+  --radius-overlay: 0.75rem; /* dialog, popover        */
   --radius-pill: 9999px; /* badge, avatar          */
-  --radius-inner: 0.5rem; /* phần tử lồng trong card */
 }
 ```
 
@@ -83,7 +83,20 @@ Khai trong `@theme` (light) **và** `:root.dark`. Thêm token mới mà quên nh
 // ✅ <div className="bg-background text-foreground">
 ```
 
-Palette mặc định của Tailwind (`slate-*`, `blue-*`, `red-*`) **bị cấm như hex**: nó không theo theme. Chỉ token `--color-*` của dự án được dùng.
+Palette mặc định của Tailwind (`slate-*`, `blue-*`, `red-*`) **bị cấm như hex**: nó không theo theme. Chỉ token `--color-*` của dự án được dùng. `@theme` mở đầu bằng `--color-*: initial`, nên palette gốc không còn biên dịch được — `bg-slate-500` chết lúc build, không chờ reviewer.
+
+### A4b. Màu đi hai tầng 👀
+
+`globals.css` khai hai tầng, và **component chỉ được gọi tên tầng 2**:
+
+| Tầng                | Gồm                                                                                                                                                                                                                                                                  | Ai dùng                |
+| :------------------ | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------- |
+| 1 — thang màu       | `primary` / `base` / `success` / `warning` / `danger` / `info`, bậc 50→950                                                                                                                                                                                           | chỉ tầng 2 trỏ vào     |
+| 2 — token ngữ nghĩa | `background`, `card`, `muted`, `sunken`, `selected`, `foreground`, `foreground-secondary`, `muted-foreground`, `foreground-disabled`, `border`, `border-strong`, `input`, `ring`, `primary*`, `destructive*`, `success*`, `warning*`, `info*`, `overlay`, `tooltip*` | primitive và call site |
+
+Thang tồn tại để tầng 2 **chọn một bậc** thay vì bịa một hex — đó là thứ giữ cho nền, viền và hover của cùng một họ màu ăn nhau. Bề mặt có bốn bậc (`background` → `card` → `muted` → `sunken`): một card trùng màu nền trang thì chỉ còn cái viền nói rằng nó tồn tại.
+
+Dark mode override **chỉ tầng 2**. Một thang đổi theo theme thì không còn là thang nữa. `test/theme-contrast.test.ts` cưỡng chế cả hai điều: mọi cặp chữ-trên-nền đạt 4.5:1 ở cả hai theme, và khối `:root.dark` không chứa bậc thang nào.
 
 **Cưỡng chế:** 🤖 `scripts/check-ui-conventions.mjs` chặn `[#...]` và toàn bộ 22 họ màu gốc Tailwind (`bg-slate-500`, `text-red-600`, ...).
 
@@ -133,16 +146,16 @@ Khai token theo vai trò, không theo cỡ:
   --text-title: 1.5rem; /* tiêu đề trang (PageHeader) */
   --text-heading: 1.125rem; /* tiêu đề khối, tiêu đề dialog */
   --text-body: 0.875rem; /* nội dung, nhãn control md/lg */
-  --text-label: 0.75rem; /* nhãn field, badge, nhãn control sm */
-  --text-caption: 0.6875rem; /* chú thích, divider */
+  --text-label: 0.8125rem; /* nhãn field, nhãn control sm */
+  --text-caption: 0.6875rem; /* badge, header bảng, chú thích */
 }
 ```
 
-Sáu bậc, mỗi bậc kèm `--text-*--line-height`. Hai bậc chủ lực `text-body` và `text-label` phủ phần lớn giao diện. Cỡ chữ của tiêu đề trang do `PageHeader` quyết định, trang không tự viết.
+Sáu bậc, mỗi bậc kèm `--text-*--line-height` và `--text-*--letter-spacing`. Tracking là một phần của bậc, không phải tuỳ chọn: `display`/`title`/`heading` siết lại, `caption` nới ra — đó là khác biệt giữa một giao diện được sắp chữ và một giao diện dùng mặc định. Chữ là Inter (biến thiên) cho `font-sans` và JetBrains Mono 400 cho `font-mono`, self-host qua `@fontsource`, không CDN. `font-mono` dành cho ID, email, token, mã lỗi. Hai bậc chủ lực `text-body` và `text-label` phủ phần lớn giao diện. Cỡ chữ của tiêu đề trang do `PageHeader` quyết định, trang không tự viết.
 
 ### B3. Thang chiều cao control 👀
 
-Mọi phần tử tương tác dùng một trong ba chiều cao: `h-8` (sm), `h-10` (md, mặc định), `h-12` (lg). Thang này sống trong `shared/ui/control.ts` (`CONTROL_HEIGHT`, `CONTROL_PADDING`, `CONTROL_TEXT`) và `Button`, `Input`, `Select` đều lấy từ đó, nên một `Button size="md"` cạnh một `Input size="md"` tự khớp hàng. Chiều cao là `size` variant của primitive — call site **không** được override bằng `className="h-11"`.
+Mọi phần tử tương tác dùng một trong ba chiều cao: `h-8` (sm, 32px), `h-9` (md, 36px, mặc định), `h-11` (lg, 44px). Đây là admin console: control md 40px kéo hàng bảng lên 56px và giảm nửa số dòng một trang hiển thị được; 44px giữ lại cho hành động chính và cho cảm ứng. Control vuông (icon button, ô hành động trong cell) lấy `CONTROL_SIZE` cùng thang. Hàng bảng dùng `h-row` (3rem) hoặc `h-row-compact` (2.5rem), không dùng padding để quyết chiều cao. Thang này sống trong `shared/ui/control.ts` (`CONTROL_HEIGHT`, `CONTROL_PADDING`, `CONTROL_TEXT`, `CONTROL_SIZE`) và `Button`, `Input`, `Select` đều lấy từ đó, nên một `Button size="md"` cạnh một `Input size="md"` tự khớp hàng. Chiều cao là `size` variant của primitive — call site **không** được override bằng `className="h-11"`.
 
 ### B4. Thang kích thước icon 🤖
 
@@ -226,9 +239,20 @@ Class không tiền tố là điện thoại; `sm:` `md:` `lg:` mở rộng lên
 `overflow-x-auto` không phải thiết kế responsive. `DataTable` giải quyết sẵn bằng hai cơ chế, không cần trang tự lo:
 
 - Mỗi `<td>` mang `data-label` là tiêu đề cột; dưới `md`, CSS trong `globals.css` (`table[data-stacked]`) xếp mỗi dòng thành danh sách nhãn/giá trị. Đây là một trong vài chỗ buộc phải viết CSS toàn cục: `content: attr(data-label)` không diễn đạt được bằng utility.
-- Cột khai `priority: 'secondary'` bị ẩn hẳn trên điện thoại (`hidden md:table-cell`) thay vì đẩy bảng tràn ngang.
+- Cột khai `priority: 2` ẩn dưới `lg`, `priority: 3` ẩn dưới `xl`, thay vì đẩy bảng tràn ngang. Dưới `md` bảng xếp dọc nên mọi cột quay lại.
 
 Chỉ một cây DOM cho cả hai bố cục, nên không có nội dung nhân đôi cho trình đọc màn hình.
+
+### D8. Danh sách admin dùng chung một bộ bảng 👀
+
+`shared/ui/table/` là bộ duy nhất: `DataTable`, `DataTableHeader`, `TableToolbar`, `FilterChips`, `ColumnVisibilityMenu`, `useColumnVisibility`, `cells.tsx`, `sort-state.ts`. Trang khai cột, không tự viết `<table>`.
+
+- **Sáu trạng thái**: `loading` (skeleton đúng hình cell), `reloading` (giữ dòng cũ, chỉ đánh dấu cũ), `ready`, `empty`, `no-results`, `error`. `empty` và `no-results` **không được gộp**: một danh sách rỗng mời tạo dòng đầu tiên, một bộ lọc không khớp mời xoá bộ lọc.
+- Mọi trạng thái render **bên trong** vỏ bảng. Bộ lọc không khớp không được lấy đi cái toolbar để xoá nó, lỗi không được lấy đi nút tải lại. `EmptyState`/`ErrorState` dùng `isInline` khi nằm trong `<td>`.
+- **Không có `onRowClick`**. Một hàng điều hướng phải chặn click của mọi control bên trong, và không tới được bằng bàn phím nếu không giả vờ `<tr>` là button. Điều hướng thuộc về `IdentityCell` — một `<Link>` thật.
+- Cột `sortable` phải mang `id` là field API **allow-list** cho `sortBy` (xem repository), nếu không API trả 422. Sort đi 3 bước: tăng, giảm, tắt — bước thứ ba đưa danh sách về thứ tự mặc định của API.
+- Thiếu giá trị in `EMPTY_CELL` (`—`), không bao giờ để trống, `N/A` hay `null`.
+- `useColumnVisibility` lưu localStorage theo `tableId`: đó là sở thích đọc của một người, không phải phần của view mà một link phải tái hiện — sort, filter, page thì ngược lại, chúng thuộc URL (`useUrlState`).
 
 ---
 
@@ -244,14 +268,15 @@ Chỉ một cây DOM cho cả hai bố cục, nên không có nội dung nhân �
 
 Không được viết giao diện khi primitive tương ứng còn thiếu — viết primitive trước.
 
-| Nhóm       | Primitive                                                                                    |
-| :--------- | :------------------------------------------------------------------------------------------- |
-| Hành động  | `Button`, `IconButton`, `LinkButton`, `TEXT_LINK`                                            |
-| Nhập liệu  | `Input`, `Textarea`, `Select`, `CheckboxField`, `Label`, `FieldError`                        |
-| Bề mặt     | `Card`, `Dialog`, `ConfirmDialog`, `Divider`, `DividerLabel`                                 |
-| Hiển thị   | `Badge`, `DataTable`, `Pagination`, `IconText`, `SegmentedControl`                           |
-| Trạng thái | `Spinner`, `Skeleton`, `SkeletonTable`, `EmptyState`, `ErrorState`, `Alert`, `ToastProvider` |
-| Bố cục     | `PageShell`, `PageHeader`, `Stack`                                                           |
+| Nhóm       | Primitive                                                                                                                                                            |
+| :--------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Hành động  | `Button`, `IconButton`, `LinkButton`, `TEXT_LINK`                                                                                                                    |
+| Nhập liệu  | `Input`, `Textarea`, `Select`, `CheckboxField`, `Label`, `FieldError`                                                                                                |
+| Bề mặt     | `Card`, `Dialog`, `ConfirmDialog`, `Divider`, `DividerLabel`                                                                                                         |
+| Hiển thị   | `Badge`, `DataTable`, `Pagination`, `IconText`, `SegmentedControl`                                                                                                   |
+| Bảng       | `TableToolbar`, `FilterChips`, `ColumnVisibilityMenu`, `TextCell`/`IdentityCell`/`CodeCell`/`NumberCell`/`DateTimeCell`/`BooleanCell`/`BadgeGroupCell`/`ActionsCell` |
+| Trạng thái | `Spinner`, `Skeleton`, `SkeletonTable`, `EmptyState`, `ErrorState`, `Alert`, `ToastProvider`                                                                         |
+| Bố cục     | `PageShell`, `PageHeader`, `Stack`                                                                                                                                   |
 
 ### E3. Mọi trạng thái đều có giao diện riêng 👀
 
