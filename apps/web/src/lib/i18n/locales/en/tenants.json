@@ -1,7 +1,6 @@
 {
   "title": "Tenants",
   "subtitle": "Organizations on the platform.",
-  "back": "Home",
   "loading": "Loading tenants...",
   "error": "Could not load tenants.",
   "empty": "No tenants found.",

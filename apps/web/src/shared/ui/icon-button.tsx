@@ -3,6 +3,7 @@ import { type ButtonHTMLAttributes, type ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
 
+import { CONTROL_SIZE } from './control';
 import { FOCUS_RING } from './focus-ring';
 
 /**
@@ -25,8 +26,8 @@ const iconButtonVariants = cva(
         subtle: 'bg-muted text-muted-foreground hover:text-foreground',
       },
       size: {
-        sm: 'size-8',
-        md: 'size-10',
+        sm: CONTROL_SIZE.sm,
+        md: CONTROL_SIZE.md,
       },
     },
     defaultVariants: { variant: 'ghost', size: 'md' },

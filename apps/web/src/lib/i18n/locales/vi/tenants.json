@@ -1,7 +1,6 @@
 {
   "title": "Tenant",
   "subtitle": "Các tổ chức trên nền tảng.",
-  "back": "Trang chủ",
   "loading": "Đang tải danh sách tenant...",
   "error": "Không thể tải danh sách tenant.",
   "empty": "Không có tenant.",

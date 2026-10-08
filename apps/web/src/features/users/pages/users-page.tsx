@@ -1,52 +1,75 @@
 import { subject } from '@casl/ability';
-import { Search, Users, X } from 'lucide-react';
+import { Plus, Users } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
 
 import { useAuthStore } from '@/entities/session';
 import { CanAction, useAbility } from '@/features/auth';
 import { useDeleteUser } from '@/features/users/api/use-delete-user';
 import { useResendInvitation } from '@/features/users/api/use-resend-invitation';
 import { useUpdateUser } from '@/features/users/api/use-update-user';
-import { useUsers } from '@/features/users/api/use-users';
+import { USER_SORT_FIELDS, useUsers } from '@/features/users/api/use-users';
 import { CreateUserForm } from '@/features/users/components/create-user-form';
 import { EditUserRolesDialog } from '@/features/users/components/edit-user-roles-dialog';
 import { PendingInvitations } from '@/features/users/components/pending-invitations';
 import type { UserListItem } from '@/features/users/types';
 import {
+  urlNumber,
+  urlString,
   useApiErrorMessage,
   useDebouncedSearchParam,
   useDisclosure,
   useFormatters,
   usePageParam,
+  useUrlState,
+  type UrlStateSchema,
 } from '@/shared/hooks';
 import {
+  ActionsCell,
   Badge,
+  BadgeGroupCell,
   Button,
+  ColumnVisibilityMenu,
   ConfirmDialog,
   DataTable,
+  DateTimeCell,
   EmptyState,
   ErrorState,
-  IconButton,
-  Input,
   PageHeader,
   PageShell,
   Pagination,
-  SkeletonTable,
-  Stack,
-  TEXT_LINK,
+  TableToolbar,
+  TextCell,
+  parseSort,
+  serializeSort,
+  useColumnVisibility,
   useToast,
   type DataTableColumn,
+  type DataTableState,
 } from '@/shared/ui';
 
-const PAGE_SIZE = 20;
+const DEFAULT_PAGE_SIZE = 20;
+
+/**
+ * The part of the view that belongs in the URL: a sorted, paged list has to be
+ * reproducible from a pasted link. `limit` is here too — "show me 100" should
+ * survive a reload.
+ */
+const VIEW_SCHEMA: UrlStateSchema<{ sort: string; limit: number }> = {
+  sort: urlString(''),
+  limit: urlNumber(DEFAULT_PAGE_SIZE),
+};
 
 export function UsersPage() {
   const { t } = useTranslation('users');
   const { t: tCommon } = useTranslation('common');
   const { page, goToPage } = usePageParam();
   const search = useDebouncedSearchParam();
+  const [view, setView] = useUrlState(VIEW_SCHEMA, { resetPageOn: ['sort', 'limit'] });
+  // A column may only sort by a field the API allow-lists, or it 422s.
+  const sort = parseSort(view.sort);
+  const isSortable = (field: string): boolean =>
+    (USER_SORT_FIELDS as readonly string[]).includes(field);
 
   const { showToast } = useToast();
   const toMessage = useApiErrorMessage();
@@ -57,7 +80,12 @@ export function UsersPage() {
   const [editingRolesId, setEditingRolesId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<UserListItem | null>(null);
 
-  const { data, isPending, isError, isFetching, refetch } = useUsers(page, PAGE_SIZE, search.value);
+  const { data, isPending, isError, isFetching, refetch } = useUsers(
+    page,
+    view.limit,
+    search.value,
+    sort,
+  );
   const editingRoles = data?.items.find((user) => user.id === editingRolesId);
   const updateUser = useUpdateUser();
   const deleteUser = useDeleteUser();
@@ -119,41 +147,64 @@ export function UsersPage() {
   };
 
   const columns: readonly DataTableColumn<UserListItem>[] = [
-    { key: 'fullName', header: t('columns.fullName'), cell: (user) => user.fullName },
-    { key: 'email', header: t('columns.email'), cell: (user) => user.email },
     {
-      key: 'roles',
+      id: 'fullName',
+      header: t('columns.fullName'),
+      kind: 'identity',
+      sortable: isSortable('fullName'),
+      hideable: false,
+      cell: (user) => <TextCell value={user.fullName} />,
+    },
+    {
+      id: 'email',
+      header: t('columns.email'),
+      sortable: isSortable('email'),
+      cell: (user) => <TextCell value={user.email} />,
+    },
+    {
+      id: 'roles',
       header: t('columns.role'),
+      kind: 'badge',
       cell: (user) => (
-        <div className="flex flex-wrap gap-1">
+        <BadgeGroupCell>
           {user.roles.map((role) => (
             <Badge key={role.id}>{role.name}</Badge>
           ))}
-        </div>
+        </BadgeGroupCell>
       ),
     },
     {
-      key: 'createdAt',
+      id: 'createdAt',
       header: t('columns.createdAt'),
-      cell: (user) => format.date(user.createdAt),
+      kind: 'datetime',
+      width: 'sm',
+      // Second to drop on a narrow window: it is the least load-bearing column.
+      priority: 2,
+      sortable: isSortable('createdAt'),
+      cell: (user) => <DateTimeCell value={format.date(user.createdAt)} />,
     },
     {
-      key: 'status',
+      id: 'status',
       header: t('columns.status'),
+      kind: 'status',
+      width: 'sm',
       cell: (user) => (
-        <div className="flex flex-wrap gap-1">
+        <BadgeGroupCell>
           <Badge tone={user.isActive ? 'success' : 'neutral'}>
             {user.isActive ? t('status.active') : t('status.inactive')}
           </Badge>
           {isPendingInvite(user) ? <Badge tone="warning">{t('status.pendingInvite')}</Badge> : null}
-        </div>
+        </BadgeGroupCell>
       ),
     },
     {
-      key: 'actions',
+      id: 'actions',
       header: t('columns.actions'),
+      kind: 'actions',
+      width: 'lg',
+      hideable: false,
       cell: (user) => (
-        <div className="flex flex-wrap gap-2">
+        <ActionsCell>
           {canUpdate(user) ? (
             <>
               <Button
@@ -201,53 +252,44 @@ export function UsersPage() {
               {t('actions.delete')}
             </Button>
           ) : null}
-        </div>
+        </ActionsCell>
       ),
     },
   ];
 
-  const hasRows = data !== undefined && data.items.length > 0;
+  const columnVisibility = useColumnVisibility('users-list', columns);
   const isSearching = search.value !== '';
+
+  /*
+   * One expression, read top to bottom, instead of four sibling blocks each
+   * guarding a different combination of flags: an error wins over a load, a
+   * first load over a refetch, and an empty result only counts as "nothing here"
+   * when no search narrowed it.
+   */
+  const tableState: DataTableState = isError
+    ? 'error'
+    : isPending
+      ? 'loading'
+      : data.items.length > 0
+        ? isFetching
+          ? 'reloading'
+          : 'ready'
+        : isSearching
+          ? 'no-results'
+          : 'empty';
 
   return (
     <PageShell>
+      {/* No `title`: the app bar already shows "Users" from the nav entry. */}
       <PageHeader
-        title={t('title')}
         subtitle={t('subtitle')}
         actions={
-          <>
-            <CanAction I="create" a="User">
-              <Button size="sm" onClick={createForm.toggle}>
-                {t('create.open')}
-              </Button>
-            </CanAction>
-            <Link to="/" className={TEXT_LINK}>
-              {t('back')}
-            </Link>
-          </>
-        }
-      />
-
-      <Input
-        id="users-search"
-        type="search"
-        autoComplete="off"
-        aria-label={t('search.label')}
-        placeholder={t('search.placeholder')}
-        value={search.inputValue}
-        onChange={(event) => {
-          search.setInputValue(event.target.value);
-        }}
-        startIcon={<Search className="size-4" />}
-        endAction={
-          search.inputValue === '' ? undefined : (
-            <IconButton
-              size="sm"
-              label={t('search.clear')}
-              onClick={search.clear}
-              icon={<X className="size-4" aria-hidden="true" />}
-            />
-          )
+          <CanAction I="create" a="User">
+            <Button size="sm" onClick={createForm.toggle}>
+              <Plus aria-hidden="true" className="size-4" />
+              {t('create.open')}
+            </Button>
+          </CanAction>
         }
       />
 
@@ -259,57 +301,102 @@ export function UsersPage() {
 
       <PendingInvitations />
 
-      {isPending ? <SkeletonTable columns={columns.length} label={t('loading')} /> : null}
-      {isError ? (
-        <ErrorState
-          title={t('error')}
-          action={
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                void refetch();
-              }}
-            >
-              {tCommon('actions.retry')}
-            </Button>
-          }
-        />
-      ) : null}
-
-      {/* A refetch keeps the current rows on screen; only the first load blanks it. */}
-      {data !== undefined && isFetching ? (
-        <p role="status" className="text-muted-foreground text-label">
-          {t('loading')}
-        </p>
-      ) : null}
-
-      {hasRows ? (
-        <Stack gap="normal">
-          <DataTable columns={columns} rows={data.items} rowKey={(user) => user.id} emptyLabel="" />
-          <Pagination
-            page={data.meta.page}
-            totalPages={data.meta.totalPages}
-            summary={t('pagination.summary', {
-              page: data.meta.page,
-              totalPages: Math.max(data.meta.totalPages, 1),
-              total: data.meta.total,
-            })}
-            previousLabel={t('pagination.previous')}
-            nextLabel={t('pagination.next')}
-            onPageChange={goToPage}
+      <DataTable
+        caption={t('title')}
+        columns={columnVisibility.visibleColumns}
+        rows={data?.items ?? []}
+        rowKey={(user) => user.id}
+        state={tableState}
+        pageSize={view.limit}
+        sort={sort}
+        onSortChange={(next) => {
+          setView({ sort: serializeSort(next) });
+        }}
+        sortLabel={tCommon('table.sortBy')}
+        toolbar={
+          <TableToolbar
+            searchValue={search.inputValue}
+            onSearchChange={search.setInputValue}
+            searchLabel={t('search.label')}
+            searchPlaceholder={t('search.placeholder')}
+            clearSearchLabel={t('search.clear')}
+            onReload={() => {
+              void refetch();
+            }}
+            reloadLabel={tCommon('actions.reload')}
+            isReloading={isFetching}
+            columnsControl={
+              <ColumnVisibilityMenu
+                {...columnVisibility}
+                label={tCommon('table.columns')}
+                resetLabel={tCommon('table.showAllColumns')}
+              />
+            }
           />
-        </Stack>
-      ) : null}
-
-      {data !== undefined && !hasRows ? (
+        }
+        footer={
+          data === undefined ? undefined : (
+            <Pagination
+              page={data.meta.page}
+              totalPages={data.meta.totalPages}
+              summary={t('pagination.summary', {
+                page: data.meta.page,
+                totalPages: Math.max(data.meta.totalPages, 1),
+                total: data.meta.total,
+              })}
+              previousLabel={t('pagination.previous')}
+              nextLabel={t('pagination.next')}
+              pageLabel={tCommon('pagination.page')}
+              onPageChange={goToPage}
+              pageSize={view.limit}
+              pageSizeLabel={tCommon('pagination.rowsPerPage')}
+              onPageSizeChange={(limit) => {
+                setView({ limit });
+              }}
+            />
+          )
+        }
         // No call to action here: the header already carries "Create user", and a
         // second control with the same name is a worse page, not a better one.
-        <EmptyState
-          icon={<Users className="size-8" aria-hidden="true" />}
-          title={isSearching ? t('search.empty', { term: search.value }) : t('empty')}
-        />
-      ) : null}
+        emptyState={
+          <EmptyState
+            isInline
+            icon={<Users className="size-8" aria-hidden="true" />}
+            title={t('empty')}
+          />
+        }
+        noResultsState={
+          <EmptyState
+            isInline
+            title={t('search.empty', { term: search.value })}
+            action={
+              // Not "Clear search": the toolbar's own clear button already
+              // carries that name, and two buttons with one name is ambiguous
+              // to anyone navigating by label.
+              <Button size="sm" variant="outline" onClick={search.clear}>
+                {tCommon('table.clearFilters')}
+              </Button>
+            }
+          />
+        }
+        errorState={
+          <ErrorState
+            isInline
+            title={t('error')}
+            action={
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  void refetch();
+                }}
+              >
+                {tCommon('actions.retry')}
+              </Button>
+            }
+          />
+        }
+      />
 
       {editingRoles ? (
         <EditUserRolesDialog

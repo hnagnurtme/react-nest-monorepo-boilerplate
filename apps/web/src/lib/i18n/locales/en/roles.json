@@ -1,7 +1,6 @@
 {
   "title": "Roles",
   "subtitle": "Who can do what in your workspace.",
-  "back": "Home",
   "loading": "Loading...",
   "error": "Could not load roles.",
   "empty": "No roles found.",

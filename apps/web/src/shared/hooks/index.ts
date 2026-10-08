@@ -9,6 +9,15 @@ export { useLocalStorage } from './use-local-storage';
 export { useMediaQuery } from './use-media-query';
 export { usePageParam, FIRST_PAGE, type PageParam } from './use-page-param';
 export {
+  urlBoolean,
+  urlNumber,
+  urlString,
+  useUrlState,
+  type UrlField,
+  type UrlStateSchema,
+  type UseUrlStateOptions,
+} from './use-url-state';
+export {
   useTheme,
   THEME_STORAGE_KEY,
   type ResolvedTheme,

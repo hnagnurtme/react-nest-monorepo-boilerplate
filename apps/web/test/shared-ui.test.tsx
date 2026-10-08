@@ -82,13 +82,14 @@ interface Row {
 }
 
 const ROW_COLUMNS: readonly DataTableColumn<Row>[] = [
-  { key: 'name', header: 'Name', cell: (row) => row.name },
+  { id: 'name', header: 'Name', cell: (row) => row.name },
 ];
 
 describe('DataTable', () => {
   it('renders one row per item under the declared headers', () => {
     render(
       <DataTable
+        caption="People"
         columns={ROW_COLUMNS}
         rows={[
           { id: '1', name: 'Ada' },
@@ -106,7 +107,13 @@ describe('DataTable', () => {
 
   it('spans the empty message across every column', () => {
     render(
-      <DataTable columns={ROW_COLUMNS} rows={[]} rowKey={(row) => row.id} emptyLabel="No rows" />,
+      <DataTable
+        caption="People"
+        columns={ROW_COLUMNS}
+        rows={[]}
+        rowKey={(row) => row.id}
+        emptyLabel="No rows"
+      />,
     );
 
     expect(screen.getByText('No rows')).toHaveAttribute('colspan', '1');
@@ -277,6 +284,7 @@ describe('DataTable responsive layout', () => {
   it('stamps each cell with its column header so phones can stack the row', () => {
     render(
       <DataTable
+        caption="People"
         columns={ROW_COLUMNS}
         rows={[{ id: '1', name: 'Ada' }]}
         rowKey={(row) => row.id}

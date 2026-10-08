@@ -1,34 +1,58 @@
+import { Plus } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
 
 import { CanAction } from '@/features/auth';
 import { usePermissionOptions, useRoles } from '@/features/roles/api/use-roles';
 import { CreateRoleDialog } from '@/features/roles/components/create-role-dialog';
 import { RoleEditorDialog } from '@/features/roles/components/role-editor-dialog';
 import type { RoleItem } from '@/features/roles/types';
-import { useDisclosure, usePageParam } from '@/shared/hooks';
 import {
+  urlNumber,
+  useDisclosure,
+  usePageParam,
+  useUrlState,
+  type UrlStateSchema,
+} from '@/shared/hooks';
+import {
+  ActionsCell,
   Badge,
   Button,
+  CodeCell,
+  ColumnVisibilityMenu,
   DataTable,
+  EmptyState,
   ErrorState,
+  NumberCell,
   PageHeader,
   PageShell,
   Pagination,
-  SkeletonTable,
-  TEXT_LINK,
+  TableToolbar,
+  TextCell,
+  useColumnVisibility,
   type DataTableColumn,
+  type DataTableState,
 } from '@/shared/ui';
 
-const PAGE_SIZE = 20;
+const DEFAULT_PAGE_SIZE = 20;
+
+/**
+ * `GET /roles` takes neither `search` nor `sortBy`, so the only view state worth
+ * keeping in the URL is the page size. No column declares `sortable`: a header
+ * that cycles an arrow while the order never changes is worse than no header
+ * control at all.
+ */
+const VIEW_SCHEMA: UrlStateSchema<{ limit: number }> = {
+  limit: urlNumber(DEFAULT_PAGE_SIZE),
+};
 
 export function RolesPage() {
   const { t } = useTranslation('roles');
   const { t: tCommon } = useTranslation('common');
   const { page, goToPage } = usePageParam();
 
-  const { data, isPending, isError, refetch } = useRoles(page, PAGE_SIZE);
+  const [view, setView] = useUrlState(VIEW_SCHEMA, { resetPageOn: ['limit'] });
+  const { data, isPending, isError, isFetching, refetch } = useRoles(page, view.limit);
   const permissionOptions = usePermissionOptions();
   const options = permissionOptions.data ?? [];
 
@@ -38,107 +62,152 @@ export function RolesPage() {
 
   const columns: readonly DataTableColumn<RoleItem>[] = [
     {
-      key: 'name',
+      id: 'name',
       header: t('columns.name'),
+      kind: 'identity',
+      hideable: false,
       cell: (role) => (
-        <span className="inline-flex items-center gap-2">
-          {role.name}
+        <span className="inline-flex min-w-0 items-center gap-2">
+          <TextCell value={role.name} />
           {role.isSystem ? <Badge>{t('system')}</Badge> : null}
         </span>
       ),
     },
     {
-      key: 'key',
+      id: 'key',
       header: t('columns.key'),
-      cell: (role) => <code className="text-label">{role.key}</code>,
+      kind: 'code',
+      width: 'md',
+      cell: (role) => <CodeCell value={role.key} />,
     },
     {
-      key: 'scope',
+      id: 'scope',
       header: t('columns.scope'),
+      width: 'sm',
+      priority: 2,
       cell: (role) => (role.scope === 'platform' ? t('scope.platform') : t('scope.tenant')),
     },
     {
-      key: 'permissions',
+      id: 'permissions',
       header: t('columns.permissions'),
-      cell: (role) => role.permissions.length,
+      kind: 'number',
+      width: 'xs',
+      cell: (role) => <NumberCell value={role.permissions.length} />,
     },
     {
-      key: 'actions',
+      id: 'actions',
       header: t('columns.actions'),
+      kind: 'actions',
+      width: 'sm',
+      hideable: false,
       cell: (role) => (
-        <Button
-          size="sm"
-          variant="outline"
-          aria-label={t('open', { name: role.name })}
-          onClick={() => {
-            setEditingId(role.id);
-          }}
-        >
-          {role.isSystem ? t('view') : t('manage')}
-        </Button>
+        <ActionsCell>
+          <Button
+            size="sm"
+            variant="outline"
+            aria-label={t('open', { name: role.name })}
+            onClick={() => {
+              setEditingId(role.id);
+            }}
+          >
+            {role.isSystem ? t('view') : t('manage')}
+          </Button>
+        </ActionsCell>
       ),
     },
   ];
 
+  const columnVisibility = useColumnVisibility('roles-list', columns);
+
+  const tableState: DataTableState = isError
+    ? 'error'
+    : isPending
+      ? 'loading'
+      : data.items.length === 0
+        ? 'empty'
+        : isFetching
+          ? 'reloading'
+          : 'ready';
+
   return (
     <PageShell>
+      {/* No `title`: the app bar already shows "Roles" from the nav entry. */}
       <PageHeader
-        title={t('title')}
         subtitle={t('subtitle')}
         actions={
-          <>
-            <CanAction I="create" a="Role">
-              <Button size="sm" onClick={createDialog.open}>
-                {t('create.open')}
-              </Button>
-            </CanAction>
-            <Link to="/" className={TEXT_LINK}>
-              {t('back')}
-            </Link>
-          </>
+          <CanAction I="create" a="Role">
+            <Button size="sm" onClick={createDialog.open}>
+              <Plus aria-hidden="true" className="size-4" />
+              {t('create.open')}
+            </Button>
+          </CanAction>
         }
       />
 
-      {isPending ? <SkeletonTable columns={columns.length} label={t('loading')} /> : null}
-      {isError ? (
-        <ErrorState
-          title={t('error')}
-          action={
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                void refetch();
+      <DataTable
+        caption={t('title')}
+        columns={columnVisibility.visibleColumns}
+        rows={data?.items ?? []}
+        rowKey={(role) => role.id}
+        state={tableState}
+        pageSize={view.limit}
+        toolbar={
+          <TableToolbar
+            onReload={() => {
+              void refetch();
+            }}
+            reloadLabel={tCommon('actions.reload')}
+            isReloading={isFetching}
+            columnsControl={
+              <ColumnVisibilityMenu
+                {...columnVisibility}
+                label={tCommon('table.columns')}
+                resetLabel={tCommon('table.showAllColumns')}
+              />
+            }
+          />
+        }
+        footer={
+          data === undefined ? undefined : (
+            <Pagination
+              page={data.meta.page}
+              totalPages={data.meta.totalPages}
+              summary={t('pagination.summary', {
+                page: data.meta.page,
+                totalPages: Math.max(data.meta.totalPages, 1),
+                total: data.meta.total,
+              })}
+              previousLabel={t('pagination.previous')}
+              nextLabel={t('pagination.next')}
+              pageLabel={tCommon('pagination.page')}
+              onPageChange={goToPage}
+              pageSize={view.limit}
+              pageSizeLabel={tCommon('pagination.rowsPerPage')}
+              onPageSizeChange={(limit) => {
+                setView({ limit });
               }}
-            >
-              {tCommon('actions.retry')}
-            </Button>
-          }
-        />
-      ) : null}
-
-      {data ? (
-        <>
-          <DataTable
-            columns={columns}
-            rows={data.items}
-            rowKey={(role) => role.id}
-            emptyLabel={t('empty')}
+            />
+          )
+        }
+        emptyState={<EmptyState isInline title={t('empty')} />}
+        errorState={
+          <ErrorState
+            isInline
+            title={t('error')}
+            action={
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  void refetch();
+                }}
+              >
+                {tCommon('actions.retry')}
+              </Button>
+            }
           />
-          <Pagination
-            page={data.meta.page}
-            totalPages={data.meta.totalPages}
-            summary={t('pagination.summary', {
-              page: data.meta.page,
-              totalPages: Math.max(data.meta.totalPages, 1),
-              total: data.meta.total,
-            })}
-            previousLabel={t('pagination.previous')}
-            nextLabel={t('pagination.next')}
-            onPageChange={goToPage}
-          />
-        </>
-      ) : null}
+        }
+      />
 
       {createDialog.isOpen ? (
         <CanAction I="create" a="Role">

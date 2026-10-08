@@ -10,8 +10,39 @@ export {
 export { Card, type CardProps } from './card';
 export { CheckboxField, type CheckboxFieldProps } from './checkbox-field';
 export { ConfirmDialog, type ConfirmDialogProps } from './confirm-dialog';
-export { CONTROL_HEIGHT, type ControlSize } from './control';
-export { DataTable, type DataTableColumn, type DataTableProps } from './data-table';
+export { CONTROL_HEIGHT, CONTROL_SIZE, type ControlSize } from './control';
+export {
+  ActionsCell,
+  BadgeGroupCell,
+  BooleanCell,
+  CodeCell,
+  ColumnVisibilityMenu,
+  DataTable,
+  DataTableHeader,
+  DateTimeCell,
+  EMPTY_CELL,
+  EmptyCell,
+  FilterChips,
+  IdentityCell,
+  NumberCell,
+  TableToolbar,
+  TextCell,
+  nextSort,
+  parseSort,
+  serializeSort,
+  useColumnVisibility,
+  type ColumnAlign,
+  type ColumnKind,
+  type ColumnVisibility,
+  type ColumnWidth,
+  type DataTableColumn,
+  type DataTableProps,
+  type DataTableState,
+  type FilterChip,
+  type SortDirection,
+  type SortState,
+  type TableToolbarProps,
+} from './table';
 export { Dialog, type DialogProps, type DialogWidth } from './dialog';
 export { Divider } from './divider';
 export { DividerLabel } from './divider-label';

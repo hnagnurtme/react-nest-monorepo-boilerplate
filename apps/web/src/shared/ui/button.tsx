@@ -27,7 +27,8 @@ export const buttonVariants = cva(
         secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
         outline: 'border-border bg-card text-foreground hover:bg-muted border',
         ghost: 'text-foreground hover:bg-muted',
-        destructive: 'bg-destructive text-destructive-foreground hover:opacity-90',
+        destructive:
+          'border-destructive-stroke bg-destructive text-destructive-foreground hover:bg-destructive-hover border',
       },
       size: {
         sm: cn(CONTROL_HEIGHT.sm, CONTROL_PADDING.sm, CONTROL_TEXT.sm),

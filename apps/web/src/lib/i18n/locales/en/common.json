@@ -1,32 +1,14 @@
 {
   "actions": {
-    "save": "Save",
+    "back": "Back",
     "cancel": "Cancel",
+    "clearSearch": "Clear search",
     "close": "Close",
-    "delete": "Delete",
     "confirm": "Confirm",
+    "delete": "Delete",
+    "reload": "Reload",
     "retry": "Try again",
-    "back": "Back"
-  },
-  "state": {
-    "loading": "Loading...",
-    "saving": "Saving...",
-    "empty": "No data yet",
-    "error": "Could not load the data."
-  },
-  "pagination": {
-    "previous": "Previous",
-    "next": "Next"
-  },
-  "language": {
-    "label": "Language",
-    "en": "English",
-    "vi": "Vietnamese"
-  },
-  "theme": {
-    "label": "Theme",
-    "toLight": "Switch to light theme",
-    "toDark": "Switch to dark theme"
+    "save": "Save"
   },
   "errors": {
     "forbidden": "You do not have permission to do that.",
@@ -34,5 +16,33 @@
     "invalid": "The data sent is invalid.",
     "notFound": "The item no longer exists.",
     "unexpected": "Something went wrong. Please try again."
+  },
+  "language": {
+    "label": "Language",
+    "en": "English",
+    "vi": "Vietnamese"
+  },
+  "pagination": {
+    "next": "Next",
+    "page": "Page {{page}}",
+    "previous": "Previous",
+    "rowsPerPage": "Rows"
+  },
+  "state": {
+    "loading": "Loading...",
+    "saving": "Saving...",
+    "empty": "No data yet",
+    "error": "Could not load the data."
+  },
+  "table": {
+    "clearFilters": "Clear all filters",
+    "columns": "Choose columns",
+    "showAllColumns": "Show all columns",
+    "sortBy": "Sort by {{column}}"
+  },
+  "theme": {
+    "label": "Theme",
+    "toLight": "Switch to light theme",
+    "toDark": "Switch to dark theme"
   }
 }

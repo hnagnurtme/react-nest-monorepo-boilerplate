@@ -1,32 +1,14 @@
 {
   "actions": {
-    "save": "Lưu",
+    "back": "Quay lại",
     "cancel": "Huỷ",
+    "clearSearch": "Xoá tìm kiếm",
     "close": "Đóng",
-    "delete": "Xoá",
     "confirm": "Xác nhận",
+    "delete": "Xoá",
+    "reload": "Tải lại",
     "retry": "Thử lại",
-    "back": "Quay lại"
-  },
-  "state": {
-    "loading": "Đang tải...",
-    "saving": "Đang lưu...",
-    "empty": "Chưa có dữ liệu",
-    "error": "Không tải được dữ liệu."
-  },
-  "pagination": {
-    "previous": "Trước",
-    "next": "Sau"
-  },
-  "language": {
-    "label": "Ngôn ngữ",
-    "en": "Tiếng Anh",
-    "vi": "Tiếng Việt"
-  },
-  "theme": {
-    "label": "Giao diện",
-    "toLight": "Chuyển sang giao diện sáng",
-    "toDark": "Chuyển sang giao diện tối"
+    "save": "Lưu"
   },
   "errors": {
     "forbidden": "Bạn không có quyền thực hiện việc này.",
@@ -34,5 +16,33 @@
     "invalid": "Dữ liệu gửi lên không hợp lệ.",
     "notFound": "Mục này không còn tồn tại.",
     "unexpected": "Đã có lỗi xảy ra. Vui lòng thử lại."
+  },
+  "language": {
+    "label": "Ngôn ngữ",
+    "en": "Tiếng Anh",
+    "vi": "Tiếng Việt"
+  },
+  "pagination": {
+    "next": "Sau",
+    "page": "Trang {{page}}",
+    "previous": "Trước",
+    "rowsPerPage": "Số dòng"
+  },
+  "state": {
+    "loading": "Đang tải...",
+    "saving": "Đang lưu...",
+    "empty": "Chưa có dữ liệu",
+    "error": "Không tải được dữ liệu."
+  },
+  "table": {
+    "clearFilters": "Xoá tất cả bộ lọc",
+    "columns": "Chọn cột hiển thị",
+    "showAllColumns": "Hiện tất cả cột",
+    "sortBy": "Sắp xếp theo {{column}}"
+  },
+  "theme": {
+    "label": "Giao diện",
+    "toLight": "Chuyển sang giao diện sáng",
+    "toDark": "Chuyển sang giao diện tối"
   }
 }
