@@ -8,8 +8,6 @@ import { createForgotPasswordSchema } from '@/features/auth/schemas/forgot-passw
 import type { ForgotPasswordFormValues } from '@/features/auth/types';
 import { Button, Input } from '@/shared/ui';
 
-import { IconField } from './icon-field';
-
 export interface EmailStepProps {
   isPending: boolean;
   onSubmit: (email: string) => void;
@@ -38,29 +36,24 @@ export function EmailStep({ isPending, onSubmit }: EmailStepProps) {
         })(event);
       }}
     >
-      <p className="text-muted-foreground text-sm leading-relaxed">
+      <p className="text-muted-foreground text-body leading-relaxed">
         {t('forgotPasswordModal.description')}
       </p>
 
-      <IconField
+      <Input
         id="forgot-email"
         label={t('forgotPasswordModal.emailLabel')}
-        icon={<Mail className="h-4 w-4" />}
-      >
-        <Input
-          id="forgot-email"
-          type="email"
-          autoComplete="email"
-          placeholder={t('forgotPasswordModal.inputPlaceholder')}
-          error={errors.email?.message}
-          className="h-11 pl-10"
-          {...register('email')}
-        />
-      </IconField>
+        type="email"
+        autoComplete="email"
+        placeholder={t('forgotPasswordModal.inputPlaceholder')}
+        error={errors.email?.message}
+        startIcon={<Mail className="size-4" />}
+        {...register('email')}
+      />
 
       <Button type="submit" isLoading={isPending} isFullWidth className="mt-2 gap-2">
         <span>{t('forgotPasswordModal.submit')}</span>
-        <ArrowRight className="h-4 w-4" aria-hidden="true" />
+        <ArrowRight className="size-4" aria-hidden="true" />
       </Button>
     </form>
   );

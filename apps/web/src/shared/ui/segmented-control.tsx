@@ -2,6 +2,8 @@ import { type ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
 
+import { FOCUS_RING_INSET } from './focus-ring';
+
 export interface SegmentedControlOption {
   icon?: ReactNode;
   label: ReactNode;
@@ -22,7 +24,7 @@ export function SegmentedControl({
   value,
 }: SegmentedControlProps) {
   return (
-    <div className={cn('bg-muted border-border flex rounded-xl border p-1', className)}>
+    <div className={cn('bg-muted border-border rounded-control flex border p-1', className)}>
       {options.map((option) => {
         const isSelected = option.value === value;
 
@@ -35,9 +37,10 @@ export function SegmentedControl({
               onValueChange(option.value);
             }}
             className={cn(
-              'flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg py-2.5 text-xs font-semibold transition-all',
+              'text-label rounded-inner flex h-8 flex-1 cursor-pointer items-center justify-center gap-2 font-semibold transition-colors',
+              FOCUS_RING_INSET,
               isSelected
-                ? 'bg-card text-primary shadow-sm'
+                ? 'bg-card text-primary shadow-raised'
                 : 'text-muted-foreground hover:text-foreground',
             )}
           >

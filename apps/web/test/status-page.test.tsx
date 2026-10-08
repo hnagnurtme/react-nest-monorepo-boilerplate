@@ -13,9 +13,11 @@ describe('status page', () => {
       vi.fn(() => new Promise<Response>(() => undefined)),
     );
 
-    const { findByRole } = renderApp({ initialRoute: '/status' });
+    // Not `findByRole('status')`: the route's Suspense fallback is a live region
+    // too, so the assertion has to name the page's own message.
+    const { findByText } = renderApp({ initialRoute: '/status' });
 
-    expect(await findByRole('status')).toHaveTextContent('Checking API status');
+    expect(await findByText('Checking API status')).toBeInTheDocument();
   });
 
   it('shows a healthy API state', async () => {

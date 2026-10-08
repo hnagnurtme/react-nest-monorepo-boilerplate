@@ -60,6 +60,7 @@ jobs:
       docs_only: ${{ steps.filter.outputs.docs_only }}
       ts_any: ${{ steps.evaluate.outputs.ts_any }}
       api_any: ${{ steps.evaluate.outputs.api_any }}
+      web_any: ${{ steps.evaluate.outputs.web_any }}
     steps:
       - uses: actions/checkout@v6
       - id: branch
@@ -109,6 +110,12 @@ jobs:
             echo "api_any=true" >> "$GITHUB_OUTPUT"
           else
             echo "api_any=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          if [ "$is_main" = "true" ] || [ "$shared" = "true" ] || [ "$web" = "true" ]; then
+            echo "web_any=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "web_any=false" >> "$GITHUB_OUTPUT"
           fi
 
   # 09 section B: commits must follow Conventional Commits (lightweight, no pnpm install)
@@ -302,23 +309,35 @@ jobs:
   conventions:
     name: Conventions
     needs: changes
-    if: needs.changes.outputs.api_any == 'true'
+    if: needs.changes.outputs.api_any == 'true' || needs.changes.outputs.web_any == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        if: needs.changes.outputs.web_any == 'true'
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      # docs/rules/11-ui-design-system.md: tokens, type and radius scales, one icon
+      # set, no emoji. Pure Node, so it needs no install step.
+      - name: UI design-system conventions (apps/web)
+        if: needs.changes.outputs.web_any == 'true'
+        run: node scripts/check-ui-conventions.mjs
       - name: No bare timestamp() in the schema (use withTimezone)
+        if: needs.changes.outputs.api_any == 'true'
         run: |
           if grep -nE "timestamp\(" apps/api/src/core/database/schema/*.ts | grep -v "withTimezone"; then
             echo "::error::timestamp() without withTimezone in apps/api/src/core/database/schema"
             exit 1
           fi
       - name: No pgEnum in the schema (use text + CHECK)
+        if: needs.changes.outputs.api_any == 'true'
         run: |
           if grep -nE "pgEnum\(" apps/api/src/core/database/schema/*.ts; then
             echo "::error::pgEnum is banned; use a text column with a CHECK constraint"
             exit 1
           fi
       - name: No axios import in modules (outbound HTTP belongs in integrations)
+        if: needs.changes.outputs.api_any == 'true'
         run: |
           if grep -rnE "from ['\"]axios['\"]" apps/api/src/modules; then
             echo "::error::axios imported under apps/api/src/modules; use an adapter in src/integrations"

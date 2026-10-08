@@ -1,5 +1,5 @@
 import { subject } from '@casl/ability';
-import { Search, X } from 'lucide-react';
+import { Search, Users, X } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
@@ -13,7 +13,6 @@ import { useUsers } from '@/features/users/api/use-users';
 import { CreateUserForm } from '@/features/users/components/create-user-form';
 import { EditUserRolesDialog } from '@/features/users/components/edit-user-roles-dialog';
 import type { UserListItem } from '@/features/users/types';
-import { ConfirmDialog } from '@/shared/components';
 import {
   useApiErrorMessage,
   useDebouncedSearchParam,
@@ -24,11 +23,18 @@ import {
 import {
   Badge,
   Button,
-  Card,
+  ConfirmDialog,
   DataTable,
+  EmptyState,
+  ErrorState,
+  IconButton,
   Input,
   PageHeader,
+  PageShell,
   Pagination,
+  SkeletonTable,
+  Stack,
+  TEXT_LINK,
   useToast,
   type DataTableColumn,
 } from '@/shared/ui';
@@ -50,7 +56,7 @@ export function UsersPage() {
   const [editingRolesId, setEditingRolesId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<UserListItem | null>(null);
 
-  const { data, isPending, isError, isFetching } = useUsers(page, PAGE_SIZE, search.value);
+  const { data, isPending, isError, isFetching, refetch } = useUsers(page, PAGE_SIZE, search.value);
   const editingRoles = data?.items.find((user) => user.id === editingRolesId);
   const updateUser = useUpdateUser();
   const deleteUser = useDeleteUser();
@@ -199,98 +205,108 @@ export function UsersPage() {
     },
   ];
 
+  const hasRows = data !== undefined && data.items.length > 0;
+  const isSearching = search.value !== '';
+
   return (
-    <div className="bg-background min-h-screen p-6">
-      <div className="mx-auto max-w-4xl space-y-4">
-        <PageHeader
-          title={t('title')}
-          subtitle={t('subtitle')}
-          actions={
-            <>
-              <CanAction I="create" a="User">
-                <Button size="sm" onClick={createForm.toggle}>
-                  {t('create.open')}
-                </Button>
-              </CanAction>
-              <Link to="/" className="text-primary text-sm font-semibold hover:underline">
-                {t('back')}
-              </Link>
-            </>
+    <PageShell>
+      <PageHeader
+        title={t('title')}
+        subtitle={t('subtitle')}
+        actions={
+          <>
+            <CanAction I="create" a="User">
+              <Button size="sm" onClick={createForm.toggle}>
+                {t('create.open')}
+              </Button>
+            </CanAction>
+            <Link to="/" className={TEXT_LINK}>
+              {t('back')}
+            </Link>
+          </>
+        }
+      />
+
+      <Input
+        id="users-search"
+        type="search"
+        autoComplete="off"
+        aria-label={t('search.label')}
+        placeholder={t('search.placeholder')}
+        value={search.inputValue}
+        onChange={(event) => {
+          search.setInputValue(event.target.value);
+        }}
+        startIcon={<Search className="size-4" />}
+        endAction={
+          search.inputValue === '' ? undefined : (
+            <IconButton
+              size="sm"
+              label={t('search.clear')}
+              onClick={search.clear}
+              icon={<X className="size-4" aria-hidden="true" />}
+            />
+          )
+        }
+      />
+
+      {createForm.isOpen ? (
+        <CanAction I="create" a="User">
+          <CreateUserForm onCreated={createForm.close} onCancel={createForm.close} />
+        </CanAction>
+      ) : null}
+
+      {isPending ? <SkeletonTable columns={columns.length} label={t('loading')} /> : null}
+      {isError ? (
+        <ErrorState
+          title={t('error')}
+          action={
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                void refetch();
+              }}
+            >
+              {tCommon('actions.retry')}
+            </Button>
           }
         />
+      ) : null}
 
-        <Card>
-          <div className="relative">
-            <span className="text-muted-foreground pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
-              <Search className="h-4 w-4" aria-hidden="true" />
-            </span>
-            <Input
-              id="users-search"
-              type="search"
-              autoComplete="off"
-              aria-label={t('search.label')}
-              placeholder={t('search.placeholder')}
-              value={search.inputValue}
-              onChange={(event) => {
-                search.setInputValue(event.target.value);
-              }}
-              className="h-11 pl-10 pr-10"
-            />
-            {search.inputValue === '' ? null : (
-              <button
-                type="button"
-                aria-label={t('search.clear')}
-                onClick={search.clear}
-                className="text-muted-foreground hover:text-foreground absolute inset-y-0 right-0 flex cursor-pointer items-center pr-3"
-              >
-                <X className="h-4 w-4" aria-hidden="true" />
-              </button>
-            )}
-          </div>
-        </Card>
+      {/* A refetch keeps the current rows on screen; only the first load blanks it. */}
+      {data !== undefined && isFetching ? (
+        <p role="status" className="text-muted-foreground text-label">
+          {t('loading')}
+        </p>
+      ) : null}
 
-        {createForm.isOpen ? (
-          <CanAction I="create" a="User">
-            <CreateUserForm onCreated={createForm.close} onCancel={createForm.close} />
-          </CanAction>
-        ) : null}
+      {hasRows ? (
+        <Stack gap="normal">
+          <DataTable columns={columns} rows={data.items} rowKey={(user) => user.id} emptyLabel="" />
+          <Pagination
+            page={data.meta.page}
+            totalPages={data.meta.totalPages}
+            summary={t('pagination.summary', {
+              page: data.meta.page,
+              totalPages: Math.max(data.meta.totalPages, 1),
+              total: data.meta.total,
+            })}
+            previousLabel={t('pagination.previous')}
+            nextLabel={t('pagination.next')}
+            onPageChange={goToPage}
+          />
+        </Stack>
+      ) : null}
 
-        {isPending || isFetching ? (
-          <p role="status" className="text-muted-foreground text-sm">
-            {t('loading')}
-          </p>
-        ) : null}
-        {isError ? (
-          <p role="alert" className="text-destructive text-sm">
-            {t('error')}
-          </p>
-        ) : null}
-
-        {data ? (
-          <>
-            <DataTable
-              columns={columns}
-              rows={data.items}
-              rowKey={(user) => user.id}
-              emptyLabel={
-                search.value === '' ? t('empty') : t('search.empty', { term: search.value })
-              }
-            />
-            <Pagination
-              page={data.meta.page}
-              totalPages={data.meta.totalPages}
-              summary={t('pagination.summary', {
-                page: data.meta.page,
-                totalPages: Math.max(data.meta.totalPages, 1),
-                total: data.meta.total,
-              })}
-              previousLabel={t('pagination.previous')}
-              nextLabel={t('pagination.next')}
-              onPageChange={goToPage}
-            />
-          </>
-        ) : null}
-      </div>
+      {data !== undefined && !hasRows ? (
+        // No call to action here: the header already carries "Create user", and a
+        // second control with the same name is a worse page, not a better one.
+        <EmptyState
+          icon={<Users className="size-8" aria-hidden="true" />}
+          title={isSearching ? t('search.empty', { term: search.value }) : t('empty')}
+        />
+      ) : null}
 
       {editingRoles ? (
         <EditUserRolesDialog
@@ -316,6 +332,6 @@ export function UsersPage() {
           }}
         />
       ) : null}
-    </div>
+    </PageShell>
   );
 }

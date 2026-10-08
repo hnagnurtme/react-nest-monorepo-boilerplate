@@ -215,48 +215,19 @@ Chống double-submit tạo hai đơn hàng.
 
 ## Phần F. Styling
 
+Toàn bộ quy tắc trình bày — token, thang đo, bộ icon, cách viết Tailwind, primitive trong `shared/ui`, chữ viết trên giao diện, khả năng tiếp cận thị giác — chuyển sang [`11-ui-design-system.md`](11-ui-design-system.md). Giữ lại ở đây đúng ba điều cốt lõi:
+
 ### F1. Tailwind utility là mặc định 👀
 
-`styled-components`, CSS module, file `.css` riêng: chỉ khi thật sự cần (animation phức tạp, `@layer` toàn cục).
+`styled-components`, CSS module, file `.css` riêng: chỉ khi thật sự cần (animation phức tạp, `@layer` toàn cục, hoặc thứ utility không diễn đạt được như `content: attr(...)`).
 
-### F2. Cấm màu hard-code 👀
+### F2. Giá trị thị giác chỉ đến từ token 🤖
 
-```tsx
-// ❌ <div className="bg-[#1a1a1a] text-[#fff]">   // hỏng ở dark mode
-// ✅ <div className="bg-background text-foreground">
-```
-
-Màu **chỉ** được lấy từ token khai trong `@theme`.
-
-**Cưỡng chế:** 👀 review (chưa có plugin ESLint cho Tailwind).
-
-### F2b. Token thay cho pixel tuỳ ý 👀
-
-Tailwind spacing mặc định như `p-4`, `h-4`, `py-2.5` đã là `rem`. Không thay chúng bằng pixel thủ công. Với kích thước chữ/spacing ngoài thang Tailwind, khai token trong `@theme` trước rồi dùng utility token.
-
-```css
-@theme {
-  --text-2xs: 0.6875rem;
-  --text-2xs--line-height: 1rem;
-}
-```
-
-```tsx
-// ❌ <span className="text-[11px]" />
-// ✅ <span className="text-2xs" />
-```
+Màu, bán kính, đổ bóng, cỡ chữ: lấy từ token khai trong `@theme`. Không hex, không palette gốc Tailwind, không pixel, không arbitrary value. Chi tiết và cơ chế cưỡng chế: rule 11 phần A.
 
 ### F3. Ghép class bằng `cn()` 👀
 
 Nối chuỗi thủ công làm class Tailwind xung đột không được giải quyết đúng thứ tự.
-
-### F4. `shared/ui/` giữ thuần UI 👀
-
-Đó là các primitive viết tay (không phải output shadcn). Cần biến thể ➔ thêm vào primitive hoặc bọc thành component mới; không đưa nghiệp vụ vào.
-
-### F5. Mobile-first 👀
-
-Class không tiền tố là giao diện điện thoại; `md:`, `lg:` để mở rộng lên. Phần lớn người dùng web truy cập từ điện thoại.
 
 ---
 

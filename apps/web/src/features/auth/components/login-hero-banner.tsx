@@ -12,8 +12,8 @@ export function LoginHeroBanner() {
           className="absolute inset-0 h-full w-full object-cover opacity-30"
         />
       ) : null}
-      <p className="relative text-4xl font-bold tracking-tight">{brand.name}</p>
-      <p className="relative max-w-sm text-base opacity-90">{brand.slogan}</p>
+      <p className="text-display relative font-bold tracking-tight">{brand.name}</p>
+      <p className="text-body relative max-w-sm opacity-90">{brand.slogan}</p>
     </div>
   );
 }

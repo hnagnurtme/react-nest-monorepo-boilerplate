@@ -43,7 +43,7 @@ export function AcceptInvitationForm({ isPending, onSubmit }: AcceptInvitationFo
         error={formState.errors.confirmPassword?.message}
         registration={register('confirmPassword')}
       />
-      <Button type="submit" isLoading={isPending} className="h-11 w-full">
+      <Button type="submit" size="lg" isLoading={isPending} isFullWidth>
         {t('acceptInvitation.submit')}
       </Button>
     </form>

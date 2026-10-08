@@ -12,9 +12,9 @@ export function PageHeader({ title, subtitle, actions }: PageHeaderProps) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
       <div>
-        <h1 className="text-foreground text-2xl font-bold">{title}</h1>
+        <h1 className="text-foreground text-title font-bold">{title}</h1>
         {subtitle === undefined ? null : (
-          <p className="text-muted-foreground text-sm">{subtitle}</p>
+          <p className="text-muted-foreground text-body">{subtitle}</p>
         )}
       </div>
       {actions === undefined ? null : <div className="flex items-center gap-3">{actions}</div>}

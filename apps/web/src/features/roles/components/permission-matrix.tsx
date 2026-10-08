@@ -8,9 +8,7 @@ import {
   permissionKey,
   type PresetSelection,
 } from '@/features/roles/utils/permissions';
-
-const SELECT_CLASS =
-  'bg-card border-border focus:border-primary focus:ring-primary/20 rounded-lg border px-2.5 py-1.5 text-sm outline-none focus:ring-2 disabled:opacity-60';
+import { Select } from '@/shared/ui';
 
 export interface PermissionMatrixProps {
   options: readonly PermissionOption[];
@@ -31,8 +29,8 @@ export function PermissionMatrix({
   return (
     <div className="space-y-3">
       {groupBySubject(options).map(([subjectName, rows]) => (
-        <fieldset key={subjectName} className="border-border rounded-xl border p-3">
-          <legend className="text-foreground px-1 text-sm font-semibold">
+        <fieldset key={subjectName} className="border-border rounded-surface border p-3">
+          <legend className="text-foreground text-body px-1 font-semibold">
             {t(`subjects.${subjectName}`, { defaultValue: subjectName })}
           </legend>
           <div className="space-y-2">
@@ -50,30 +48,31 @@ export function PermissionMatrix({
               return (
                 <div key={key} className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-foreground text-sm">{actionLabel}</p>
+                    <p className="text-foreground text-body">{actionLabel}</p>
                     {option.description !== '' ? (
-                      <p className="text-muted-foreground text-xs">{option.description}</p>
+                      <p className="text-muted-foreground text-label">{option.description}</p>
                     ) : null}
                   </div>
-                  <select
+                  <Select
+                    size="sm"
                     aria-label={t('matrix.rowLabel', {
                       action: actionLabel,
                       subject: subjectLabel,
                     })}
-                    className={SELECT_CLASS}
+                    className="w-auto"
                     value={current}
                     disabled={disabled || !isWriteAction(option.action)}
+                    options={[
+                      { value: NO_PRESET, label: t('presets.none') },
+                      ...presets.map((preset) => ({
+                        value: preset,
+                        label: t(`presets.${preset}`, { defaultValue: preset }),
+                      })),
+                    ]}
                     onChange={(event) => {
                       onChange(key, event.target.value);
                     }}
-                  >
-                    <option value={NO_PRESET}>{t('presets.none')}</option>
-                    {presets.map((preset) => (
-                      <option key={preset} value={preset}>
-                        {t(`presets.${preset}`, { defaultValue: preset })}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </div>
               );
             })}

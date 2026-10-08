@@ -3,6 +3,8 @@ import { useEffect, useId, useRef, type ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
 
+import { IconButton } from './icon-button';
+
 const FOCUSABLE_SELECTOR = [
   'a[href]',
   'button:not([disabled])',
@@ -141,22 +143,22 @@ export function Dialog({
         aria-labelledby={titleId}
         tabIndex={-1}
         className={cn(
-          'border-border bg-card relative z-10 max-h-[90vh] w-full space-y-4 overflow-y-auto rounded-2xl border p-6 shadow-lg',
+          // `max-h-[90vh]` is the documented exception to the no-arbitrary-value
+          // rule: the panel is bounded by the viewport, which no token describes.
+          'border-border bg-card rounded-overlay shadow-overlay relative z-10 max-h-[90vh] w-full space-y-4 overflow-y-auto border p-6',
           WIDTH_STYLES[width],
         )}
       >
         <div className="flex items-start justify-between gap-4">
-          <h2 id={titleId} className="text-foreground text-lg font-bold">
+          <h2 id={titleId} className="text-foreground text-heading font-bold">
             {title}
           </h2>
-          <button
-            type="button"
-            aria-label={closeLabel}
+          <IconButton
+            size="sm"
+            label={closeLabel}
             onClick={onClose}
-            className="text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer rounded-lg p-1.5 transition-colors"
-          >
-            <X className="h-5 w-5" aria-hidden="true" />
-          </button>
+            icon={<X className="size-5" aria-hidden="true" />}
+          />
         </div>
         {children}
         {footer ? <div className="flex justify-end gap-2 pt-2">{footer}</div> : null}

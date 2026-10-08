@@ -22,7 +22,7 @@ export function Pagination({
 }: PaginationProps) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
-      <span className="text-muted-foreground text-sm">{summary}</span>
+      <span className="text-muted-foreground text-body">{summary}</span>
       <div className="flex gap-2">
         <Button
           type="button"

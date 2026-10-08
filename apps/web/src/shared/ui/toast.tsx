@@ -1,6 +1,9 @@
 import { AlertCircle, CheckCircle2, Info, X } from 'lucide-react';
 import { useState, useCallback, useMemo, type ReactNode } from 'react';
 
+import { cn } from '@/lib/utils';
+
+import { IconButton } from './icon-button';
 import { ToastContext, type ToastMessage } from './use-toast';
 
 const DEFAULT_TOAST_DURATION_MS = 5000;
@@ -33,23 +36,25 @@ function ToastItem({
 
   return (
     <div
-      className={`pointer-events-auto flex items-start gap-3 rounded-xl border p-4 shadow-lg transition-all ${TONE_STYLES[toast.type]}`}
+      className={cn(
+        'rounded-surface shadow-floating pointer-events-auto flex items-start gap-3 border p-4',
+        TONE_STYLES[toast.type],
+      )}
     >
-      <ToneIcon className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
-      <div className="flex-1 text-xs sm:text-sm">
+      <ToneIcon className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
+      <div className="text-body flex-1">
         {toast.title && <h4 className="mb-0.5 font-semibold">{toast.title}</h4>}
         <p>{toast.message}</p>
       </div>
-      <button
-        type="button"
+      <IconButton
+        size="sm"
+        label={closeLabel}
         onClick={() => {
           onClose(toast.id);
         }}
-        className="cursor-pointer opacity-70 transition-opacity hover:opacity-100"
-        aria-label={closeLabel}
-      >
-        <X className="h-4 w-4" aria-hidden="true" />
-      </button>
+        className="-mr-1 -mt-1 shrink-0"
+        icon={<X className="size-4" aria-hidden="true" />}
+      />
     </div>
   );
 }

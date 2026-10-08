@@ -40,6 +40,7 @@ All build, test, lint, migration, and dev commands **MUST** go through `just`. N
 | Changed area                             | Required commands                                                  |
 | :--------------------------------------- | :----------------------------------------------------------------- |
 | Any TS/JS file                           | `just typecheck` + `just lint`                                     |
+| Any `apps/web` component or style        | `just lint-ui` (design-system conventions)                         |
 | Any API endpoint, DTO, or response shape | `just contract` then commit both `openapi.json` and `generated.ts` |
 | Schema, RLS, or auth changes             | integration tests (`pnpm test:integration` in `apps/api`)          |
 | Non-trivial feature or PR                | `just verify`                                                      |
@@ -292,7 +293,9 @@ Feature A cannot import `features/B/components/Something`. Only `features/B` (it
 - URL search params — filters/pagination
 - `useState` — local UI state
 
-**`shared/ui/`** holds small hand-written primitives (button, input, toast, ...), not generated shadcn output. Add variants rather than domain logic; keep it free of `features/` / `entities/` imports (ESLint-enforced).
+**`shared/ui/`** is the only primitive directory (there is no `shared/components/`): small hand-written primitives, not generated shadcn output. It holds the design system's shared pieces — the control height scale (`control.ts`), the one focus ring (`focus-ring.ts`), the text-control shell (`field.ts`), `TEXT_LINK` and `buttonVariants`. Add variants rather than domain logic; keep it free of `features/` / `entities/` imports (ESLint-enforced).
+
+**Styling is token-only** (`docs/rules/11-ui-design-system.md`): colour, radius, shadow and type come from `@theme` in `app/styles/globals.css` — `rounded-control`/`rounded-surface`/`rounded-overlay`/`rounded-inner`/`rounded-pill`, `shadow-raised`/`shadow-floating`/`shadow-overlay`, `text-display`/`text-title`/`text-heading`/`text-body`/`text-label`/`text-caption`. Default Tailwind utilities for those (`rounded-xl`, `text-sm`, `shadow-md`) and the default palette (`bg-slate-500`) are rejected by `just lint-ui`, as are hex values, pixel arbitrary values, emoji anywhere under `apps/web/src`, and `h-4 w-4` in place of `size-4`. One icon set: `lucide-react`. A raw `<button>`/`<input>`/`<select>`/`<textarea>` outside `shared/ui` is an ESLint error.
 
 **Routes** wired in `apps/web/src/app/router.tsx` last, after the page is ready. All routes use `lazy()` + `<Suspense>`; protected ones sit inside `RouteGuard`.
 
@@ -343,7 +346,7 @@ When adding a feature that touches both backend and frontend, this order is requ
 | :------------- | :---------------------------------------------------------------------------------------------------- |
 | Every change   | `docs/rules/00-nguyen-tac-chung.md`, `docs/rules/01-typescript.md`                                    |
 | `apps/api`     | `docs/rules/02-backend-nestjs.md`, `docs/rules/03-database-drizzle.md`, `docs/rules/06-api-design.md` |
-| `apps/web`     | `docs/rules/04-frontend-react.md`                                                                     |
+| `apps/web`     | `docs/rules/04-frontend-react.md`, `docs/rules/11-ui-design-system.md`                                |
 | Auth / secrets | `docs/rules/07-security.md`                                                                           |
 | Tests          | `docs/rules/08-testing.md`                                                                            |
 | Commits / CI   | `docs/rules/09-git-va-ci.md`, `docs/rules/10-infra-devops.md`                                         |

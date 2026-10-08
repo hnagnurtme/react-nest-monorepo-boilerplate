@@ -1,7 +1,6 @@
 import { AlertTriangle } from 'lucide-react';
 
-import { Button } from '@/shared/ui';
-
+import { Button } from './button';
 import { Dialog } from './dialog';
 
 export interface ConfirmDialogProps {
@@ -57,11 +56,11 @@ export function ConfirmDialog({
     >
       <div className="flex items-start gap-3">
         {tone === 'danger' ? (
-          <span className="bg-destructive-light text-destructive flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
-            <AlertTriangle className="h-5 w-5" aria-hidden="true" />
+          <span className="bg-destructive-light text-destructive rounded-inner flex size-10 shrink-0 items-center justify-center">
+            <AlertTriangle className="size-5" aria-hidden="true" />
           </span>
         ) : null}
-        <p className="text-muted-foreground text-sm leading-relaxed">{message}</p>
+        <p className="text-muted-foreground text-body leading-relaxed">{message}</p>
       </div>
     </Dialog>
   );

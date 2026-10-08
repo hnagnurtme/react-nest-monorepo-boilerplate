@@ -13,7 +13,7 @@ export function LoginForm({ onForgotPassword }: LoginFormProps) {
   const { form, showPassword, togglePasswordVisibility, isSubmitting, onSubmit } = useLoginForm();
 
   return (
-    <div className="mx-auto w-full max-w-[420px] space-y-6">
+    <div className="max-w-form mx-auto w-full space-y-6">
       <LoginFormHeader />
 
       <form onSubmit={(e) => void onSubmit(e)} className="space-y-4">

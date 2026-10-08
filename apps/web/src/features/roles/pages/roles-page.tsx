@@ -12,8 +12,12 @@ import {
   Badge,
   Button,
   DataTable,
+  ErrorState,
   PageHeader,
+  PageShell,
   Pagination,
+  SkeletonTable,
+  TEXT_LINK,
   type DataTableColumn,
 } from '@/shared/ui';
 
@@ -21,9 +25,10 @@ const PAGE_SIZE = 20;
 
 export function RolesPage() {
   const { t } = useTranslation('roles');
+  const { t: tCommon } = useTranslation('common');
   const { page, goToPage } = usePageParam();
 
-  const { data, isPending, isError } = useRoles(page, PAGE_SIZE);
+  const { data, isPending, isError, refetch } = useRoles(page, PAGE_SIZE);
   const permissionOptions = usePermissionOptions();
   const options = permissionOptions.data ?? [];
 
@@ -45,7 +50,7 @@ export function RolesPage() {
     {
       key: 'key',
       header: t('columns.key'),
-      cell: (role) => <code className="text-xs">{role.key}</code>,
+      cell: (role) => <code className="text-label">{role.key}</code>,
     },
     {
       key: 'scope',
@@ -76,55 +81,64 @@ export function RolesPage() {
   ];
 
   return (
-    <div className="bg-background min-h-screen p-6">
-      <div className="mx-auto max-w-4xl space-y-4">
-        <PageHeader
-          title={t('title')}
-          subtitle={t('subtitle')}
-          actions={
-            <>
-              <CanAction I="create" a="Role">
-                <Button size="sm" onClick={createDialog.open}>
-                  {t('create.open')}
-                </Button>
-              </CanAction>
-              <Link to="/" className="text-primary text-sm font-semibold hover:underline">
-                {t('back')}
-              </Link>
-            </>
+    <PageShell>
+      <PageHeader
+        title={t('title')}
+        subtitle={t('subtitle')}
+        actions={
+          <>
+            <CanAction I="create" a="Role">
+              <Button size="sm" onClick={createDialog.open}>
+                {t('create.open')}
+              </Button>
+            </CanAction>
+            <Link to="/" className={TEXT_LINK}>
+              {t('back')}
+            </Link>
+          </>
+        }
+      />
+
+      {isPending ? <SkeletonTable columns={columns.length} label={t('loading')} /> : null}
+      {isError ? (
+        <ErrorState
+          title={t('error')}
+          action={
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                void refetch();
+              }}
+            >
+              {tCommon('actions.retry')}
+            </Button>
           }
         />
+      ) : null}
 
-        {isPending ? <p className="text-muted-foreground text-sm">{t('loading')}</p> : null}
-        {isError ? (
-          <p role="alert" className="text-destructive text-sm">
-            {t('error')}
-          </p>
-        ) : null}
-
-        {data ? (
-          <>
-            <DataTable
-              columns={columns}
-              rows={data.items}
-              rowKey={(role) => role.id}
-              emptyLabel={t('empty')}
-            />
-            <Pagination
-              page={data.meta.page}
-              totalPages={data.meta.totalPages}
-              summary={t('pagination.summary', {
-                page: data.meta.page,
-                totalPages: Math.max(data.meta.totalPages, 1),
-                total: data.meta.total,
-              })}
-              previousLabel={t('pagination.previous')}
-              nextLabel={t('pagination.next')}
-              onPageChange={goToPage}
-            />
-          </>
-        ) : null}
-      </div>
+      {data ? (
+        <>
+          <DataTable
+            columns={columns}
+            rows={data.items}
+            rowKey={(role) => role.id}
+            emptyLabel={t('empty')}
+          />
+          <Pagination
+            page={data.meta.page}
+            totalPages={data.meta.totalPages}
+            summary={t('pagination.summary', {
+              page: data.meta.page,
+              totalPages: Math.max(data.meta.totalPages, 1),
+              total: data.meta.total,
+            })}
+            previousLabel={t('pagination.previous')}
+            nextLabel={t('pagination.next')}
+            onPageChange={goToPage}
+          />
+        </>
+      ) : null}
 
       {createDialog.isOpen ? (
         <CanAction I="create" a="Role">
@@ -140,6 +154,6 @@ export function RolesPage() {
           }}
         />
       ) : null}
-    </div>
+    </PageShell>
   );
 }

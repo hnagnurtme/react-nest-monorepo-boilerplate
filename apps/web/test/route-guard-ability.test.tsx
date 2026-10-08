@@ -54,9 +54,6 @@ function renderGuard(checkAbility?: (ability: AppAbility) => boolean, initialEnt
   );
 }
 
-const isSpinner = (_: string, element: Element | null): boolean =>
-  element?.className.includes('animate-spin') ?? false;
-
 describe('RouteGuard with abilities', () => {
   beforeEach(() => {
     useAuthStore.setState({ status: 'anonymous', accessToken: null, user: null });
@@ -70,7 +67,7 @@ describe('RouteGuard with abilities', () => {
     useAuthStore.setState({ status: 'initializing', accessToken: null, user: null });
     renderGuard();
 
-    expect(screen.getByText(isSpinner)).toBeInTheDocument();
+    expect(screen.getByRole('status')).toBeInTheDocument();
     expect(screen.queryByTestId('protected-page')).not.toBeInTheDocument();
   });
 
@@ -85,7 +82,7 @@ describe('RouteGuard with abilities', () => {
     mockApi(makePlatformAdmin(), PLATFORM_ADMIN_GRANTS);
     renderGuard(canManageAll);
 
-    expect(screen.getByText(isSpinner)).toBeInTheDocument();
+    expect(screen.getByRole('status')).toBeInTheDocument();
     expect(screen.queryByTestId('home-page')).not.toBeInTheDocument();
 
     expect(await screen.findByTestId('protected-page')).toBeInTheDocument();

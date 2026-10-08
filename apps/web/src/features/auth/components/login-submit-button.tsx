@@ -1,4 +1,4 @@
-import { ArrowRight, Loader2 } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/shared/ui';
@@ -15,18 +15,16 @@ export function LoginSubmitButton({ isSubmitting }: LoginSubmitButtonProps) {
       type="submit"
       variant="primary"
       size="lg"
-      disabled={isSubmitting}
-      className="mt-2 w-full cursor-pointer gap-2"
+      isFullWidth
+      isLoading={isSubmitting}
+      className="mt-2"
     >
       {isSubmitting ? (
-        <>
-          <Loader2 className="h-4 w-4 animate-spin" />
-          <span>{t('form.submitting')}</span>
-        </>
+        <span>{t('form.submitting')}</span>
       ) : (
         <>
           <span>{t('form.submit')}</span>
-          <ArrowRight className="h-4 w-4" />
+          <ArrowRight className="size-4" aria-hidden="true" />
         </>
       )}
     </Button>

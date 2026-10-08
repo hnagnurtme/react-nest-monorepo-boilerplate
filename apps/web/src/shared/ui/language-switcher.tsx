@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next';
 import { isAppLanguage, type AppLanguage } from '@/lib/i18n/languages';
 import { useLanguage } from '@/shared/hooks';
 
+import { Select } from './select';
+
 // Explicit keys, not a template literal, so the typed `t()` can check them.
 const LANGUAGE_LABEL_KEYS = {
   en: 'language.en',
@@ -19,24 +21,18 @@ export function LanguageSwitcher() {
 
   return (
     <div className="flex items-center gap-2">
-      <label htmlFor={selectId} className="sr-only">
-        {t('language.label')}
-      </label>
-      <Languages className="text-muted-foreground h-4 w-4" aria-hidden="true" />
-      <select
+      <Languages className="text-muted-foreground size-4" aria-hidden="true" />
+      <Select
         id={selectId}
+        size="sm"
+        aria-label={t('language.label')}
         value={language}
+        options={languages.map((code) => ({ value: code, label: t(LANGUAGE_LABEL_KEYS[code]) }))}
         onChange={(event) => {
           if (isAppLanguage(event.target.value)) setLanguage(event.target.value);
         }}
-        className="border-border bg-card text-foreground focus:border-primary focus:ring-primary/20 cursor-pointer rounded-xl border px-2 py-1.5 text-xs outline-none focus:ring-2"
-      >
-        {languages.map((code) => (
-          <option key={code} value={code}>
-            {t(LANGUAGE_LABEL_KEYS[code])}
-          </option>
-        ))}
-      </select>
+        className="w-auto"
+      />
     </div>
   );
 }
