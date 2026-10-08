@@ -1,20 +1,25 @@
 import { Injectable } from '@nestjs/common';
 import { and, eq, inArray, isNull, ne, count } from 'drizzle-orm';
 
-import type { Action, ScopePreset } from '@repo/shared-types';
+import type { Action, PermissionGrant, ScopePreset } from '@repo/shared-types';
 
 import type { Tx } from '@/core/database/drizzle.module.js';
 import {
   permissions,
   rolePermissions,
   roles,
+  tenants,
   userRoles,
   users,
+  userTenants,
 } from '@/core/database/schema/index.js';
 
-import type { AuthzProfile, RoleSummary, RoleWithGrants } from './authz.types.js';
+import type { AuthzProfile, ProfileRole, RoleSummary, RoleWithGrants } from './authz.types.js';
 
-type ProfileRows = Pick<AuthzProfile, 'userId' | 'email' | 'tenantId' | 'roles' | 'grants'>;
+type ProfileRows = Pick<
+  AuthzProfile,
+  'userId' | 'email' | 'homeTenantId' | 'tenants' | 'roles' | 'platformGrants' | 'grantsByTenant'
+>;
 
 /** Read side of authorization. Callers pass a transaction opened in 'admin' mode. */
 @Injectable()
@@ -28,48 +33,96 @@ export class AuthzRepository {
       .limit(1);
     if (user === undefined) return undefined;
 
+    const membershipRows = await tx
+      .select({ id: tenants.id, name: tenants.name })
+      .from(userTenants)
+      .innerJoin(tenants, eq(tenants.id, userTenants.tenantId))
+      .where(and(eq(userTenants.userId, userId), isNull(tenants.deletedAt)));
+
     const roleRows = await tx
-      .select({ id: roles.id, key: roles.key, name: roles.name, scope: roles.scope })
+      .select({
+        id: roles.id,
+        key: roles.key,
+        name: roles.name,
+        scope: roles.scope,
+        assignedTenantId: userRoles.tenantId,
+      })
       .from(userRoles)
       .innerJoin(roles, eq(roles.id, userRoles.roleId))
       .where(and(eq(userRoles.userId, userId), isNull(roles.deletedAt)));
 
-    const roleSummaries: RoleSummary[] = roleRows.map((row) => ({
+    const roleAssignments: ProfileRole[] = roleRows.map((row) => ({
       id: row.id,
       key: row.key,
       name: row.name,
       scope: row.scope === 'platform' ? 'platform' : 'tenant',
+      assignedTenantId: row.assignedTenantId,
     }));
 
-    const grantRows =
-      roleSummaries.length === 0
-        ? []
-        : await tx
-            .select({
-              action: permissions.action,
-              subject: permissions.subject,
-              preset: rolePermissions.scopePreset,
-            })
-            .from(rolePermissions)
-            .innerJoin(permissions, eq(permissions.id, rolePermissions.permissionId))
-            .where(
-              inArray(
-                rolePermissions.roleId,
-                roleSummaries.map((r) => r.id),
-              ),
-            );
+    const grantsByRole = await this.grantsByRoleId(
+      tx,
+      roleAssignments.map((role) => role.id),
+    );
+
+    // Kept apart on purpose: an account that administers one tenant must not
+    // carry those grants into another tenant it merely belongs to.
+    const platformGrants: PermissionGrant[] = [];
+    const grantsByTenant: Record<string, PermissionGrant[]> = {};
+
+    for (const role of roleAssignments) {
+      const grants = grantsByRole.get(role.id) ?? [];
+      if (role.assignedTenantId === null) {
+        platformGrants.push(...grants);
+        continue;
+      }
+      const bucket = grantsByTenant[role.assignedTenantId];
+      if (bucket === undefined) {
+        grantsByTenant[role.assignedTenantId] = [...grants];
+      } else {
+        bucket.push(...grants);
+      }
+    }
 
     return {
       userId: user.id,
       email: user.email,
-      tenantId: user.tenantId,
-      roles: roleSummaries,
-      grants: grantRows.map((row) => ({
+      homeTenantId: user.tenantId,
+      tenants: membershipRows,
+      roles: roleAssignments,
+      platformGrants,
+      grantsByTenant,
+    };
+  }
+
+  private async grantsByRoleId(
+    tx: Tx,
+    roleIds: readonly string[],
+  ): Promise<Map<string, PermissionGrant[]>> {
+    const result = new Map<string, PermissionGrant[]>();
+    if (roleIds.length === 0) return result;
+
+    const rows = await tx
+      .select({
+        roleId: rolePermissions.roleId,
+        action: permissions.action,
+        subject: permissions.subject,
+        preset: rolePermissions.scopePreset,
+      })
+      .from(rolePermissions)
+      .innerJoin(permissions, eq(permissions.id, rolePermissions.permissionId))
+      .where(inArray(rolePermissions.roleId, [...roleIds]));
+
+    for (const row of rows) {
+      const grant: PermissionGrant = {
         action: row.action as Action,
         subject: row.subject,
         preset: row.preset as ScopePreset,
-      })),
-    };
+      };
+      const list = result.get(row.roleId);
+      if (list === undefined) result.set(row.roleId, [grant]);
+      else list.push(grant);
+    }
+    return result;
   }
 
   /** Users that hold a role, for cache invalidation when the role changes. */
@@ -153,20 +206,56 @@ export class AuthzRepository {
     return result;
   }
 
-  /** Replaces the whole assignment set. `tenant_id` is filled in by the trigger. */
+  /**
+   * Replaces the assignment set *inside one tenant*, or the platform-scope set
+   * when `tenantId` is null. Assignments the account holds in other tenants are
+   * left alone: a tenant admin edits their own tenant, nothing beyond it.
+   *
+   * `tenant_id` is passed explicitly — the trigger no longer derives it, since
+   * an account can belong to several tenants.
+   */
   async replaceUserRoles(
     tx: Tx,
     userId: string,
+    tenantId: string | null,
     roleIds: readonly string[],
     grantedBy: string,
   ): Promise<void> {
-    await tx.delete(userRoles).where(eq(userRoles.userId, userId));
+    await tx
+      .delete(userRoles)
+      .where(
+        and(
+          eq(userRoles.userId, userId),
+          tenantId === null ? isNull(userRoles.tenantId) : eq(userRoles.tenantId, tenantId),
+        ),
+      );
     if (roleIds.length === 0) return;
 
-    await tx.insert(userRoles).values(roleIds.map((roleId) => ({ userId, roleId, grantedBy })));
+    await tx
+      .insert(userRoles)
+      .values(roleIds.map((roleId) => ({ userId, roleId, tenantId, grantedBy })));
   }
 
-  /** Active users of a tenant holding a role key, optionally ignoring one user. */
+  /**
+   * Tenants where the account holds a role key — the tenants a deactivation
+   * would strip of an administrator. Rows the caller cannot see are absent.
+   */
+  async tenantIdsWithRoleKey(tx: Tx, userId: string, roleKey: string): Promise<string[]> {
+    const rows = await tx
+      .select({ tenantId: userRoles.tenantId })
+      .from(userRoles)
+      .innerJoin(roles, eq(roles.id, userRoles.roleId))
+      .where(and(eq(userRoles.userId, userId), eq(roles.key, roleKey), isNull(roles.deletedAt)));
+
+    return rows.flatMap((row) => (row.tenantId === null ? [] : [row.tenantId]));
+  }
+
+  /**
+   * Active accounts holding a role key *in one tenant*, ignoring one account.
+   *
+   * Counted on the assignment's tenant, not on `users.tenant_id`: an account
+   * whose home tenant is elsewhere still administers the tenants it joined.
+   */
   async countActiveWithRoleKey(
     tx: Tx,
     tenantId: string,
@@ -180,7 +269,7 @@ export class AuthzRepository {
       .innerJoin(users, eq(users.id, userRoles.userId))
       .where(
         and(
-          eq(users.tenantId, tenantId),
+          eq(userRoles.tenantId, tenantId),
           eq(users.isActive, true),
           isNull(users.deletedAt),
           eq(roles.key, roleKey),

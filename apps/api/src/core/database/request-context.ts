@@ -16,6 +16,7 @@ export const CLS_KEYS = {
   profile: 'profile',
   userId: 'userId',
   tenantId: 'tenantId',
+  activeTenantId: 'activeTenantId',
   traceId: 'traceId',
 } as const;
 
@@ -38,6 +39,8 @@ export interface AppClsStore extends ClsStore {
   [CLS_KEYS.profile]?: AuthzProfile;
   [CLS_KEYS.userId]?: string;
   [CLS_KEYS.tenantId]?: string;
+  /** The tenant this request acts in, chosen by the caller and validated by the auth guard. */
+  [CLS_KEYS.activeTenantId]?: string;
   [CLS_KEYS.traceId]?: string;
 }
 

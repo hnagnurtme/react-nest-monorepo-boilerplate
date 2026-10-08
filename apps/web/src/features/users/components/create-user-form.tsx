@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
@@ -7,6 +7,7 @@ import { useAuthStore } from '@/entities/session';
 import { useRoles, type RoleItem } from '@/features/roles';
 import { useTenants } from '@/features/tenants';
 import { useCreateUser } from '@/features/users/api/use-create-user';
+import { useInviteToTenant } from '@/features/users/api/use-tenant-invitations';
 import { RoleChecklist } from '@/features/users/components/role-checklist';
 import {
   createUserSchema,
@@ -14,11 +15,16 @@ import {
   type CreateUserFormValues,
   type CreateUserSchemaOptions,
 } from '@/features/users/schemas/create-user.schema';
-import type { CreateUserBody } from '@/features/users/types';
-import { Button, CheckboxField, FieldError, Input, Select, useToast } from '@/shared/ui';
+import type { CreateUserBody, InviteToTenantBody } from '@/features/users/types';
+import { Alert, Button, CheckboxField, FieldError, Input, Select, useToast } from '@/shared/ui';
 
 const CONFLICT_STATUS = 409;
 const FORBIDDEN_STATUS = 403;
+/**
+ * An email is one account across every tenant, so a duplicate is not a mistake
+ * to correct — it is an existing account to invite into this tenant.
+ */
+const ACCOUNT_EXISTS_CODE = 'ACCOUNT_ALREADY_EXISTS';
 const TENANT_OPTIONS_LIMIT = 100;
 const ROLE_OPTIONS_LIMIT = 100;
 
@@ -107,6 +113,10 @@ export function CreateUserForm({ onCreated, onCancel }: CreateUserFormProps) {
   const showTenantSelect = isPlatformActor && needsTenant(roleIds, scopeOf);
   const tenants = useTenants(1, TENANT_OPTIONS_LIMIT, { enabled: isPlatformActor });
   const createUser = useCreateUser();
+  const inviteToTenant = useInviteToTenant();
+  // Set when the API reports the email already has an account: the form then
+  // offers to invite it here instead of asking for a different address.
+  const [existing, setExisting] = useState<InviteToTenantBody | null>(null);
 
   const toggleRole = (roleId: string): void => {
     setValue(
@@ -119,7 +129,10 @@ export function CreateUserForm({ onCreated, onCancel }: CreateUserFormProps) {
   const onSubmit = (values: CreateUserFormValues): void => {
     const visibleIds = new Set(roles.map((role) => role.id));
     const submitted = { ...values, roleIds: values.roleIds.filter((id) => visibleIds.has(id)) };
-    createUser.mutate(buildCreateUserBody(submitted, isPlatformActor, scopeOf), {
+    const body = buildCreateUserBody(submitted, isPlatformActor, scopeOf);
+    setExisting(null);
+
+    createUser.mutate(body, {
       onSuccess: () => {
         showToast({
           type: 'success',
@@ -129,6 +142,15 @@ export function CreateUserForm({ onCreated, onCancel }: CreateUserFormProps) {
         onCreated?.();
       },
       onError: (error) => {
+        if (error.code === ACCOUNT_EXISTS_CODE) {
+          setExisting({
+            email: body.email,
+            roleIds: body.roleIds,
+            ...(body.tenantId === undefined ? {} : { tenantId: body.tenantId }),
+          });
+          return;
+        }
+
         showToast({
           type: 'error',
           message:
@@ -137,6 +159,30 @@ export function CreateUserForm({ onCreated, onCancel }: CreateUserFormProps) {
               : error.status === FORBIDDEN_STATUS
                 ? t('actions.rolesForbidden')
                 : t('create.error'),
+        });
+      },
+    });
+  };
+
+  const onInvite = (): void => {
+    if (existing === null) return;
+
+    inviteToTenant.mutate(existing, {
+      onSuccess: () => {
+        showToast({ type: 'success', message: t('invite.sent', { email: existing.email }) });
+        setExisting(null);
+        reset();
+        onCreated?.();
+      },
+      onError: (error) => {
+        showToast({
+          type: 'error',
+          message:
+            error.status === CONFLICT_STATUS
+              ? t('invite.alreadyMember')
+              : error.status === FORBIDDEN_STATUS
+                ? t('actions.rolesForbidden')
+                : t('invite.error'),
         });
       },
     });
@@ -231,6 +277,27 @@ export function CreateUserForm({ onCreated, onCancel }: CreateUserFormProps) {
           {...register('tenantId')}
         />
       ) : null}
+
+      {existing === null ? null : (
+        <Alert className="sm:col-span-2">
+          <p className="text-body">{t('invite.prompt', { email: existing.email })}</p>
+          <div className="mt-3 flex gap-2">
+            <Button type="button" size="sm" isLoading={inviteToTenant.isPending} onClick={onInvite}>
+              {t('invite.submit')}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setExisting(null);
+              }}
+            >
+              {t('invite.dismiss')}
+            </Button>
+          </div>
+        </Alert>
+      )}
 
       <div className="flex justify-end gap-2 sm:col-span-2">
         {onCancel ? (

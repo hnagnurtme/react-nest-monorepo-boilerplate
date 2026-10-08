@@ -1,4 +1,5 @@
 export {
+  AccountAlreadyExistsError,
   AppError,
   CsrfValidationFailedError,
   ForbiddenActionError,

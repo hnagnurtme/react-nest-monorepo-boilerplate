@@ -10,6 +10,7 @@ import type {
   InvitationEmailPayload,
   OtpEmailPayload,
   SendMailOptions,
+  TenantInvitationEmailPayload,
 } from './mail.interfaces.js';
 
 const DEFAULT_OTP_TTL_MINUTES = 5;
@@ -165,6 +166,32 @@ export class MailService {
       subject,
       html,
       text: `${inviterName} invited you to ${tenantName}. Set your password: ${acceptUrl} (expires in ${String(ttlHours)} hours).`,
+    });
+  }
+
+  async sendTenantInvitationMail(payload: TenantInvitationEmailPayload): Promise<void> {
+    const { toEmail, recipientName, inviterName, tenantName, acceptUrl, ttlHours } = payload;
+    const subject = `${inviterName} invited you to join ${tenantName}`;
+
+    const html = this.renderWithLayout(
+      'tenant-invitation.html',
+      {
+        recipientName,
+        inviterName,
+        tenantName,
+        acceptUrl,
+        ttlHours: ttlHours.toString(),
+        appName: this.config.appName,
+        brandColor: this.config.mailBrand.brandColor,
+      },
+      { subject, preheader: `Accept to start working in ${tenantName}.` },
+    );
+
+    await this.sendMail({
+      to: toEmail,
+      subject,
+      html,
+      text: `${inviterName} invited you to join ${tenantName} with your existing ${this.config.appName} account. Accept: ${acceptUrl} (expires in ${String(ttlHours)} hours).`,
     });
   }
 

@@ -68,7 +68,7 @@ export class RolesService {
 
   /** What the caller may put into a role: the catalog narrowed to what it already holds. */
   grantable(): PermissionOption[] {
-    const held = this.authz.currentProfile()?.grants ?? [];
+    const held = this.authz.currentGrants();
 
     return PERMISSION_CATALOG.filter((entry) => !entry.platformOnly).flatMap((entry) => {
       const presets = entry.presets.filter((preset) =>
@@ -209,7 +209,7 @@ export class RolesService {
    * reach the catalog permits, and be covered by what the caller itself holds.
    */
   private validateGrants(requested: readonly PermissionGrant[]): PermissionGrant[] {
-    const held = this.authz.currentProfile()?.grants ?? [];
+    const held = this.authz.currentGrants();
     const seen = new Set<string>();
 
     return requested.map((grant) => {

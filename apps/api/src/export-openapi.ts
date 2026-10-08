@@ -48,6 +48,16 @@ async function exportOpenApi(): Promise<void> {
       },
       ACCESS_TOKEN_SECURITY_SCHEME,
     )
+    // An account can belong to several tenants, so every authenticated call
+    // says which one it acts in. Only the endpoints marked `@NoTenantContext()`
+    // work without it.
+    .addGlobalParameters({
+      name: 'x-tenant-id',
+      in: 'header',
+      required: false,
+      description: 'The tenant to act in. Must be one of the tenants from `GET /auth/me`.',
+      schema: { type: 'string', format: 'uuid' },
+    })
     .build();
 
   const document = cleanupOpenApiDoc(SwaggerModule.createDocument(app, options));

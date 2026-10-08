@@ -8,10 +8,11 @@ import '@/app/styles/globals.css';
 import { App } from '@/app/app';
 import { useAuthStore } from '@/entities/session/store';
 import { broadcastLogout, broadcastRefreshed } from '@/entities/session/sync';
-import { setTokenProvider, setUnauthorizedHandler } from '@/lib/http/client';
+import { setTenantProvider, setTokenProvider, setUnauthorizedHandler } from '@/lib/http/client';
 import { setRefreshHandler } from '@/lib/http/refresh';
 
 setTokenProvider(() => useAuthStore.getState().accessToken);
+setTenantProvider(() => useAuthStore.getState().activeTenantId);
 
 setUnauthorizedHandler(() => {
   useAuthStore.getState().clearAuth();

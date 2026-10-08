@@ -71,36 +71,53 @@ beforeAll(async () => {
     `INSERT INTO tenants (id, name, slug) VALUES ($1, 'Search A', $2), ($3, 'Search B', $4)`,
     [tenantA.id, tenantA.slug, tenantB.id, tenantB.slug],
   );
-  await ownerPool.query(
-    `INSERT INTO users (id, email, password_hash, full_name, tenant_id, deleted_at)
-     VALUES ($1, $2, 'x', $3, $4, NULL),
-            ($5, $6, 'x', $7, $8, NULL),
-            ($9, $10, 'x', $11, $12, now()),
-            ($13, $14, 'x', $15, $16, NULL),
-            ($17, $18, 'x', $19, $20, NULL)`,
-    [
-      adaA.id,
-      adaA.email,
-      adaA.name,
-      tenantA.id,
-      graceA.id,
-      graceA.email,
-      graceA.name,
-      tenantA.id,
-      goneA.id,
-      goneA.email,
-      goneA.name,
-      tenantA.id,
-      oddA.id,
-      oddA.email,
-      oddA.name,
-      tenantA.id,
-      adaB.id,
-      adaB.email,
-      adaB.name,
-      tenantB.id,
-    ],
-  );
+  // One transaction: `users` carries a deferred constraint trigger that checks
+  // the membership row, so the two have to commit together.
+  const setup = await ownerPool.connect();
+  try {
+    await setup.query('BEGIN');
+    await setup.query(
+      `INSERT INTO users (id, email, password_hash, full_name, tenant_id, deleted_at)
+       VALUES ($1, $2, 'x', $3, $4, NULL),
+              ($5, $6, 'x', $7, $8, NULL),
+              ($9, $10, 'x', $11, $12, now()),
+              ($13, $14, 'x', $15, $16, NULL),
+              ($17, $18, 'x', $19, $20, NULL)`,
+      [
+        adaA.id,
+        adaA.email,
+        adaA.name,
+        tenantA.id,
+        graceA.id,
+        graceA.email,
+        graceA.name,
+        tenantA.id,
+        goneA.id,
+        goneA.email,
+        goneA.name,
+        tenantA.id,
+        oddA.id,
+        oddA.email,
+        oddA.name,
+        tenantA.id,
+        adaB.id,
+        adaB.email,
+        adaB.name,
+        tenantB.id,
+      ],
+    );
+    await setup.query(
+      `INSERT INTO user_tenants (user_id, tenant_id)
+       VALUES ($1, $5), ($2, $5), ($3, $5), ($4, $5), ($6, $7)`,
+      [adaA.id, graceA.id, goneA.id, oddA.id, tenantA.id, adaB.id, tenantB.id],
+    );
+    await setup.query('COMMIT');
+  } catch (error: unknown) {
+    await setup.query('ROLLBACK');
+    throw error;
+  } finally {
+    setup.release();
+  }
 });
 
 afterAll(async () => {

@@ -6,7 +6,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { AppCore } from '@/app/app';
 import { useAuthStore } from '@/entities/session/store';
 import { broadcastLogout, broadcastRefreshed } from '@/entities/session/sync';
-import { setTokenProvider, setUnauthorizedHandler } from '@/lib/http/client';
+import { setTenantProvider, setTokenProvider, setUnauthorizedHandler } from '@/lib/http/client';
 import { setRefreshHandler } from '@/lib/http/refresh';
 
 interface RenderAppOptions {
@@ -27,6 +27,7 @@ export function renderApp({
 }: RenderAppOptions = {}): ReturnType<typeof render> {
   // Setup handlers like in main.tsx
   setTokenProvider(() => useAuthStore.getState().accessToken);
+  setTenantProvider(() => useAuthStore.getState().activeTenantId);
 
   setUnauthorizedHandler(() => {
     useAuthStore.getState().clearAuth();

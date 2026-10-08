@@ -47,6 +47,10 @@ function renderGuard(checkAbility?: (ability: AppAbility) => boolean, initialEnt
             />
             <Route path="/" element={<HomeProbe />} />
             <Route path="/login" element={<div data-testid="login-page">Login</div>} />
+            <Route
+              path="/select-tenant"
+              element={<div data-testid="select-tenant-page">Choose</div>}
+            />
           </Routes>
         </AbilityProvider>
       </MemoryRouter>
@@ -56,7 +60,12 @@ function renderGuard(checkAbility?: (ability: AppAbility) => boolean, initialEnt
 
 describe('RouteGuard with abilities', () => {
   beforeEach(() => {
-    useAuthStore.setState({ status: 'anonymous', accessToken: null, user: null });
+    useAuthStore.setState({
+      status: 'anonymous',
+      accessToken: null,
+      user: null,
+      activeTenantId: null,
+    });
   });
 
   afterEach(() => {
@@ -106,6 +115,30 @@ describe('RouteGuard with abilities', () => {
   it('without checkAbility an authenticated user is let through after the ability loaded', async () => {
     setSessionUser(makeUser());
     mockApi(makeUser(), MEMBER_GRANTS);
+    renderGuard();
+
+    expect(await screen.findByTestId('protected-page')).toBeInTheDocument();
+  });
+
+  it('sends an account with several tenants to the picker before anything loads', async () => {
+    mockApi(makeUser(), MEMBER_GRANTS);
+    setSessionUser(
+      makeUser({
+        tenants: [
+          { id: 'tenant-1', name: 'Acme' },
+          { id: 'tenant-2', name: 'Globex' },
+        ],
+      }),
+    );
+    renderGuard();
+
+    expect(await screen.findByTestId('select-tenant-page')).toBeInTheDocument();
+    expect(screen.queryByTestId('protected-page')).not.toBeInTheDocument();
+  });
+
+  it('lets a platform user through without any tenant', async () => {
+    setSessionUser(makePlatformAdmin());
+    mockApi(makePlatformAdmin(), PLATFORM_ADMIN_GRANTS);
     renderGuard();
 
     expect(await screen.findByTestId('protected-page')).toBeInTheDocument();

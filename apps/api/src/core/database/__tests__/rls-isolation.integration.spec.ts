@@ -32,6 +32,8 @@ const tenantA = { id: randomUUID(), slug: `rls-a-${randomUUID()}` };
 const tenantB = { id: randomUUID(), slug: `rls-b-${randomUUID()}` };
 const userA = { id: randomUUID(), email: `a-${randomUUID()}@example.test` };
 const userB = { id: randomUUID(), email: `b-${randomUUID()}@example.test` };
+/** Lives in tenant A, but also belongs to tenant B. */
+const userAB = { id: randomUUID(), email: `ab-${randomUUID()}@example.test` };
 const roleA = { id: randomUUID() };
 const roleB = { id: randomUUID() };
 const SYSTEM_TENANT_ADMIN = SYSTEM_ROLES.TENANT_ADMIN.id;
@@ -79,27 +81,54 @@ beforeAll(async () => {
     `INSERT INTO tenants (id, name, slug) VALUES ($1, 'RLS A', $2), ($3, 'RLS B', $4)`,
     [tenantA.id, tenantA.slug, tenantB.id, tenantB.slug],
   );
-  await ownerPool.query(
-    `INSERT INTO users (id, email, password_hash, full_name, tenant_id)
-     VALUES ($1, $2, 'x', 'A Admin', $3), ($4, $5, 'x', 'B Admin', $6)`,
-    [userA.id, userA.email, tenantA.id, userB.id, userB.email, tenantB.id],
-  );
+  // One transaction: `users` carries a deferred constraint trigger that checks
+  // the membership row, so a user and its memberships have to commit together.
+  const setup = await ownerPool.connect();
+  try {
+    await setup.query('BEGIN');
+    await setup.query(
+      `INSERT INTO users (id, email, password_hash, full_name, tenant_id)
+       VALUES ($1, $2, 'x', 'A Admin', $3), ($4, $5, 'x', 'B Admin', $6),
+              ($7, $8, 'x', 'AB Member', $3)`,
+      [
+        userA.id,
+        userA.email,
+        tenantA.id,
+        userB.id,
+        userB.email,
+        tenantB.id,
+        userAB.id,
+        userAB.email,
+      ],
+    );
+    await setup.query(
+      `INSERT INTO user_tenants (user_id, tenant_id)
+       VALUES ($1, $2), ($3, $4), ($5, $2), ($5, $4)`,
+      [userA.id, tenantA.id, userB.id, tenantB.id, userAB.id],
+    );
+    await setup.query('COMMIT');
+  } catch (error: unknown) {
+    await setup.query('ROLLBACK');
+    throw error;
+  } finally {
+    setup.release();
+  }
+
   await ownerPool.query(
     `INSERT INTO roles (id, tenant_id, key, name) VALUES ($1, $2, 'RLS_A', 'RLS A'), ($3, $4, 'RLS_B', 'RLS B')`,
     [roleA.id, tenantA.id, roleB.id, tenantB.id],
   );
-  await ownerPool.query(`INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2), ($3, $4)`, [
-    userA.id,
-    SYSTEM_TENANT_ADMIN,
-    userB.id,
-    SYSTEM_TENANT_ADMIN,
-  ]);
+  await ownerPool.query(
+    `INSERT INTO user_roles (user_id, role_id, tenant_id) VALUES ($1, $2, $3), ($4, $2, $5), ($6, $2, $5)`,
+    [userA.id, SYSTEM_TENANT_ADMIN, tenantA.id, userB.id, tenantB.id, userAB.id],
+  );
 });
 
 afterAll(async () => {
-  await ownerPool.query('DELETE FROM user_roles WHERE user_id = ANY($1)', [[userA.id, userB.id]]);
+  const userIds = [userA.id, userB.id, userAB.id];
+  await ownerPool.query('DELETE FROM user_roles WHERE user_id = ANY($1)', [userIds]);
   await ownerPool.query('DELETE FROM roles WHERE id = ANY($1)', [[roleA.id, roleB.id]]);
-  await ownerPool.query('DELETE FROM users WHERE id = ANY($1)', [[userA.id, userB.id]]);
+  await ownerPool.query('DELETE FROM users WHERE id = ANY($1)', [userIds]);
   await ownerPool.query('DELETE FROM tenants WHERE id = ANY($1)', [[tenantA.id, tenantB.id]]);
   await Promise.all([appPool.end(), ownerPool.end()]);
 });
@@ -156,6 +185,130 @@ describe('tenant isolation', () => {
         ),
       ),
     ).rejects.toThrow(/row-level security/iu);
+  });
+});
+
+describe('multi-tenant membership', () => {
+  it('an account is visible in every tenant it belongs to, not just its home tenant', async () => {
+    for (const tenantId of [tenantA.id, tenantB.id]) {
+      const rows = await withContext(
+        { accessMode: 'tenant', tenantId },
+        async (client) =>
+          (await client.query<IdRow>('SELECT id FROM users WHERE id = $1', [userAB.id])).rows,
+      );
+
+      expect(rows).toEqual([{ id: userAB.id }]);
+    }
+  });
+
+  it('membership rows of another tenant stay hidden', async () => {
+    const rows = await withContext(
+      { accessMode: 'tenant', tenantId: tenantA.id },
+      async (client) =>
+        (
+          await client.query<{ tenant_id: string }>(
+            'SELECT tenant_id FROM user_tenants WHERE user_id = $1',
+            [userAB.id],
+          )
+        ).rows,
+    );
+
+    expect(rows).toEqual([{ tenant_id: tenantA.id }]);
+  });
+
+  it('holds the same role in two tenants: one key per membership, not per account', async () => {
+    const rows = await withContext({ accessMode: 'admin', reason: 'test' }, async (client) => {
+      await client.query(
+        'INSERT INTO user_roles (user_id, role_id, tenant_id) VALUES ($1, $2, $3), ($1, $2, $4)',
+        [userAB.id, SYSTEM_ROLES.TENANT_MEMBER.id, tenantA.id, tenantB.id],
+      );
+      return (
+        await client.query<{ tenant_id: string }>(
+          'SELECT tenant_id FROM user_roles WHERE user_id = $1 AND role_id = $2 ORDER BY tenant_id',
+          [userAB.id, SYSTEM_ROLES.TENANT_MEMBER.id],
+        )
+      ).rows;
+    });
+
+    expect(rows).toHaveLength(2);
+  });
+
+  it('refuses the same role twice in one tenant', async () => {
+    await expect(
+      withContext({ accessMode: 'admin', reason: 'test' }, async (client) =>
+        client.query(
+          'INSERT INTO user_roles (user_id, role_id, tenant_id) VALUES ($1, $2, $3), ($1, $2, $3)',
+          [userAB.id, SYSTEM_ROLES.TENANT_MEMBER.id, tenantA.id],
+        ),
+      ),
+    ).rejects.toThrow(/uq_user_roles_tenant|duplicate key/iu);
+  });
+
+  it('a role cannot be assigned in a tenant the account does not belong to', async () => {
+    await expect(
+      withContext({ accessMode: 'admin', reason: 'test' }, async (client) =>
+        client.query('INSERT INTO user_roles (user_id, role_id, tenant_id) VALUES ($1, $2, $3)', [
+          userB.id,
+          SYSTEM_ROLES.TENANT_MEMBER.id,
+          tenantA.id,
+        ]),
+      ),
+    ).rejects.toThrow(/does not belong to that tenant/iu);
+  });
+
+  it('a custom role cannot be assigned outside its own tenant', async () => {
+    await expect(
+      withContext({ accessMode: 'admin', reason: 'test' }, async (client) =>
+        client.query('INSERT INTO user_roles (user_id, role_id, tenant_id) VALUES ($1, $2, $3)', [
+          userAB.id,
+          roleB.id,
+          tenantA.id,
+        ]),
+      ),
+    ).rejects.toThrow(/another tenant/iu);
+  });
+
+  it('a tenant role assignment without a tenant is refused', async () => {
+    await expect(
+      withContext({ accessMode: 'admin', reason: 'test' }, async (client) =>
+        client.query('INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2)', [
+          userAB.id,
+          SYSTEM_ROLES.TENANT_MEMBER.id,
+        ]),
+      ),
+    ).rejects.toThrow(/needs a tenant/iu);
+  });
+
+  it('a tenant cannot repoint an account home tenant', async () => {
+    await expect(
+      withContext({ accessMode: 'tenant', tenantId: tenantA.id }, async (client) =>
+        client.query('UPDATE users SET tenant_id = $1 WHERE id = $2', [tenantB.id, userAB.id]),
+      ),
+    ).rejects.toThrow(/admin mode/iu);
+  });
+
+  it('a home tenant the account does not belong to is refused', async () => {
+    await expect(
+      withContext({ accessMode: 'admin', reason: 'test' }, async (client) =>
+        client.query('UPDATE users SET tenant_id = $1 WHERE id = $2', [tenantB.id, userA.id]),
+      ),
+    ).rejects.toThrow(/not a tenant of this account/iu);
+  });
+
+  it('removing a membership leaves the account and its other tenants alone', async () => {
+    const remaining = await withContext(
+      { accessMode: 'tenant', tenantId: tenantB.id },
+      async (client) => {
+        await client.query('DELETE FROM user_tenants WHERE user_id = $1 AND tenant_id = $2', [
+          userAB.id,
+          tenantB.id,
+        ]);
+        return (await client.query<IdRow>('SELECT id FROM users WHERE id = $1', [userAB.id])).rows;
+      },
+    );
+
+    // The row is gone from tenant B's view, and the account itself survives.
+    expect(remaining).toEqual([]);
   });
 });
 
@@ -338,19 +491,34 @@ describe('user_roles', () => {
 
     await expect(
       withContext({ accessMode: 'admin', reason: 'rls-test' }, async (client) =>
-        client.query(`INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2)`, [
+        client.query(`INSERT INTO user_roles (user_id, role_id, tenant_id) VALUES ($1, $2, $3)`, [
           userA.id,
           roleB.id,
+          tenantA.id,
         ]),
       ),
     ).rejects.toThrow(/another tenant/iu);
   });
 
-  it("assigning a role stamps the user's tenant, whatever the caller sent", async () => {
+  it('refuses an assignment in a tenant the account does not belong to', async () => {
+    // The tenant is no longer stamped from the user: an account can belong to
+    // several, so the caller names one and the trigger checks the membership.
+    await expect(
+      withContext(tenantCtx, async (client) =>
+        client.query(`INSERT INTO user_roles (user_id, role_id, tenant_id) VALUES ($1, $2, $3)`, [
+          userA.id,
+          roleA.id,
+          tenantB.id,
+        ]),
+      ),
+    ).rejects.toThrow(/row-level security|does not belong to that tenant/iu);
+  });
+
+  it('keeps the tenant the caller named when the account belongs to it', async () => {
     const row = await withContext(tenantCtx, async (client) => {
       await client.query(
         `INSERT INTO user_roles (user_id, role_id, tenant_id) VALUES ($1, $2, $3)`,
-        [userA.id, roleA.id, tenantB.id],
+        [userA.id, roleA.id, tenantA.id],
       );
       return (
         await client.query<{ tenant_id: string }>(
@@ -358,11 +526,9 @@ describe('user_roles', () => {
           [userA.id, roleA.id],
         )
       ).rows[0];
-    }).catch((error: unknown) => error);
+    });
 
-    // The forged tenant_id either fails the RLS check or is overwritten by the trigger.
-    if (row instanceof Error) expect(String(row)).toMatch(/row-level security/iu);
-    else expect(row).toEqual({ tenant_id: tenantA.id });
+    expect(row).toEqual({ tenant_id: tenantA.id });
   });
 });
 

@@ -34,18 +34,18 @@ just api         # NestJS API on http://localhost:3000 (Swagger at /api/docs)
 just web         # Vite dev server on http://localhost:5173
 ```
 
-Seeded accounts (all use the password `Password123!`):
+Seeded account (password `Password123!`), plus two empty tenants, Acme Inc. and Globex Corp.:
 
-| Email                  | Role             | Tenant       |
-| :--------------------- | :--------------- | :----------- |
-| `admin@example.com`    | `PLATFORM_ADMIN` | none         |
-| `admin-a@example.com`  | `TENANT_ADMIN`   | Acme Inc.    |
-| `member-a@example.com` | `TENANT_MEMBER`  | Acme Inc.    |
-| `admin-b@example.com`  | `TENANT_ADMIN`   | Globex Corp. |
+| Email                | Role             | Tenant |
+| :------------------- | :--------------- | :----- |
+| `admin@platform.com` | `PLATFORM_ADMIN` | none   |
+
+Everything else is created from this account: there is no sign-up, so the seed only makes the one account the API cannot.
 
 ## Multi-Tenancy Model
 
-- A `tenants` table holds one row per workspace. Each user belongs to exactly one tenant (`users.tenant_id`); the column is null only for platform users, who hold a platform-scope role.
+- A `tenants` table holds one row per workspace. An account may belong to several tenants (`user_tenants`), while `users.tenant_id` records its home tenant and is null only for platform users, who hold a platform-scope role.
+- Every authenticated request names the tenant it acts in with the `x-tenant-id` header, validated against the account's memberships. A platform user sends none and sees every tenant.
 - Who creates what:
   - A platform admin creates tenants (`POST /api/v1/tenants`) and users in any tenant (`POST /api/v1/users` with `tenantId` and `roleIds`).
   - A tenant user with the `create:User` permission (by default `TENANT_ADMIN`) creates users in its own tenant, with roles it is allowed to hand out.

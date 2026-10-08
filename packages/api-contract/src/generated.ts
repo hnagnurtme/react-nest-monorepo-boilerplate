@@ -403,6 +403,92 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tenant-invitations/token/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** What an invitation link is offering, for the acceptance screen */
+        get: operations["TenantInvitationsController_preview_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenant-invitations/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Accept an invitation to join a tenant */
+        post: operations["TenantInvitationsController_accept_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenant-invitations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Invitations still waiting on their invitee */
+        get: operations["TenantInvitationsController_listPending_v1"];
+        put?: never;
+        /** Invite an existing account to join the tenant */
+        post: operations["TenantInvitationsController_invite_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenant-invitations/{id}/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Email a fresh link for a pending invitation */
+        post: operations["TenantInvitationsController_resend_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenant-invitations/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Withdraw a pending invitation */
+        delete: operations["TenantInvitationsController_revoke_v1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -421,6 +507,10 @@ export interface components {
                     email: string;
                     fullName: string;
                     tenantId?: string;
+                    tenants: {
+                        id: string;
+                        name: string;
+                    }[];
                     /** @enum {string} */
                     scope: "platform" | "tenant";
                     roles: {
@@ -480,6 +570,10 @@ export interface components {
                 email: string;
                 fullName: string;
                 tenantId?: string;
+                tenants: {
+                    id: string;
+                    name: string;
+                }[];
                 /** @enum {string} */
                 scope: "platform" | "tenant";
                 roles: {
@@ -674,6 +768,41 @@ export interface components {
         };
         SetUserRolesDto: {
             roleIds: string[];
+            /** Format: uuid */
+            tenantId?: string;
+        };
+        TenantInvitationPreviewEnvelopeDto: {
+            data: {
+                /** Format: email */
+                email: string;
+                tenantName: string;
+                inviterName: string;
+                roles: string[];
+            };
+        };
+        AcceptTenantInvitationDto: {
+            token: string;
+        };
+        TenantInvitationListEnvelopeDto: {
+            data: {
+                /** Format: uuid */
+                id: string;
+                /** Format: email */
+                email: string;
+                fullName: string;
+                roles: string[];
+                /** Format: date-time */
+                expiresAt: string;
+                /** Format: date-time */
+                createdAt: string;
+            }[];
+        };
+        InviteToTenantDto: {
+            /** Format: email */
+            email: string;
+            roleIds: string[];
+            /** Format: uuid */
+            tenantId?: string;
         };
     };
     responses: never;
@@ -687,7 +816,10 @@ export interface operations {
     HealthController_getLiveness: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The tenant to act in. Must be one of the tenants from `GET /auth/me`. */
+                "x-tenant-id"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -705,7 +837,10 @@ export interface operations {
     HealthController_getReadiness: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The tenant to act in. Must be one of the tenants from `GET /auth/me`. */
+                "x-tenant-id"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -730,7 +865,10 @@ export interface operations {
     AuthController_login_v1: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The tenant to act in. Must be one of the tenants from `GET /auth/me`. */
+                "x-tenant-id"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -790,7 +928,10 @@ export interface operations {
     AuthController_refresh_v1: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The tenant to act in. Must be one of the tenants from `GET /auth/me`. */
+                "x-tenant-id"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -850,7 +991,10 @@ export interface operations {
     AuthController_forgotPassword_v1: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The tenant to act in. Must be one of the tenants from `GET /auth/me`. */
+                "x-tenant-id"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -892,7 +1036,10 @@ export interface operations {
     AuthController_resetPassword_v1: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The tenant to act in. Must be one of the tenants from `GET /auth/me`. */
+                "x-tenant-id"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -952,7 +1099,10 @@ export interface operations {
     AuthController_previewInvitation_v1: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The tenant to act in. Must be one of the tenants from `GET /auth/me`. */
+                "x-tenant-id"?: string;
+            };
             path: {
                 /** @description The single-use token from the invitation email */
                 token: unknown;
@@ -993,7 +1143,10 @@ export interface operations {
     AuthController_acceptInvitation_v1: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The tenant to act in. Must be one of the tenants from `GET /auth/me`. */
+                "x-tenant-id"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1044,7 +1197,10 @@ export interface operations {
     AuthController_changePassword_v1: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The tenant to act in. Must be one of the tenants from `GET /auth/me`. */
+                "x-tenant-id"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1095,7 +1251,10 @@ export interface operations {
     AuthController_logout_v1: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The tenant to act in. Must be one of the tenants from `GET /auth/me`. */
+                "x-tenant-id"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1135,7 +1294,10 @@ export interface operations {
     AuthController_logoutAll_v1: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The tenant to act in. Must be one of the tenants from `GET /auth/me`. */
+                "x-tenant-id"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1171,7 +1333,10 @@ export interface operations {
     AuthController_me_v1: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The tenant to act in. Must be one of the tenants from `GET /auth/me`. */
+                "x-tenant-id"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1200,7 +1365,10 @@ export interface operations {
     AuthController_abilities_v1: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The tenant to act in. Must be one of the tenants from `GET /auth/me`. */
+                "x-tenant-id"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1229,7 +1397,10 @@ export interface operations {
     RolesController_permissions_v1: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The tenant to act in. Must be one of the tenants from `GET /auth/me`. */
+                "x-tenant-id"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1267,7 +1438,10 @@ export interface operations {
     RolesController_list_v1: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The tenant to act in. Must be one of the tenants from `GET /auth/me`. */
+                "x-tenant-id"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1314,7 +1488,10 @@ export interface operations {
     RolesController_create_v1: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The tenant to act in. Must be one of the tenants from `GET /auth/me`. */
+                "x-tenant-id"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1374,7 +1551,10 @@ export interface operations {
     RolesController_get_v1: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The tenant to act in. Must be one of the tenants from `GET /auth/me`. */
+                "x-tenant-id"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1421,7 +1601,10 @@ export interface operations {
     RolesController_remove_v1: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The tenant to act in. Must be one of the tenants from `GET /auth/me`. */
+                "x-tenant-id"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1468,7 +1651,10 @@ export interface operations {
     RolesController_rename_v1: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The tenant to act in. Must be one of the tenants from `GET /auth/me`. */
+                "x-tenant-id"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1537,7 +1723,10 @@ export interface operations {
     RolesController_setPermissions_v1: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The tenant to act in. Must be one of the tenants from `GET /auth/me`. */
+                "x-tenant-id"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1597,7 +1786,10 @@ export interface operations {
     TenantsController_list_v1: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The tenant to act in. Must be one of the tenants from `GET /auth/me`. */
+                "x-tenant-id"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1644,7 +1836,10 @@ export interface operations {
     TenantsController_create_v1: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The tenant to act in. Must be one of the tenants from `GET /auth/me`. */
+                "x-tenant-id"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1704,7 +1899,10 @@ export interface operations {
     TenantsController_get_v1: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The tenant to act in. Must be one of the tenants from `GET /auth/me`. */
+                "x-tenant-id"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1751,7 +1949,10 @@ export interface operations {
     TenantsController_update_v1: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The tenant to act in. Must be one of the tenants from `GET /auth/me`. */
+                "x-tenant-id"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1811,7 +2012,10 @@ export interface operations {
     UsersController_list_v1: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The tenant to act in. Must be one of the tenants from `GET /auth/me`. */
+                "x-tenant-id"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1858,7 +2062,10 @@ export interface operations {
     UsersController_create_v1: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The tenant to act in. Must be one of the tenants from `GET /auth/me`. */
+                "x-tenant-id"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1918,7 +2125,10 @@ export interface operations {
     UsersController_resendInvitation_v1: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The tenant to act in. Must be one of the tenants from `GET /auth/me`. */
+                "x-tenant-id"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1972,7 +2182,10 @@ export interface operations {
     UsersController_get_v1: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The tenant to act in. Must be one of the tenants from `GET /auth/me`. */
+                "x-tenant-id"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -2019,7 +2232,10 @@ export interface operations {
     UsersController_remove_v1: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The tenant to act in. Must be one of the tenants from `GET /auth/me`. */
+                "x-tenant-id"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -2057,7 +2273,10 @@ export interface operations {
     UsersController_update_v1: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The tenant to act in. Must be one of the tenants from `GET /auth/me`. */
+                "x-tenant-id"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -2117,7 +2336,10 @@ export interface operations {
     UsersController_setRoles_v1: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description The tenant to act in. Must be one of the tenants from `GET /auth/me`. */
+                "x-tenant-id"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -2135,6 +2357,342 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["UserEnvelopeDto"];
                 };
+            };
+            /** @description Not authenticated, or the token is invalid or expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Authenticated, but not allowed to do this */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description No such resource, or the caller may not know it exists */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description The resource is in a state that forbids this change */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description The payload failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+        };
+    };
+    TenantInvitationsController_preview_v1: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description The tenant to act in. Must be one of the tenants from `GET /auth/me`. */
+                "x-tenant-id"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The invitation */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenantInvitationPreviewEnvelopeDto"];
+                };
+            };
+            /** @description No such resource, or the caller may not know it exists */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description The payload failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+        };
+    };
+    TenantInvitationsController_accept_v1: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description The tenant to act in. Must be one of the tenants from `GET /auth/me`. */
+                "x-tenant-id"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AcceptTenantInvitationDto"];
+            };
+        };
+        responses: {
+            /** @description The account joined the tenant */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such resource, or the caller may not know it exists */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description The resource is in a state that forbids this change */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description The payload failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+        };
+    };
+    TenantInvitationsController_listPending_v1: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description The tenant to act in. Must be one of the tenants from `GET /auth/me`. */
+                "x-tenant-id"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Pending invitations */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenantInvitationListEnvelopeDto"];
+                };
+            };
+            /** @description Not authenticated, or the token is invalid or expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Authenticated, but not allowed to do this */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+        };
+    };
+    TenantInvitationsController_invite_v1: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description The tenant to act in. Must be one of the tenants from `GET /auth/me`. */
+                "x-tenant-id"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InviteToTenantDto"];
+            };
+        };
+        responses: {
+            /** @description The invitation was emailed */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not authenticated, or the token is invalid or expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Authenticated, but not allowed to do this */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description No such resource, or the caller may not know it exists */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description The resource is in a state that forbids this change */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description The payload failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+        };
+    };
+    TenantInvitationsController_resend_v1: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description The tenant to act in. Must be one of the tenants from `GET /auth/me`. */
+                "x-tenant-id"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The invitation was emailed again */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not authenticated, or the token is invalid or expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Authenticated, but not allowed to do this */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description No such resource, or the caller may not know it exists */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description The resource is in a state that forbids this change */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description The payload failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+        };
+    };
+    TenantInvitationsController_revoke_v1: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description The tenant to act in. Must be one of the tenants from `GET /auth/me`. */
+                "x-tenant-id"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The invitation was withdrawn */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Not authenticated, or the token is invalid or expired */
             401: {

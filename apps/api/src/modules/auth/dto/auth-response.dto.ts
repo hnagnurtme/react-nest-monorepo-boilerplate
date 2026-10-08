@@ -13,7 +13,14 @@ export const publicUserSchema = z.object({
   id: z.string(),
   email: z.string().email(),
   fullName: z.string(),
+  /** The account's home tenant; absent for a platform account. */
   tenantId: z.string().optional(),
+  /**
+   * Every tenant the account may act in. The client picks one and sends it as
+   * `x-tenant-id` on each request; a single membership is still a choice the
+   * client makes explicitly.
+   */
+  tenants: z.array(z.object({ id: z.string(), name: z.string() })),
   /** 'platform' users sit above every tenant. */
   scope: z.enum(ROLE_SCOPES),
   roles: z.array(z.object({ key: z.string(), name: z.string() })),

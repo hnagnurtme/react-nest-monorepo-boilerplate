@@ -12,6 +12,7 @@ import { useUpdateUser } from '@/features/users/api/use-update-user';
 import { useUsers } from '@/features/users/api/use-users';
 import { CreateUserForm } from '@/features/users/components/create-user-form';
 import { EditUserRolesDialog } from '@/features/users/components/edit-user-roles-dialog';
+import { PendingInvitations } from '@/features/users/components/pending-invitations';
 import type { UserListItem } from '@/features/users/types';
 import {
   useApiErrorMessage,
@@ -255,6 +256,8 @@ export function UsersPage() {
           <CreateUserForm onCreated={createForm.close} onCancel={createForm.close} />
         </CanAction>
       ) : null}
+
+      <PendingInvitations />
 
       {isPending ? <SkeletonTable columns={columns.length} label={t('loading')} /> : null}
       {isError ? (

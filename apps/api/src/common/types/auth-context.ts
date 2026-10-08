@@ -11,6 +11,8 @@ import type { RoleScope, UserContext } from '@repo/shared-types';
 export interface AuthContext extends UserContext {
   /** JWT id, so a single access token can be revoked before it expires. */
   jti: string;
+  /** Every tenant the account belongs to. `tenantId` is the one this request acts in. */
+  tenantIds: string[];
   email: string;
   /** 'platform' users sit above every tenant and run in the 'admin' RLS mode. */
   scope: RoleScope;

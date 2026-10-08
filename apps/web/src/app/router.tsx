@@ -20,12 +20,20 @@ const AcceptInvitationPage = lazy(() =>
   import('@/features/auth').then((module) => ({ default: module.AcceptInvitationPage })),
 );
 
+const SelectTenantPage = lazy(() =>
+  import('@/features/auth').then((module) => ({ default: module.SelectTenantPage })),
+);
+
 const StatusPage = lazy(() =>
   import('@/features/status').then((module) => ({ default: module.StatusPage })),
 );
 
 const UsersPage = lazy(() =>
   import('@/features/users').then((module) => ({ default: module.UsersPage })),
+);
+
+const AcceptTenantInvitationPage = lazy(() =>
+  import('@/features/users').then((module) => ({ default: module.AcceptTenantInvitationPage })),
 );
 
 const RolesPage = lazy(() =>
@@ -52,6 +60,10 @@ export function AppRouter() {
           <Route path="/login" element={<LoginPage />} />
           {/* Public: reached from the invitation email, before any session exists. */}
           <Route path="/accept-invitation" element={<AcceptInvitationPage />} />
+          {/* Public: reached from the "you were invited to join" email. */}
+          <Route path="/accept-tenant-invitation" element={<AcceptTenantInvitationPage />} />
+          {/* Reached whenever an account has to say which tenant it is working in. */}
+          <Route path="/select-tenant" element={<SelectTenantPage />} />
           <Route path="/status" element={<StatusPage />} />
           <Route
             path="/users"

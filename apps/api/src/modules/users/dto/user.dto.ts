@@ -57,8 +57,17 @@ export const createUserSchema = z
 
 export class CreateUserDto extends createZodDto(createUserSchema) {}
 
+/**
+ * `tenantId` is accepted for the same reason as on create: an account can
+ * belong to several tenants, so a platform admin has to say which one the role
+ * set applies to. A tenant admin may omit it (the tenant the request acts in)
+ * and may not name another.
+ */
 export const setUserRolesSchema = z
-  .object({ roleIds: z.array(z.string().uuid()).min(1).max(20) })
+  .object({
+    roleIds: z.array(z.string().uuid()).min(1).max(20),
+    tenantId: z.string().uuid().optional(),
+  })
   .strict();
 
 export class SetUserRolesDto extends createZodDto(setUserRolesSchema) {}

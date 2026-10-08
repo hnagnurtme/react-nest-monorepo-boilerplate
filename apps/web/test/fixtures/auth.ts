@@ -23,6 +23,7 @@ export function makeUser(overrides?: Partial<PublicUser>): PublicUser {
     scope: 'tenant',
     roles: [{ key: 'TENANT_MEMBER', name: 'Tenant member' }],
     tenantId: 'tenant-1',
+    tenants: [{ id: 'tenant-1', name: 'Acme' }],
     ...overrides,
   };
 }
@@ -40,6 +41,8 @@ export function makePlatformAdmin(overrides?: Partial<PublicUser>): PublicUser {
     id: 'root',
     scope: 'platform',
     roles: [{ key: 'PLATFORM_ADMIN', name: 'Platform administrator' }],
+    // A platform account sits above every tenant, so it belongs to none.
+    tenants: [],
     ...overrides,
   });
   delete user.tenantId;
@@ -104,5 +107,10 @@ export function problem(
 }
 
 export function setSessionUser(user: PublicUser): void {
-  useAuthStore.setState({ status: 'authenticated', accessToken: 'token', user });
+  // The real store resolves the active tenant on sign-in, and nothing
+  // tenant-scoped renders without one.
+  const [only] = user.tenants;
+  const activeTenantId =
+    user.scope === 'platform' || user.tenants.length !== 1 || only === undefined ? null : only.id;
+  useAuthStore.setState({ status: 'authenticated', accessToken: 'token', user, activeTenantId });
 }

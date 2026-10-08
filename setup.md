@@ -106,28 +106,30 @@ Seed development data (idempotent):
 just db-seed
 ```
 
-| Email                  | Role             | Tenant       | Password       |
-| :--------------------- | :--------------- | :----------- | :------------- |
-| `admin@example.com`    | `PLATFORM_ADMIN` | none         | `Password123!` |
-| `admin-a@example.com`  | `TENANT_ADMIN`   | Acme Inc.    | `Password123!` |
-| `member-a@example.com` | `TENANT_MEMBER`  | Acme Inc.    | `Password123!` |
-| `admin-b@example.com`  | `TENANT_ADMIN`   | Globex Corp. | `Password123!` |
+| Email                | Role             | Tenant | Password       |
+| :------------------- | :--------------- | :----- | :------------- |
+| `admin@platform.com` | `PLATFORM_ADMIN` | none   | `Password123!` |
 
-There is no sign-up. Log in as `admin@example.com` to create tenants and users in any tenant, or as a tenant admin to create users in that tenant. New users are active and email-verified with the password you choose. The seed assigns the roles through `user_roles`.
+The seed also creates two empty tenants, Acme Inc. and Globex Corp.
+
+There is no sign-up, and this is the only account the seed creates: it is the one that cannot be made through the API. Log in as `admin@platform.com` to create more tenants (`POST /api/v1/tenants`) and the first administrator of each (`POST /api/v1/users` with `tenantId` and `roleIds`); that administrator then creates the rest of its tenant's users. New accounts are emailed an invitation unless you choose a password for them.
 
 ### Creating a Custom Role
 
-Roles and permissions live in the database. Log in as a tenant admin (for example `admin-a@example.com`) and either use the roles page in the web app or call the API with the access token:
+Roles and permissions live in the database. Log in as a tenant admin (one you created with the platform account) and either use the roles page in the web app or call the API with the access token. A tenant admin must send the tenant it is acting in on every call:
 
 ```bash
 # 0. Log in and copy data.accessToken from the response
 curl -X POST http://localhost:3000/api/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin-a@example.com","password":"Password123!"}'
+  -d '{"email":"admin-a@acme.test","password":"Password123!"}'
 export TOKEN=<accessToken>
+# Copy data.user.tenants[0].id from the same response
+export TENANT=<tenantId>
 
 # 1. What may I put into a role?
-curl -H "Authorization: Bearer $TOKEN" http://localhost:3000/api/v1/permissions
+curl -H "Authorization: Bearer $TOKEN" -H "x-tenant-id: $TENANT" \
+  http://localhost:3000/api/v1/permissions
 
 # 2. Create the role (a platform admin must also send "tenantId")
 curl -X POST http://localhost:3000/api/v1/roles \

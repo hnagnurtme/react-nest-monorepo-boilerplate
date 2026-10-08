@@ -88,5 +88,35 @@
     "save": "Save roles",
     "cancel": "Cancel",
     "loading": "Loading roles..."
+  },
+  "invite": {
+    "prompt": "{{email}} already has an account. Invite it to join this tenant instead — the account holder has to accept.",
+    "submit": "Send invitation",
+    "dismiss": "Use another email",
+    "sent": "Invitation sent to {{email}}. They join once they accept it.",
+    "alreadyMember": "That account already belongs to this tenant.",
+    "error": "The invitation could not be sent."
+  },
+  "joinTenant": {
+    "loading": "Checking the invitation…",
+    "invalidTitle": "This invitation is no longer valid",
+    "invalidBody": "The link has expired or has already been used. Ask the administrator to invite you again.",
+    "title": "Join {{tenant}}",
+    "subtitle": "{{inviter}} invited {{email}} to join. Your account and password stay the same.",
+    "roles": "You will join as: {{roles}}",
+    "accept": "Accept and join",
+    "success": "You joined the tenant. Sign in to start working in it.",
+    "error": "The invitation could not be accepted."
+  },
+  "pendingInvitations": {
+    "title_one": "{{count}} invitation waiting to be accepted",
+    "title_other": "{{count}} invitations waiting to be accepted",
+    "detail": "Joining as {{roles}} · link expires {{expires}}",
+    "resend": "Send again",
+    "resent": "The invitation was emailed again.",
+    "resendError": "The invitation could not be sent again.",
+    "revoke": "Withdraw",
+    "revoked": "The invitation was withdrawn.",
+    "revokeError": "The invitation could not be withdrawn."
   }
 }

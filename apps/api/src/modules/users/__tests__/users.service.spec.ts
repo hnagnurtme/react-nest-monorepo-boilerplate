@@ -7,6 +7,7 @@ import type { AppConfig } from '@/config/index.js';
 import type { RoleWithGrants } from '@/core/authz/index.js';
 import type { User } from '@/core/database/schema/index.js';
 import {
+  AccountAlreadyExistsError,
   ForbiddenActionError,
   ResourceConflictError,
   ResourceNotFoundError,
@@ -73,6 +74,7 @@ function tenantAdmin(id = 'actor'): Actor {
       id,
       email: 'a@x.test',
       tenantId: TENANT,
+      tenantIds: [TENANT],
       scope: 'tenant',
       roles: ['TENANT_ADMIN'],
       jti: 'j',
@@ -86,6 +88,7 @@ function tenantMember(id = 'u-1'): Actor {
       id,
       email: 'm@x.test',
       tenantId: TENANT,
+      tenantIds: [TENANT],
       scope: 'tenant',
       roles: ['TENANT_MEMBER'],
       jti: 'j',
@@ -95,7 +98,14 @@ function tenantMember(id = 'u-1'): Actor {
 }
 function platformAdmin(): Actor {
   return {
-    auth: { id: 'root', email: 'r@x.test', scope: 'platform', roles: ['PLATFORM_ADMIN'], jti: 'j' },
+    auth: {
+      id: 'root',
+      email: 'r@x.test',
+      tenantIds: [],
+      scope: 'platform',
+      roles: ['PLATFORM_ADMIN'],
+      jti: 'j',
+    },
     grants: [...SYSTEM_ROLES.PLATFORM_ADMIN.grants],
   };
 }
@@ -103,27 +113,55 @@ function platformAdmin(): Actor {
 describe('UsersService', () => {
   let service: UsersService;
   let repository: Record<
-    'findById' | 'update' | 'softDelete' | 'list' | 'count' | 'create' | 'findTenantName',
+    | 'findById'
+    | 'update'
+    | 'softDelete'
+    | 'list'
+    | 'count'
+    | 'create'
+    | 'findTenantName'
+    | 'findByEmail'
+    | 'addMembership'
+    | 'removeMembership'
+    | 'membershipIds',
     Mock
   >;
   let authzRepository: Record<
-    'loadRolesWithGrants' | 'rolesForUsers' | 'replaceUserRoles' | 'countActiveWithRoleKey',
+    | 'loadRolesWithGrants'
+    | 'rolesForUsers'
+    | 'replaceUserRoles'
+    | 'countActiveWithRoleKey'
+    | 'tenantIdsWithRoleKey',
     Mock
   >;
-  let authz: { current: Mock; currentProfile: Mock; invalidateUsers: Mock };
+  let authz: {
+    current: Mock;
+    currentGrants: Mock;
+    activeTenantId: Mock;
+    invalidateUsers: Mock;
+  };
   let audit: { record: Mock };
-  let mail: { sendInvitationMail: Mock };
+  let mail: { sendInvitationMail: Mock; sendTenantInvitationMail: Mock };
   let invitations: { issue: Mock; ttlHours: number };
+  let tenantInvitations: { issue: Mock; find: Mock; ttlHours: number };
+  let invitationsRepository: Record<
+    | 'create'
+    | 'findById'
+    | 'findLiveByTokenHash'
+    | 'listPending'
+    | 'revokeLive'
+    | 'revokeById'
+    | 'markAccepted'
+    | 'tenantName',
+    Mock
+  >;
 
   function act(actor: Actor): AuthContext {
     authz.current.mockReturnValue(
       buildAbility(actor.grants, { id: actor.auth.id, tenantId: actor.auth.tenantId }),
     );
-    authz.currentProfile.mockReturnValue({
-      userId: actor.auth.id,
-      tenantId: actor.auth.tenantId ?? null,
-      grants: actor.grants,
-    });
+    authz.currentGrants.mockReturnValue([...actor.grants]);
+    authz.activeTenantId.mockReturnValue(actor.auth.tenantId);
     return actor.auth;
   }
 
@@ -138,25 +176,54 @@ describe('UsersService', () => {
         Promise.resolve(makeUser({ id: 'new-id', ...values })),
       ),
       findTenantName: vi.fn(() => Promise.resolve('Acme')),
+      findByEmail: vi.fn(() => Promise.resolve(undefined)),
+      addMembership: vi.fn(),
+      removeMembership: vi.fn(() => Promise.resolve(true)),
+      membershipIds: vi.fn(() => Promise.resolve([TENANT])),
     };
     authzRepository = {
       loadRolesWithGrants: vi.fn(),
       rolesForUsers: vi.fn(() => Promise.resolve(new Map())),
       replaceUserRoles: vi.fn(),
       countActiveWithRoleKey: vi.fn(() => Promise.resolve(1)),
+      tenantIdsWithRoleKey: vi.fn(() => Promise.resolve([TENANT])),
     };
-    authz = { current: vi.fn(), currentProfile: vi.fn(), invalidateUsers: vi.fn() };
+    authz = {
+      current: vi.fn(),
+      currentGrants: vi.fn(() => []),
+      activeTenantId: vi.fn(),
+      invalidateUsers: vi.fn(),
+    };
     audit = { record: vi.fn() };
     const transactions = {
       runInRequestContext: vi.fn((fn: (tx: unknown) => Promise<unknown>) => fn({})),
+      runAsAdmin: vi.fn((_reason: string, fn: (tx: unknown) => Promise<unknown>) => fn({})),
     };
     const credentials = { hash: vi.fn(() => Promise.resolve('hashed')) };
-    mail = { sendInvitationMail: vi.fn(() => Promise.resolve()) };
+    mail = {
+      sendInvitationMail: vi.fn(() => Promise.resolve()),
+      sendTenantInvitationMail: vi.fn(() => Promise.resolve()),
+    };
     const appConfig: Pick<AppConfig, 'webOrigin' | 'appName'> = {
       webOrigin: 'http://localhost:5173',
       appName: 'Starter App',
     };
     invitations = { issue: vi.fn(() => Promise.resolve('invite-token')), ttlHours: 72 };
+    tenantInvitations = {
+      issue: vi.fn(() => Promise.resolve('join-token')),
+      find: vi.fn(),
+      ttlHours: 72,
+    };
+    invitationsRepository = {
+      create: vi.fn(),
+      findById: vi.fn(),
+      findLiveByTokenHash: vi.fn(),
+      listPending: vi.fn(() => Promise.resolve([])),
+      revokeLive: vi.fn(() => Promise.resolve(0)),
+      revokeById: vi.fn(() => Promise.resolve(true)),
+      markAccepted: vi.fn(() => Promise.resolve(true)),
+      tenantName: vi.fn(() => Promise.resolve('Acme')),
+    };
 
     service = new UsersService(
       transactions as never,
@@ -167,6 +234,8 @@ describe('UsersService', () => {
       authzRepository as never,
       mail as never,
       invitations as never,
+      tenantInvitations as never,
+      invitationsRepository as never,
       appConfig as never,
     );
   });
@@ -189,6 +258,7 @@ describe('UsersService', () => {
     it('refuses a read the ability denies even if RLS let the row through', async () => {
       act(tenantAdmin());
       repository.findById.mockResolvedValue(makeUser({ id: 'u-2', tenantId: OTHER_TENANT }));
+      repository.membershipIds.mockResolvedValue([OTHER_TENANT]);
 
       await expect(service.findOrThrow('u-2')).rejects.toBeInstanceOf(ForbiddenActionError);
     });
@@ -209,6 +279,7 @@ describe('UsersService', () => {
     it('evicts the cached profile when a user is deactivated', async () => {
       const admin = act(tenantAdmin());
       repository.findById.mockResolvedValue(makeUser({ id: 'u-2' }));
+      repository.membershipIds.mockResolvedValue([TENANT]);
       repository.update.mockResolvedValue(makeUser({ id: 'u-2', isActive: false }));
 
       await service.update(admin, 'u-2', { isActive: false });
@@ -227,14 +298,44 @@ describe('UsersService', () => {
       expect(repository.softDelete).not.toHaveBeenCalled();
     });
 
-    it('soft-deletes a member and evicts its profile', async () => {
+    it('removes a member from the tenant, keeping the account, and evicts its profile', async () => {
       const admin = act(tenantAdmin());
       repository.findById.mockResolvedValue(makeUser({ id: 'u-2' }));
 
       await service.remove(admin, 'u-2');
 
-      expect(repository.softDelete).toHaveBeenCalledWith(expect.anything(), 'u-2');
+      expect(repository.removeMembership).toHaveBeenCalledWith(expect.anything(), 'u-2', TENANT);
+      expect(authzRepository.replaceUserRoles).toHaveBeenCalledWith(
+        expect.anything(),
+        'u-2',
+        TENANT,
+        [],
+        'actor',
+      );
+      // The account may still belong to another tenant, so it survives.
+      expect(repository.softDelete).not.toHaveBeenCalled();
       expect(authz.invalidateUsers).toHaveBeenCalledWith(['u-2']);
+    });
+
+    it('deletes the account itself for a platform caller', async () => {
+      const root = act(platformAdmin());
+      repository.findById.mockResolvedValue(makeUser({ id: 'u-2' }));
+
+      await service.remove(root, 'u-2');
+
+      expect(repository.softDelete).toHaveBeenCalledWith(expect.anything(), 'u-2');
+      expect(repository.removeMembership).not.toHaveBeenCalled();
+    });
+
+    it('refuses a tenant admin deactivating an account that belongs to another tenant too', async () => {
+      const admin = act(tenantAdmin());
+      repository.findById.mockResolvedValue(makeUser({ id: 'u-2' }));
+      repository.membershipIds.mockResolvedValue([TENANT, OTHER_TENANT]);
+
+      await expect(service.update(admin, 'u-2', { isActive: false })).rejects.toBeInstanceOf(
+        ForbiddenActionError,
+      );
+      expect(repository.update).not.toHaveBeenCalled();
     });
 
     it('refuses to remove the last active tenant admin', async () => {
@@ -327,6 +428,7 @@ describe('UsersService', () => {
       repository.findById.mockResolvedValue(
         makeUser({ id: 'u-2', tenantId: OTHER_TENANT, isEmailVerified: false }),
       );
+      repository.membershipIds.mockResolvedValue([OTHER_TENANT]);
 
       await expect(service.resendInvitation(admin, 'u-2')).rejects.toBeInstanceOf(
         ForbiddenActionError,
@@ -396,9 +498,11 @@ describe('UsersService', () => {
           isEmailVerified: true,
         }),
       );
+      expect(repository.addMembership).toHaveBeenCalledWith(expect.anything(), 'new-id', TENANT);
       expect(authzRepository.replaceUserRoles).toHaveBeenCalledWith(
         expect.anything(),
         'new-id',
+        TENANT,
         [ROLE_MEMBER.id],
         'actor',
       );
@@ -497,6 +601,7 @@ describe('UsersService', () => {
       expect(authzRepository.replaceUserRoles).toHaveBeenCalledWith(
         expect.anything(),
         'u-2',
+        TENANT,
         [ROLE_ADMIN.id],
         'actor',
       );
@@ -527,6 +632,182 @@ describe('UsersService', () => {
         service.setRoles(admin, 'u-2', { roleIds: [ROLE_MEMBER.id] }),
       ).rejects.toBeInstanceOf(ResourceConflictError);
       expect(authzRepository.replaceUserRoles).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('tenant invitations', () => {
+    const invite = { email: 'ada@other.test', roleIds: [ROLE_MEMBER.id] };
+
+    it('refuses to create a second account for an email that already has one', async () => {
+      const admin = act(tenantAdmin());
+      repository.findByEmail.mockResolvedValue(makeUser({ id: 'u-9', tenantId: OTHER_TENANT }));
+
+      await expect(
+        service.create(admin, { ...body, roleIds: [ROLE_MEMBER.id] }),
+      ).rejects.toBeInstanceOf(AccountAlreadyExistsError);
+      expect(repository.create).not.toHaveBeenCalled();
+    });
+
+    it('emails an invitation instead of attaching the account straight away', async () => {
+      const admin = act(tenantAdmin());
+      authzRepository.loadRolesWithGrants.mockResolvedValue([ROLE_MEMBER]);
+      repository.findById.mockResolvedValue(makeUser({ id: 'actor', fullName: 'Ada Admin' }));
+      repository.findByEmail.mockResolvedValue(
+        makeUser({ id: 'u-9', email: invite.email, tenantId: OTHER_TENANT }),
+      );
+      repository.membershipIds.mockResolvedValue([OTHER_TENANT]);
+
+      await service.inviteToTenant(admin, invite);
+
+      expect(tenantInvitations.issue).toHaveBeenCalledWith(expect.anything(), {
+        userId: 'u-9',
+        tenantId: TENANT,
+        roleIds: [ROLE_MEMBER.id],
+        invitedBy: 'actor',
+      });
+      expect(mail.sendTenantInvitationMail).toHaveBeenCalledWith(
+        expect.objectContaining({ toEmail: invite.email, tenantName: 'Acme' }),
+      );
+      // Nothing changes until the account accepts.
+      expect(repository.addMembership).not.toHaveBeenCalled();
+      expect(authzRepository.replaceUserRoles).not.toHaveBeenCalled();
+    });
+
+    it('stops privilege escalation through the invitation', async () => {
+      const member = act(tenantMember('actor'));
+      authzRepository.loadRolesWithGrants.mockResolvedValue([ROLE_ADMIN]);
+
+      await expect(service.inviteToTenant(member, invite)).rejects.toBeInstanceOf(
+        ForbiddenActionError,
+      );
+      expect(tenantInvitations.issue).not.toHaveBeenCalled();
+    });
+
+    it('conflicts when the account already belongs to the tenant', async () => {
+      const admin = act(tenantAdmin());
+      authzRepository.loadRolesWithGrants.mockResolvedValue([ROLE_MEMBER]);
+      repository.findByEmail.mockResolvedValue(makeUser({ id: 'u-9', email: invite.email }));
+      repository.membershipIds.mockResolvedValue([TENANT]);
+
+      await expect(service.inviteToTenant(admin, invite)).rejects.toBeInstanceOf(
+        ResourceConflictError,
+      );
+    });
+
+    it('refuses to pull a platform account into a tenant', async () => {
+      const admin = act(tenantAdmin());
+      authzRepository.loadRolesWithGrants.mockResolvedValue([ROLE_MEMBER]);
+      repository.findByEmail.mockResolvedValue(
+        makeUser({ id: 'root', email: invite.email, tenantId: null }),
+      );
+
+      await expect(service.inviteToTenant(admin, invite)).rejects.toBeInstanceOf(
+        ResourceConflictError,
+      );
+    });
+
+    it('reads as not found for an address with no account', async () => {
+      const admin = act(tenantAdmin());
+      authzRepository.loadRolesWithGrants.mockResolvedValue([ROLE_MEMBER]);
+      repository.findByEmail.mockResolvedValue(undefined);
+
+      await expect(service.inviteToTenant(admin, invite)).rejects.toBeInstanceOf(
+        ResourceNotFoundError,
+      );
+    });
+
+    it('accepting spends the token, adds the membership and the roles, and evicts the profile', async () => {
+      tenantInvitations.find.mockResolvedValue({
+        id: 'inv-1',
+        userId: 'u-9',
+        tenantId: TENANT,
+        roleIds: [ROLE_MEMBER.id],
+        invitedBy: 'actor',
+        acceptedAt: null,
+        revokedAt: null,
+      });
+      repository.findById.mockResolvedValue(makeUser({ id: 'u-9', tenantId: OTHER_TENANT }));
+      repository.membershipIds.mockResolvedValue([OTHER_TENANT]);
+      authzRepository.loadRolesWithGrants.mockResolvedValue([ROLE_MEMBER]);
+
+      await service.acceptTenantInvitation('join-token');
+
+      expect(repository.addMembership).toHaveBeenCalledWith(expect.anything(), 'u-9', TENANT);
+      expect(authzRepository.replaceUserRoles).toHaveBeenCalledWith(
+        expect.anything(),
+        'u-9',
+        TENANT,
+        [ROLE_MEMBER.id],
+        'actor',
+      );
+      expect(authz.invalidateUsers).toHaveBeenCalledWith(['u-9']);
+    });
+
+    it('an unknown or spent token is not found', async () => {
+      tenantInvitations.find.mockResolvedValue(undefined);
+
+      await expect(service.acceptTenantInvitation('nope')).rejects.toBeInstanceOf(
+        ResourceNotFoundError,
+      );
+      expect(repository.addMembership).not.toHaveBeenCalled();
+    });
+
+    it('a second click on the same link adds nothing: spending the row is the lock', async () => {
+      tenantInvitations.find.mockResolvedValue({
+        id: 'inv-1',
+        userId: 'u-9',
+        tenantId: TENANT,
+        roleIds: [ROLE_MEMBER.id],
+        invitedBy: 'actor',
+        acceptedAt: null,
+        revokedAt: null,
+      });
+      repository.findById.mockResolvedValue(makeUser({ id: 'u-9' }));
+      // Another request got there first.
+      invitationsRepository.markAccepted.mockResolvedValue(false);
+
+      await expect(service.acceptTenantInvitation('join-token')).rejects.toBeInstanceOf(
+        ResourceNotFoundError,
+      );
+      expect(repository.addMembership).not.toHaveBeenCalled();
+      expect(authzRepository.replaceUserRoles).not.toHaveBeenCalled();
+    });
+
+    it('withdrawing a pending invitation audits it', async () => {
+      const admin = act(tenantAdmin());
+      invitationsRepository.findById.mockResolvedValue({
+        id: 'inv-1',
+        tenantId: TENANT,
+        userId: 'u-9',
+        roleIds: [ROLE_MEMBER.id],
+        acceptedAt: null,
+        revokedAt: null,
+      });
+
+      await service.revokeInvitation(admin, 'inv-1');
+
+      expect(invitationsRepository.revokeById).toHaveBeenCalledWith(expect.anything(), 'inv-1');
+      expect(audit.record).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ action: 'user.tenant.invite.revoke' }),
+      );
+    });
+
+    it('conflicts when withdrawing an invitation that is no longer pending', async () => {
+      const admin = act(tenantAdmin());
+      invitationsRepository.findById.mockResolvedValue({
+        id: 'inv-1',
+        tenantId: TENANT,
+        userId: 'u-9',
+        roleIds: [ROLE_MEMBER.id],
+        acceptedAt: null,
+        revokedAt: null,
+      });
+      invitationsRepository.revokeById.mockResolvedValue(false);
+
+      await expect(service.revokeInvitation(admin, 'inv-1')).rejects.toBeInstanceOf(
+        ResourceConflictError,
+      );
     });
   });
 });
