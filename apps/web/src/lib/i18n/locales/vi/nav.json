@@ -1,0 +1,28 @@
+{
+  "sections": {
+    "access": "Quản trị truy cập",
+    "organisation": "Tổ chức",
+    "system": "Hệ thống"
+  },
+  "items": {
+    "home": "Trang chủ",
+    "users": "Người dùng",
+    "roles": "Vai trò",
+    "tenants": "Tenant",
+    "status": "Trạng thái"
+  },
+  "sidebar": {
+    "label": "Điều hướng chính",
+    "open": "Mở điều hướng",
+    "close": "Đóng điều hướng",
+    "collapse": "Thu gọn thanh bên",
+    "expand": "Mở rộng thanh bên"
+  },
+  "account": {
+    "menu": "Menu tài khoản",
+    "changePassword": "Đổi mật khẩu",
+    "signOut": "Đăng xuất",
+    "signOutEverywhere": "Đăng xuất mọi thiết bị"
+  },
+  "skipToContent": "Tới nội dung chính"
+}

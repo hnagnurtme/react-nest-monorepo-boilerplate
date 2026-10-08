@@ -1,0 +1,28 @@
+{
+  "sections": {
+    "access": "Access control",
+    "organisation": "Organisation",
+    "system": "System"
+  },
+  "items": {
+    "home": "Home",
+    "users": "Users",
+    "roles": "Roles",
+    "tenants": "Tenants",
+    "status": "Status"
+  },
+  "sidebar": {
+    "label": "Main navigation",
+    "open": "Open navigation",
+    "close": "Close navigation",
+    "collapse": "Collapse sidebar",
+    "expand": "Expand sidebar"
+  },
+  "account": {
+    "menu": "Account menu",
+    "changePassword": "Change password",
+    "signOut": "Sign out",
+    "signOutEverywhere": "Sign out everywhere"
+  },
+  "skipToContent": "Skip to content"
+}
