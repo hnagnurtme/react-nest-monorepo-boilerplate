@@ -19,10 +19,11 @@
     "expand": "Mở rộng thanh bên"
   },
   "account": {
-    "menu": "Menu tài khoản",
     "changePassword": "Đổi mật khẩu",
+    "menu": "Menu tài khoản",
     "signOut": "Đăng xuất",
-    "signOutEverywhere": "Đăng xuất mọi thiết bị"
+    "signOutEverywhere": "Đăng xuất mọi thiết bị",
+    "switchTenant": "Đổi không gian làm việc"
   },
   "skipToContent": "Tới nội dung chính"
 }

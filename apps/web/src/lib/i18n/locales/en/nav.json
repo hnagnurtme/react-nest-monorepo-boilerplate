@@ -19,10 +19,11 @@
     "expand": "Expand sidebar"
   },
   "account": {
-    "menu": "Account menu",
     "changePassword": "Change password",
+    "menu": "Account menu",
     "signOut": "Sign out",
-    "signOutEverywhere": "Sign out everywhere"
+    "signOutEverywhere": "Sign out everywhere",
+    "switchTenant": "Switch workspace"
   },
   "skipToContent": "Skip to content"
 }

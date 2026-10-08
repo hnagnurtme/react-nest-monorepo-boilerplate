@@ -1,4 +1,5 @@
 import { screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -22,9 +23,20 @@ function renderShell(entry: string) {
         <Route path="/" element={<div data-testid="page">Home</div>} />
         <Route path="/users" element={<div data-testid="page">Users</div>} />
       </Route>
+      <Route path="/select-tenant" element={<div data-testid="chooser">Choose</div>} />
     </Routes>,
     [entry],
   );
+}
+
+const TWO_TENANTS = [
+  { id: 'tenant-1', name: 'Acme', slug: 'acme' },
+  { id: 'tenant-2', name: 'Globex', slug: 'globex' },
+];
+
+async function openAccountMenu(): Promise<HTMLElement> {
+  await userEvent.click(screen.getByRole('button', { name: 'Account menu' }));
+  return screen.getByRole('menu', { name: 'Account menu' });
 }
 
 function sidebar(): HTMLElement {
@@ -113,5 +125,46 @@ describe('the app shell', () => {
 
     expect(await screen.findByTestId('page')).toBeInTheDocument();
     expect(within(sidebar()).getByRole('link', { name: 'Users' })).toBeInTheDocument();
+  });
+
+  it('moves the tenant choice into the account menu', async () => {
+    mockApi(makeTenantAdmin({ tenants: TWO_TENANTS }), TENANT_ADMIN_GRANTS);
+    renderShell('/?tenant=acme');
+
+    expect(await screen.findByTestId('page')).toBeInTheDocument();
+    // The app bar no longer carries it: a control that throws away every cached
+    // query does not belong next to the theme toggle.
+    expect(screen.queryByRole('combobox', { name: /tenant/i })).not.toBeInTheDocument();
+
+    const menu = await openAccountMenu();
+    expect(within(menu).getByText('Workspace: Acme')).toBeInTheDocument();
+    expect(within(menu).getByRole('menuitem', { name: 'Switch workspace' })).toHaveAttribute(
+      'href',
+      '/select-tenant?change=1',
+    );
+  });
+
+  it('offers no tenant switch to an account with one tenant', async () => {
+    mockApi(makeTenantAdmin(), TENANT_ADMIN_GRANTS);
+    renderShell('/?tenant=acme');
+
+    expect(await screen.findByTestId('page')).toBeInTheDocument();
+    const menu = await openAccountMenu();
+
+    expect(
+      within(menu).queryByRole('menuitem', { name: 'Switch workspace' }),
+    ).not.toBeInTheDocument();
+    expect(within(menu).getByRole('menuitem', { name: 'Sign out' })).toBeInTheDocument();
+  });
+
+  it('reaches the chooser from the account menu', async () => {
+    mockApi(makeTenantAdmin({ tenants: TWO_TENANTS }), TENANT_ADMIN_GRANTS);
+    renderShell('/?tenant=acme');
+
+    expect(await screen.findByTestId('page')).toBeInTheDocument();
+    const menu = await openAccountMenu();
+    await userEvent.click(within(menu).getByRole('menuitem', { name: 'Switch workspace' }));
+
+    expect(await screen.findByTestId('chooser')).toBeInTheDocument();
   });
 });
