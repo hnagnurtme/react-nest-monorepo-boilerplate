@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import { SYSTEM_ROLES, buildAbility, type PermissionGrant } from '@repo/shared-types';
 
 import type { AuthContext } from '@/common/index.js';
+import type { AppConfig } from '@/config/index.js';
 import type { RoleWithGrants } from '@/core/authz/index.js';
 import type { User } from '@/core/database/schema/index.js';
 import {
@@ -101,13 +102,18 @@ function platformAdmin(): Actor {
 
 describe('UsersService', () => {
   let service: UsersService;
-  let repository: Record<'findById' | 'update' | 'softDelete' | 'list' | 'count' | 'create', Mock>;
+  let repository: Record<
+    'findById' | 'update' | 'softDelete' | 'list' | 'count' | 'create' | 'findTenantName',
+    Mock
+  >;
   let authzRepository: Record<
     'loadRolesWithGrants' | 'rolesForUsers' | 'replaceUserRoles' | 'countActiveWithRoleKey',
     Mock
   >;
   let authz: { current: Mock; currentProfile: Mock; invalidateUsers: Mock };
   let audit: { record: Mock };
+  let mail: { sendInvitationMail: Mock };
+  let invitations: { issue: Mock; ttlHours: number };
 
   function act(actor: Actor): AuthContext {
     authz.current.mockReturnValue(
@@ -131,6 +137,7 @@ describe('UsersService', () => {
       create: vi.fn((_tx: unknown, values: Partial<User>) =>
         Promise.resolve(makeUser({ id: 'new-id', ...values })),
       ),
+      findTenantName: vi.fn(() => Promise.resolve('Acme')),
     };
     authzRepository = {
       loadRolesWithGrants: vi.fn(),
@@ -144,6 +151,12 @@ describe('UsersService', () => {
       runInRequestContext: vi.fn((fn: (tx: unknown) => Promise<unknown>) => fn({})),
     };
     const credentials = { hash: vi.fn(() => Promise.resolve('hashed')) };
+    mail = { sendInvitationMail: vi.fn(() => Promise.resolve()) };
+    const appConfig: Pick<AppConfig, 'webOrigin' | 'appName'> = {
+      webOrigin: 'http://localhost:5173',
+      appName: 'Starter App',
+    };
+    invitations = { issue: vi.fn(() => Promise.resolve('invite-token')), ttlHours: 72 };
 
     service = new UsersService(
       transactions as never,
@@ -152,10 +165,18 @@ describe('UsersService', () => {
       audit,
       authz as never,
       authzRepository as never,
+      mail as never,
+      invitations as never,
+      appConfig as never,
     );
   });
 
   const body = { email: 'new@example.com', fullName: 'New User', password: 'Password123!' };
+
+  /** The same body minus the password: that absence is what triggers an invitation. */
+  function invitationBody(): Omit<typeof body, 'password'> {
+    return { email: body.email, fullName: body.fullName };
+  }
 
   describe('read / update / delete', () => {
     it('throws not found when the row is invisible (other tenant or missing)', async () => {
@@ -272,7 +293,94 @@ describe('UsersService', () => {
     });
   });
 
+  describe('resendInvitation', () => {
+    it('mints a fresh link and emails it for an account that never accepted', async () => {
+      const admin = act(tenantAdmin());
+      repository.findById
+        .mockResolvedValueOnce(makeUser({ id: 'u-2', isEmailVerified: false }))
+        .mockResolvedValueOnce(makeUser({ id: 'actor', fullName: 'Ada Admin' }));
+
+      await service.resendInvitation(admin, 'u-2');
+
+      expect(invitations.issue).toHaveBeenCalledWith('u-2');
+      expect(mail.sendInvitationMail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          toEmail: 'u1@example.com',
+          inviterName: 'Ada Admin',
+          acceptUrl: 'http://localhost:5173/accept-invitation?token=invite-token',
+        }),
+      );
+    });
+
+    it('conflicts when the account already accepted its invitation', async () => {
+      const admin = act(tenantAdmin());
+      repository.findById.mockResolvedValue(makeUser({ id: 'u-2', isEmailVerified: true }));
+
+      await expect(service.resendInvitation(admin, 'u-2')).rejects.toBeInstanceOf(
+        ResourceConflictError,
+      );
+      expect(mail.sendInvitationMail).not.toHaveBeenCalled();
+    });
+
+    it('refuses a resend the ability denies (user of another tenant)', async () => {
+      const admin = act(tenantAdmin());
+      repository.findById.mockResolvedValue(
+        makeUser({ id: 'u-2', tenantId: OTHER_TENANT, isEmailVerified: false }),
+      );
+
+      await expect(service.resendInvitation(admin, 'u-2')).rejects.toBeInstanceOf(
+        ForbiddenActionError,
+      );
+      expect(invitations.issue).not.toHaveBeenCalled();
+    });
+  });
+
   describe('create', () => {
+    it('emails an invitation and leaves the account unverified when no password is given', async () => {
+      const admin = act(tenantAdmin());
+      authzRepository.loadRolesWithGrants.mockResolvedValue([ROLE_MEMBER]);
+      repository.findById.mockResolvedValue(makeUser({ id: 'actor', fullName: 'Ada Admin' }));
+
+      const withoutPassword = invitationBody();
+      await service.create(admin, { ...withoutPassword, roleIds: [ROLE_MEMBER.id] });
+
+      expect(repository.create).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ isActive: true, isEmailVerified: false }),
+      );
+      expect(invitations.issue).toHaveBeenCalledWith('new-id');
+      expect(mail.sendInvitationMail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          toEmail: 'new@example.com',
+          inviterName: 'Ada Admin',
+          tenantName: 'Acme',
+          acceptUrl: 'http://localhost:5173/accept-invitation?token=invite-token',
+          ttlHours: 72,
+        }),
+      );
+    });
+
+    it('sends no invitation when the admin set the password itself', async () => {
+      const admin = act(tenantAdmin());
+      authzRepository.loadRolesWithGrants.mockResolvedValue([ROLE_MEMBER]);
+
+      await service.create(admin, { ...body, roleIds: [ROLE_MEMBER.id] });
+
+      expect(mail.sendInvitationMail).not.toHaveBeenCalled();
+    });
+
+    it('still returns the created user when the invitation email fails', async () => {
+      const admin = act(tenantAdmin());
+      authzRepository.loadRolesWithGrants.mockResolvedValue([ROLE_MEMBER]);
+      mail.sendInvitationMail.mockRejectedValue(new Error('smtp down'));
+
+      const withoutPassword = invitationBody();
+
+      await expect(
+        service.create(admin, { ...withoutPassword, roleIds: [ROLE_MEMBER.id] }),
+      ).resolves.toMatchObject({ email: 'new@example.com' });
+    });
+
     it("puts a tenant admin's new user in the admin's own tenant, verified, with the role", async () => {
       const admin = act(tenantAdmin());
       authzRepository.loadRolesWithGrants.mockResolvedValue([ROLE_MEMBER]);

@@ -79,9 +79,17 @@ async function openForm(user: ReturnType<typeof userEvent.setup>) {
   await user.click(await screen.findByRole('button', { name: 'Create user' }));
 }
 
+/**
+ * The form defaults to sending an invitation, which hides the password field.
+ * These assertions are about tenant and role handling, so they opt out of it
+ * and set the password directly.
+ */
 async function fillCommon(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText('Full name'), 'Jane Doe');
   await user.type(screen.getByLabelText('Email'), 'jane@example.com');
+  await user.click(
+    screen.getByLabelText('Email an invitation so the user sets their own password'),
+  );
   await user.type(screen.getByLabelText('Password'), 'supersecret1');
 }
 
@@ -102,6 +110,28 @@ describe('CreateUserForm', () => {
 
     expect(await screen.findByText('No users found.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Create user' })).not.toBeInTheDocument();
+  });
+
+  it('invites by default: no password field, and the body carries no password', async () => {
+    const fetchMock = mockApi(makeTenantAdmin(), TENANT_ADMIN_GRANTS, makeHandler());
+    renderWithProviders(<UsersPage />);
+    const user = userEvent.setup();
+
+    await openForm(user);
+    expect(screen.queryByLabelText('Password')).not.toBeInTheDocument();
+
+    await user.type(screen.getByLabelText('Full name'), 'Jane Doe');
+    await user.type(screen.getByLabelText('Email'), 'jane@example.com');
+    await user.click(await screen.findByLabelText('Tenant member'));
+    await submit(user);
+
+    await waitFor(() => {
+      expect(postedBody(fetchMock)).toEqual({
+        fullName: 'Jane Doe',
+        email: 'jane@example.com',
+        roleIds: [ROLE_MEMBER],
+      });
+    });
   });
 
   it('requires at least one role', async () => {

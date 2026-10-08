@@ -4,6 +4,7 @@ export type LoginDto = components['schemas']['LoginDto'];
 export type ForgotPasswordDto = components['schemas']['ForgotPasswordDto'];
 export type ResetPasswordDto = components['schemas']['ResetPasswordDto'];
 export type ChangePasswordDto = components['schemas']['ChangePasswordDto'];
+export type AcceptInvitationDto = components['schemas']['AcceptInvitationDto'];
 
 type ExtractResponseData<T> = T extends {
   content?: { 'application/json': { data: infer D } };
@@ -23,6 +24,18 @@ export type ResetPasswordResponse = ExtractResponseData<
 export type ChangePasswordResponse = ExtractResponseData<
   operations['AuthController_changePassword_v1']['responses'][200]
 >;
+
+export type InvitationPreview = ExtractResponseData<
+  operations['AuthController_previewInvitation_v1']['responses'][200]
+>;
+export type AcceptInvitationResponse = ExtractResponseData<
+  operations['AuthController_acceptInvitation_v1']['responses'][200]
+>;
+
+export interface AcceptInvitationFormValues {
+  password: string;
+  confirmPassword: string;
+}
 
 export interface LoginFormValues {
   email: string;

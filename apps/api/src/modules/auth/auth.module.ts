@@ -6,6 +6,7 @@ import { AuthController } from './auth.controller.js';
 import { AuthRepository } from './auth.repository.js';
 import { AuthService } from './auth.service.js';
 import { CredentialsService } from './credentials.service.js';
+import { InvitationService } from './invitation.service.js';
 import { OtpService } from './otp.service.js';
 import { SessionService } from './session.service.js';
 import { TokenService } from './token.service.js';
@@ -23,9 +24,10 @@ import { UserDirectory } from './user-directory.service.js';
     TokenService,
     UserDirectory,
     OtpService,
+    InvitationService,
   ],
   // AuthRepository is deliberately absent: a repository is never a public
   // contract (docs/rules/02-backend-nestjs.md F2).
-  exports: [AuthService, CredentialsService],
+  exports: [AuthService, CredentialsService, InvitationService],
 })
 export class AuthModule {}

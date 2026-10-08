@@ -3,7 +3,7 @@ import { and, asc, count, desc, eq, ilike, isNull, or, sql, type SQL } from 'dri
 
 import type { SortSpec } from '@/common/index.js';
 import type { Tx } from '@/core/database/drizzle.module.js';
-import { users, type NewUser, type User } from '@/core/database/schema/index.js';
+import { tenants, users, type NewUser, type User } from '@/core/database/schema/index.js';
 
 export const USER_SORT_FIELDS = ['createdAt', 'fullName', 'email'] as const;
 export type UserSortField = (typeof USER_SORT_FIELDS)[number];
@@ -48,6 +48,16 @@ function listWhere(filter: UserFilter): SQL | undefined {
  */
 @Injectable()
 export class UsersRepository {
+  async findTenantName(tx: Tx, tenantId: string): Promise<string | undefined> {
+    const [row] = await tx
+      .select({ name: tenants.name })
+      .from(tenants)
+      .where(eq(tenants.id, tenantId))
+      .limit(1);
+
+    return row?.name;
+  }
+
   async list(
     tx: Tx,
     page: { limit: number; offset: number },

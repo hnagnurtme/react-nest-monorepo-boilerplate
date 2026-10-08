@@ -7,7 +7,16 @@ const DEFAULT_POOL_MAX = 10;
 const MIN_SECRET_LENGTH = 32;
 /** OWASP minimum for Argon2id, in KiB (19 MiB). */
 const MIN_ARGON2_MEMORY_COST = 19_456;
+const DEFAULT_INVITATION_TTL_HOURS = 72;
+const MAX_INVITATION_TTL_HOURS = 168;
 const ERROR_COLUMN_WIDTH = 40;
+
+/**
+ * A documented-but-blank .env line arrives as '' rather than missing, and ''
+ * fails `.url()` before `.optional()` can skip it. Coerce it to undefined.
+ */
+const blankToUndefined = <T extends z.ZodTypeAny>(schema: T) =>
+  z.preprocess((value) => (value === '' ? undefined : value), schema);
 
 const csvToArray = (value: string): string[] =>
   value
@@ -81,6 +90,25 @@ export const envSchema = z
     SMTP_USER: z.string().default(''),
     SMTP_PASS: z.string().default(''),
     SMTP_FROM: z.string().default('Starter App <no-reply@example.com>'),
+
+    /** How long an invitation link stays usable. One week is the hard ceiling. */
+    INVITATION_TTL_HOURS: z.coerce
+      .number()
+      .int()
+      .min(1)
+      .max(MAX_INVITATION_TTL_HOURS)
+      .default(DEFAULT_INVITATION_TTL_HOURS),
+
+    // Email branding. Every URL has to be absolute and publicly reachable:
+    // mail clients fetch them from the recipient's network, not from ours.
+    // Blank is allowed everywhere — the templates fall back to text.
+    MAIL_LOGO_URL: blankToUndefined(z.string().url().optional()),
+    MAIL_BACKGROUND_URL: blankToUndefined(z.string().url().optional()),
+    MAIL_BRAND_COLOR: z
+      .string()
+      .regex(/^#[0-9a-fA-F]{6}$/, 'Must be a 6-digit hex colour such as #2563eb')
+      .default('#2563eb'),
+    MAIL_SUPPORT_EMAIL: blankToUndefined(z.string().email().optional()),
   })
   .superRefine((env, ctx) => {
     if (env.JWT_ACCESS_SECRET === env.JWT_REFRESH_SECRET) {

@@ -5,10 +5,18 @@ import {
   HttpCode,
   HttpStatus,
   Inject,
+  Param,
   Post,
   UseInterceptors,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiBody, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Throttle, seconds } from '@nestjs/throttler';
 
 import { packAbility, type PackedRules } from '@repo/shared-types';
@@ -27,14 +35,17 @@ import { AuthCookieInterceptor } from './auth-cookie.interceptor.js';
 import { ACCESS_TOKEN_SECURITY_SCHEME } from './auth.constants.js';
 import { AuthService } from './auth.service.js';
 import type {
+  AcceptInvitationResponse,
   AuthBody,
   AuthResult,
   ChangePasswordResponse,
   ForgotPasswordResponse,
+  InvitationPreview,
   PublicUser,
   ResetPasswordResponse,
 } from './auth.types.js';
 import {
+  AcceptInvitationDto,
   ChangePasswordDto,
   ForgotPasswordDto,
   LoginDto,
@@ -44,6 +55,7 @@ import {
   AuthBodyEnvelopeDto,
   ForgotPasswordEnvelopeDto,
   MessageEnvelopeDto,
+  InvitationPreviewEnvelopeDto,
   PublicUserEnvelopeDto,
 } from './dto/index.js';
 import { RefreshCookie } from './refresh-token.decorator.js';
@@ -126,6 +138,37 @@ export class AuthController {
   @ApiProblemResponses(BAD_REQUEST, NOT_FOUND, UNPROCESSABLE_ENTITY, TOO_MANY_REQUESTS)
   resetPassword(@Body() dto: ResetPasswordDto): Promise<ResetPasswordResponse> {
     return this.auth.resetPassword(dto);
+  }
+
+  @Get('invitation/:token')
+  @Public()
+  @Throttle({ default: { limit: OTP_LIMIT, ttl: seconds(WINDOW_SECONDS) } })
+  @ApiOperation({ summary: 'The account behind an invitation link, for the set-password screen' })
+  @ApiParam({ name: 'token', description: 'The single-use token from the invitation email' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'The invited account',
+    type: InvitationPreviewEnvelopeDto,
+  })
+  @ApiProblemResponses(NOT_FOUND, TOO_MANY_REQUESTS)
+  previewInvitation(@Param('token') token: string): Promise<InvitationPreview> {
+    return this.auth.previewInvitation(token);
+  }
+
+  @Post('accept-invitation')
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: OTP_LIMIT, ttl: seconds(WINDOW_SECONDS) } })
+  @ApiOperation({ summary: 'Set the first password of an invited account' })
+  @ApiBody({ type: AcceptInvitationDto })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Password set',
+    type: MessageEnvelopeDto,
+  })
+  @ApiProblemResponses(NOT_FOUND, UNPROCESSABLE_ENTITY, TOO_MANY_REQUESTS)
+  acceptInvitation(@Body() dto: AcceptInvitationDto): Promise<AcceptInvitationResponse> {
+    return this.auth.acceptInvitation(dto);
   }
 
   @Post('change-password')

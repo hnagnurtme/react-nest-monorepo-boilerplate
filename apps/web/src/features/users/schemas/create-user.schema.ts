@@ -22,6 +22,8 @@ export interface CreateUserFormValues {
   password: string;
   roleIds: string[];
   tenantId: string;
+  /** Default. The account is created without a password and invited by email. */
+  sendInvitation: boolean;
 }
 
 /** A user belongs to a tenant unless every selected role is a platform role. */
@@ -53,11 +55,21 @@ export function createUserSchema({
         .string()
         .trim()
         .refine((value) => value === '' || PHONE_REGEX.test(value), t('create.validation.phone')),
-      password: z.string().min(MIN_PASSWORD_LENGTH, t('create.validation.passwordMin')),
+      // Validated in the superRefine below, because it only applies when the
+      // admin opted out of sending an invitation.
+      password: z.string(),
       roleIds: z.array(z.string()).min(1, t('create.validation.rolesRequired')),
       tenantId: z.string(),
+      sendInvitation: z.boolean(),
     })
     .superRefine((value, context) => {
+      if (!value.sendInvitation && value.password.length < MIN_PASSWORD_LENGTH) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['password'],
+          message: t('create.validation.passwordMin'),
+        });
+      }
       const scopes = new Set(value.roleIds.map((roleId) => scopeOf(roleId)));
       if (scopes.has('platform') && scopes.size > 1) {
         context.addIssue({

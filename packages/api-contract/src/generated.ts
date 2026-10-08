@@ -106,6 +106,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/invitation/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The account behind an invitation link, for the set-password screen */
+        get: operations["AuthController_previewInvitation_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/accept-invitation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Set the first password of an invited account */
+        post: operations["AuthController_acceptInvitation_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/change-password": {
         parameters: {
             query?: never;
@@ -316,6 +350,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/users/{id}/resend-invitation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Email a fresh invitation link to a user who has not accepted yet */
+        post: operations["UsersController_resendInvitation_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/users/{id}": {
         parameters: {
             query?: never;
@@ -405,6 +456,18 @@ export interface components {
             data: {
                 message: string;
             };
+        };
+        InvitationPreviewEnvelopeDto: {
+            data: {
+                /** Format: email */
+                email: string;
+                fullName: string;
+                tenantName: string;
+            };
+        };
+        AcceptInvitationDto: {
+            token: string;
+            password: string;
         };
         ChangePasswordDto: {
             currentPassword: string;
@@ -561,6 +624,7 @@ export interface components {
                 /** Format: uuid */
                 tenantId: string | null;
                 isActive: boolean;
+                isEmailVerified: boolean;
                 /** Format: date-time */
                 createdAt: string;
             }[];
@@ -576,7 +640,7 @@ export interface components {
             email: string;
             fullName: string;
             phoneNumber?: string;
-            password: string;
+            password?: string;
             roleIds: string[];
             /** Format: uuid */
             tenantId?: string;
@@ -598,6 +662,7 @@ export interface components {
                 /** Format: uuid */
                 tenantId: string | null;
                 isActive: boolean;
+                isEmailVerified: boolean;
                 /** Format: date-time */
                 createdAt: string;
             };
@@ -853,6 +918,98 @@ export interface operations {
                 };
                 content: {
                     "application/problem+json": unknown;
+                };
+            };
+            /** @description No such resource, or the caller may not know it exists */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description The payload failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Rate limit exceeded; see Retry-After */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+        };
+    };
+    AuthController_previewInvitation_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The single-use token from the invitation email */
+                token: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The invited account */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvitationPreviewEnvelopeDto"];
+                };
+            };
+            /** @description No such resource, or the caller may not know it exists */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Rate limit exceeded; see Retry-After */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+        };
+    };
+    AuthController_acceptInvitation_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AcceptInvitationDto"];
+            };
+        };
+        responses: {
+            /** @description Password set */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageEnvelopeDto"];
                 };
             };
             /** @description No such resource, or the caller may not know it exists */
@@ -1749,6 +1906,60 @@ export interface operations {
             };
             /** @description The payload failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+        };
+    };
+    UsersController_resendInvitation_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Invitation sent */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not authenticated, or the token is invalid or expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Authenticated, but not allowed to do this */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description No such resource, or the caller may not know it exists */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description The resource is in a state that forbids this change */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

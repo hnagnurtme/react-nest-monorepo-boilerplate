@@ -11,7 +11,8 @@
   },
   "status": {
     "active": "Active",
-    "inactive": "Inactive"
+    "inactive": "Inactive",
+    "pendingInvite": "Invitation pending"
   },
   "empty": "No users found.",
   "loading": "Loading users...",
@@ -41,7 +42,10 @@
     "editRoles": "Edit roles",
     "rolesSuccess": "Roles updated.",
     "rolesError": "Could not update the roles.",
-    "rolesForbidden": "You are not allowed to assign these roles."
+    "rolesForbidden": "You are not allowed to assign these roles.",
+    "resendInvitation": "Resend invitation",
+    "resendSuccess": "Invitation sent to {{email}}.",
+    "resendError": "Could not send the invitation."
   },
   "create": {
     "open": "Create user",
@@ -73,7 +77,11 @@
     "rolesHint": "Select at least one role.",
     "rolesEmpty": "No roles available.",
     "rolesLoading": "Loading roles...",
-    "systemBadge": "System"
+    "systemBadge": "System",
+    "sendInvitation": "Email an invitation so the user sets their own password",
+    "sendInvitationHint": "No password is set now. The user receives a link that expires after a limited time.",
+    "manualPasswordHint": "You set the password yourself and pass it to the user out of band.",
+    "invitationSent": "User created. An invitation email has been sent."
   },
   "rolesDialog": {
     "title": "Edit roles for {{email}}",

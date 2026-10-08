@@ -15,7 +15,7 @@ import {
   type CreateUserSchemaOptions,
 } from '@/features/users/schemas/create-user.schema';
 import type { CreateUserBody } from '@/features/users/types';
-import { Button, Input, Select, useToast } from '@/shared/ui';
+import { Button, CheckboxField, Input, Select, useToast } from '@/shared/ui';
 
 const CONFLICT_STATUS = 409;
 const FORBIDDEN_STATUS = 403;
@@ -29,7 +29,8 @@ export interface CreateUserFormProps {
 
 /**
  * Build the POST body: tenantId is sent only by platform actors, and never when every
- * selected role is a platform role (a platform user has no tenant).
+ * selected role is a platform role (a platform user has no tenant). Omitting
+ * `password` is what makes the API send an invitation email instead.
  */
 export function buildCreateUserBody(
   values: CreateUserFormValues,
@@ -39,9 +40,11 @@ export function buildCreateUserBody(
   const body: CreateUserBody = {
     fullName: values.fullName,
     email: values.email,
-    password: values.password,
     roleIds: values.roleIds,
   };
+  if (!values.sendInvitation) {
+    body.password = values.password;
+  }
   if (values.phoneNumber !== '') {
     body.phoneNumber = values.phoneNumber;
   }
@@ -90,10 +93,12 @@ export function CreateUserForm({ onCreated, onCancel }: CreateUserFormProps) {
       password: '',
       roleIds: [],
       tenantId: '',
+      sendInvitation: true,
     },
   });
 
   const roleIds = watch('roleIds');
+  const sendInvitation = watch('sendInvitation');
   const tenantId = watch('tenantId');
   const roles = useMemo(
     () => (isPlatformActor ? visibleRoles(allRoles, tenantId) : allRoles),
@@ -116,7 +121,10 @@ export function CreateUserForm({ onCreated, onCancel }: CreateUserFormProps) {
     const submitted = { ...values, roleIds: values.roleIds.filter((id) => visibleIds.has(id)) };
     createUser.mutate(buildCreateUserBody(submitted, isPlatformActor, scopeOf), {
       onSuccess: () => {
-        showToast({ type: 'success', message: t('create.success') });
+        showToast({
+          type: 'success',
+          message: submitted.sendInvitation ? t('create.invitationSent') : t('create.success'),
+        });
         reset();
         onCreated?.();
       },
@@ -167,14 +175,27 @@ export function CreateUserForm({ onCreated, onCancel }: CreateUserFormProps) {
         error={errors.phoneNumber?.message}
         {...register('phoneNumber')}
       />
-      <Input
-        id="create-user-password"
-        type="password"
-        label={t('create.password')}
-        autoComplete="new-password"
-        error={errors.password?.message}
-        {...register('password')}
-      />
+      {sendInvitation ? null : (
+        <Input
+          id="create-user-password"
+          type="password"
+          label={t('create.password')}
+          autoComplete="new-password"
+          error={errors.password?.message}
+          {...register('password')}
+        />
+      )}
+
+      <div className="sm:col-span-2">
+        <CheckboxField
+          id="create-user-send-invitation"
+          label={t('create.sendInvitation')}
+          {...register('sendInvitation')}
+        />
+        <p className="text-muted-foreground mt-1 text-xs">
+          {sendInvitation ? t('create.sendInvitationHint') : t('create.manualPasswordHint')}
+        </p>
+      </div>
 
       <fieldset className="space-y-1.5 sm:col-span-2">
         <legend className="text-foreground block text-xs font-semibold">{t('create.roles')}</legend>

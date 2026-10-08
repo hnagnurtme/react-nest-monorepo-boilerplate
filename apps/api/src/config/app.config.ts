@@ -29,6 +29,13 @@ export interface TelemetrySettings {
   otlpEndpoint: string | undefined;
 }
 
+export interface MailBrandSettings {
+  logoUrl: string | undefined;
+  backgroundUrl: string | undefined;
+  brandColor: string;
+  supportEmail: string | undefined;
+}
+
 export interface SmtpSettings {
   host: string;
   port: number;
@@ -134,5 +141,18 @@ export class AppConfig {
       pass: this.env.SMTP_PASS,
       from: this.env.SMTP_FROM,
     };
+  }
+
+  get mailBrand(): MailBrandSettings {
+    return {
+      logoUrl: this.env.MAIL_LOGO_URL,
+      backgroundUrl: this.env.MAIL_BACKGROUND_URL,
+      brandColor: this.env.MAIL_BRAND_COLOR,
+      supportEmail: this.env.MAIL_SUPPORT_EMAIL,
+    };
+  }
+
+  get invitationTtlHours(): number {
+    return this.env.INVITATION_TTL_HOURS;
   }
 }

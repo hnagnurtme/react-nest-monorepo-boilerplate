@@ -43,7 +43,12 @@ export const createUserSchema = z
     email: z.string().email().max(MAX_PASSWORD_LENGTH).toLowerCase().trim(),
     fullName: z.string().trim().min(2).max(100),
     phoneNumber: z.string().regex(PHONE_REGEX, 'Invalid phone number').optional(),
-    password: z.string().min(MIN_PASSWORD_LENGTH).max(MAX_PASSWORD_LENGTH),
+    /**
+     * Optional on purpose: leaving it out creates the account without a usable
+     * password and emails an invitation link, which is the default flow in the
+     * admin UI. Supplying it keeps the old behaviour (account ready at once).
+     */
+    password: z.string().min(MIN_PASSWORD_LENGTH).max(MAX_PASSWORD_LENGTH).optional(),
     /** At least one; the caller may only hand out roles it already holds. */
     roleIds: z.array(z.string().uuid()).min(1).max(20),
     tenantId: z.string().uuid().optional(),

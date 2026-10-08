@@ -5,6 +5,7 @@ import type { MailService } from '@/core/mail/index.js';
 import type { AuthCookieFactory } from '@/modules/auth/auth-cookie.factory.js';
 import { AuthService } from '@/modules/auth/auth.service.js';
 import type { PublicUser } from '@/modules/auth/auth.types.js';
+import type { InvitationService } from '@/modules/auth/invitation.service.js';
 import type { OtpService } from '@/modules/auth/otp.service.js';
 import type { SessionService } from '@/modules/auth/session.service.js';
 import type { UserDirectory } from '@/modules/auth/user-directory.service.js';
@@ -33,7 +34,15 @@ interface MockOtpService {
 
 interface MockMailService {
   sendResetPasswordMail: Mock;
+  sendInvitationMail: Mock;
   sendMail: Mock;
+}
+
+interface MockInvitationService {
+  peek: Mock;
+  consume: Mock;
+  issue: Mock;
+  ttlHours: number;
 }
 
 describe('AuthService', () => {
@@ -42,6 +51,7 @@ describe('AuthService', () => {
   let mockSessions: MockSessions;
   let mockOtpService: MockOtpService;
   let mockMailService: MockMailService;
+  let mockInvitations: MockInvitationService;
 
   const mockPublicUser: PublicUser = {
     id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
@@ -77,7 +87,15 @@ describe('AuthService', () => {
 
     mockMailService = {
       sendResetPasswordMail: vi.fn(),
+      sendInvitationMail: vi.fn(),
       sendMail: vi.fn(),
+    };
+
+    mockInvitations = {
+      peek: vi.fn(),
+      consume: vi.fn(),
+      issue: vi.fn(),
+      ttlHours: 72,
     };
 
     authService = new AuthService(
@@ -86,6 +104,7 @@ describe('AuthService', () => {
       {} as unknown as AuthCookieFactory,
       mockOtpService as unknown as OtpService,
       mockMailService as unknown as MailService,
+      mockInvitations as unknown as InvitationService,
     );
   });
 

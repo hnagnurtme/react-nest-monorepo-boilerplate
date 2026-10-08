@@ -68,6 +68,28 @@ export class AuthRepository {
     return row;
   }
 
+  /**
+   * Accepting an invitation sets the password and clears the "never signed in"
+   * state in one statement, so a crash cannot leave a verified account with a
+   * random password.
+   */
+  async activateInvitedUser(tx: Tx, userId: string, passwordHash: string): Promise<void> {
+    await tx
+      .update(users)
+      .set({ passwordHash, isEmailVerified: true, updatedAt: sql`now()` })
+      .where(and(eq(users.id, userId), isNull(users.deletedAt)));
+  }
+
+  async findTenantName(tx: Tx, tenantId: string): Promise<string | undefined> {
+    const [row] = await tx
+      .select({ name: tenants.name })
+      .from(tenants)
+      .where(eq(tenants.id, tenantId))
+      .limit(1);
+
+    return row?.name;
+  }
+
   async updateUserPassword(tx: Tx, userId: string, passwordHash: string): Promise<void> {
     await tx
       .update(users)

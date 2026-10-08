@@ -83,6 +83,19 @@ export class UsersController {
     return created;
   }
 
+  @Post(':id/resend-invitation')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @CheckPolicies((ability) => ability.can('update', 'User'))
+  @ApiOperation({ summary: 'Email a fresh invitation link to a user who has not accepted yet' })
+  @ApiResponse({ status: HttpStatus.NO_CONTENT, description: 'Invitation sent' })
+  @ApiProblemResponses(UNAUTHORIZED, FORBIDDEN, NOT_FOUND, CONFLICT)
+  resendInvitation(
+    @CurrentUser() actor: AuthContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<void> {
+    return this.users.resendInvitation(actor, id);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get one user' })
   @ApiResponse({ status: HttpStatus.OK, description: 'The user', type: UserEnvelopeDto })

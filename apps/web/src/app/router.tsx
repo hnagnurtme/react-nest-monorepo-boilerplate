@@ -15,6 +15,10 @@ const LoginPage = lazy(() =>
   import('@/features/auth').then((module) => ({ default: module.LoginPage })),
 );
 
+const AcceptInvitationPage = lazy(() =>
+  import('@/features/auth').then((module) => ({ default: module.AcceptInvitationPage })),
+);
+
 const StatusPage = lazy(() =>
   import('@/features/status').then((module) => ({ default: module.StatusPage })),
 );
@@ -45,6 +49,8 @@ export function AppRouter() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />
+          {/* Public: reached from the invitation email, before any session exists. */}
+          <Route path="/accept-invitation" element={<AcceptInvitationPage />} />
           <Route path="/status" element={<StatusPage />} />
           <Route
             path="/users"
