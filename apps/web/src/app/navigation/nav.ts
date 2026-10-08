@@ -108,3 +108,21 @@ export function visibleNav(ability: AppAbility): NavSection[] {
     children: section.children.filter((leaf) => isLeafAllowed(leaf, ability)),
   })).filter((section) => section.children.length > 0);
 }
+
+/**
+ * The ability check for a guarded page, resolved from this registry so the
+ * sidebar and the router can never disagree about who may open it. Adding a
+ * page means adding one entry here, not an entry here and a predicate in the
+ * router too.
+ *
+ * It reads `allLeaves()`, so a primary entry that grows a `can` is guarded as
+ * well — searching the sections alone left such a page open while hiding it
+ * from the menu. An unknown path throws for the same reason: returning
+ * `undefined` for a typo would publish the page to everyone and still typecheck.
+ */
+export function guardFor(path: string): ((ability: AppAbility) => boolean) | undefined {
+  const leaf = allLeaves().find((entry) => entry.path === path);
+  if (leaf === undefined) throw new Error(`guardFor: no navigation entry for "${path}"`);
+  if (leaf.can === undefined) return undefined;
+  return (ability: AppAbility) => isLeafAllowed(leaf, ability);
+}
