@@ -22,6 +22,17 @@ export interface OtpEmailPayload {
   ttlMinutes?: number;
 }
 
+/** An invitation to join a tenant with an account that already exists. */
+export interface TenantInvitationEmailPayload {
+  toEmail: string;
+  recipientName: string;
+  inviterName: string;
+  tenantName: string;
+  /** Absolute link to the web page that accepts the invitation. */
+  acceptUrl: string;
+  ttlHours: number;
+}
+
 export interface InvitationEmailPayload {
   toEmail: string;
   recipientName: string;

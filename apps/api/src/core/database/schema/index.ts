@@ -14,3 +14,7 @@ export { rolePermissions } from './role-permissions.js';
 export type { NewRolePermission, RolePermission } from './role-permissions.js';
 export { userRoles } from './user-roles.js';
 export type { NewUserRole, UserRole } from './user-roles.js';
+export { userTenants } from './user-tenants.js';
+export type { NewUserTenant, UserTenant } from './user-tenants.js';
+export { tenantInvitations } from './tenant-invitations.js';
+export type { NewTenantInvitation, TenantInvitationRow } from './tenant-invitations.js';

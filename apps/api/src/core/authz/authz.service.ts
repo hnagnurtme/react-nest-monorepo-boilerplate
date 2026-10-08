@@ -1,7 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ClsService } from 'nestjs-cls';
 
-import { buildAbility, defineAnonymousAbility, type AppAbility } from '@repo/shared-types';
+import {
+  buildAbility,
+  defineAnonymousAbility,
+  type AppAbility,
+  type PermissionGrant,
+} from '@repo/shared-types';
 
 import { CLS_KEYS, type AppClsStore } from '@/core/database/request-context.js';
 import { TransactionManager } from '@/core/database/transaction.manager.js';
@@ -58,16 +63,33 @@ export class AuthzService {
     return this.cls.get(CLS_KEYS.profile);
   }
 
+  /** The tenant this request acts in, as validated by the auth guard. */
+  activeTenantId(): string | undefined {
+    return this.cls.get(CLS_KEYS.activeTenantId);
+  }
+
+  /**
+   * The grants the caller holds right now: the ones from the active tenant plus
+   * any platform-scope ones. Grants from the account's other tenants are not
+   * included — that is the whole point of keeping them apart.
+   */
+  currentGrants(): PermissionGrant[] {
+    const profile = this.cls.get(CLS_KEYS.profile);
+    if (profile === undefined) return [];
+    return grantsFor(profile, this.cls.get(CLS_KEYS.activeTenantId));
+  }
+
   /** The ability of the request's caller, built from the profile the auth guard stored. */
   current(): AppAbility {
     const profile = this.cls.get(CLS_KEYS.profile);
-    return profile === undefined ? defineAnonymousAbility() : this.abilityFor(profile);
+    if (profile === undefined) return defineAnonymousAbility();
+    return this.abilityFor(profile, this.cls.get(CLS_KEYS.activeTenantId));
   }
 
-  abilityFor(profile: Pick<AuthzProfile, 'userId' | 'tenantId' | 'grants'>): AppAbility {
-    return buildAbility(profile.grants, {
+  abilityFor(profile: AuthzProfile, activeTenantId: string | undefined): AppAbility {
+    return buildAbility(grantsFor(profile, activeTenantId), {
       id: profile.userId,
-      tenantId: profile.tenantId ?? undefined,
+      ...(activeTenantId === undefined ? {} : { tenantId: activeTenantId }),
     });
   }
 
@@ -94,4 +116,15 @@ export class AuthzService {
       return undefined;
     }
   }
+}
+
+/**
+ * `own_tenant` conditions are built from the tenant the request acts in, so a
+ * caller with no active tenant (a platform user, or one that has not chosen
+ * yet) only keeps the grants that do not depend on one.
+ */
+function grantsFor(profile: AuthzProfile, activeTenantId: string | undefined): PermissionGrant[] {
+  const tenantGrants =
+    activeTenantId === undefined ? [] : (profile.grantsByTenant[activeTenantId] ?? []);
+  return [...profile.platformGrants, ...tenantGrants];
 }

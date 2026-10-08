@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
 
 import { useAuthStore } from '@/entities/session';
-import { CanAction } from '@/features/auth';
+import { CanAction, TenantSwitcher } from '@/features/auth';
 import { useBrand } from '@/shared/hooks';
 import {
   Alert,
@@ -33,6 +33,7 @@ export function HomePage() {
   return (
     <PageShell width="form" isCentered className="relative text-center">
       <div className="absolute right-6 top-6 flex items-center gap-3">
+        <TenantSwitcher />
         <LanguageSwitcher />
         <ThemeToggle />
       </div>

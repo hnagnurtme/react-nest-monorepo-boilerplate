@@ -16,8 +16,8 @@ import { parsePackedRules } from './packed-rules.schema';
 
 export const abilityKeys = {
   all: ['abilities'] as const,
-  session: (userId: string, accessToken: string | null) =>
-    ['abilities', userId, accessToken] as const,
+  session: (userId: string, accessToken: string | null, tenantId: string | null) =>
+    ['abilities', userId, accessToken, tenantId] as const,
 };
 
 interface AbilityState {
@@ -40,14 +40,19 @@ export function AbilityProvider({ children }: { children: ReactNode }) {
   const status = useAuthStore((s) => s.status);
   const userId = useAuthStore((s) => s.user?.id ?? null);
   const accessToken = useAuthStore((s) => s.accessToken);
+  // Grants are per tenant, so the rules are refetched when the tenant changes.
+  const activeTenantId = useAuthStore((s) => s.activeTenantId);
   const isSignedIn = status === 'authenticated' && userId !== null;
 
   const query = useQuery<PackedRules>({
-    queryKey: abilityKeys.session(userId ?? '', accessToken),
+    queryKey: abilityKeys.session(userId ?? '', accessToken, activeTenantId),
     enabled: isSignedIn,
-    // Keep the previous rules across a token refresh of the same user (no UI flash).
+    // Keep the previous rules across a token refresh of the same user and tenant
+    // (no UI flash). A tenant switch must not reuse them: the grants differ.
     placeholderData: (previous, previousQuery) =>
-      previousQuery?.queryKey[1] === userId ? previous : undefined,
+      previousQuery?.queryKey[1] === userId && previousQuery.queryKey[3] === activeTenantId
+        ? previous
+        : undefined,
     staleTime: 0,
     queryFn: async () => {
       const { rules } = await apiClient.get(AUTH_ENDPOINTS.ABILITIES);

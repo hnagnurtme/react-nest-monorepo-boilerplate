@@ -26,6 +26,7 @@ const TENANT_ADMIN: AuthContext = {
   id: 'actor',
   email: 'a@x.test',
   tenantId: 't-1',
+  tenantIds: ['t-1'],
   scope: 'tenant',
   roles: ['TENANT_ADMIN'],
   jti: 'j',
@@ -33,6 +34,7 @@ const TENANT_ADMIN: AuthContext = {
 const PLATFORM_ADMIN: AuthContext = {
   id: 'root',
   email: 'r@x.test',
+  tenantIds: [],
   scope: 'platform',
   roles: ['PLATFORM_ADMIN'],
   jti: 'j',

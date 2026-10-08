@@ -6,6 +6,9 @@ export {
 export { LoginForm } from './components/login-form';
 export { LoginPage } from './pages/login-page';
 export { AcceptInvitationPage } from './pages/accept-invitation-page';
+export { SelectTenantPage } from './pages/select-tenant-page';
+export { TenantSwitcher } from './components/tenant-switcher';
+export { useActiveTenant, type ActiveTenant } from './hooks/use-active-tenant';
 export {
   AbilityProvider,
   abilityKeys,

@@ -88,5 +88,35 @@
     "save": "Lưu vai trò",
     "cancel": "Hủy",
     "loading": "Đang tải vai trò..."
+  },
+  "invite": {
+    "prompt": "{{email}} đã có tài khoản. Hãy mời tài khoản đó tham gia tenant này — chủ tài khoản phải chấp nhận.",
+    "submit": "Gửi lời mời",
+    "dismiss": "Dùng email khác",
+    "sent": "Đã gửi lời mời tới {{email}}. Họ tham gia sau khi chấp nhận.",
+    "alreadyMember": "Tài khoản đó đã thuộc tenant này.",
+    "error": "Không gửi được lời mời."
+  },
+  "joinTenant": {
+    "loading": "Đang kiểm tra lời mời…",
+    "invalidTitle": "Lời mời không còn hiệu lực",
+    "invalidBody": "Link đã hết hạn hoặc đã dùng. Hãy nhờ quản trị viên mời lại.",
+    "title": "Tham gia {{tenant}}",
+    "subtitle": "{{inviter}} đã mời {{email}} tham gia. Tài khoản và mật khẩu của bạn không đổi.",
+    "roles": "Bạn sẽ tham gia với quyền: {{roles}}",
+    "accept": "Chấp nhận và tham gia",
+    "success": "Bạn đã tham gia tenant. Đăng nhập để bắt đầu làm việc.",
+    "error": "Không chấp nhận được lời mời."
+  },
+  "pendingInvitations": {
+    "title_one": "{{count}} lời mời đang chờ chấp nhận",
+    "title_other": "{{count}} lời mời đang chờ chấp nhận",
+    "detail": "Tham gia với quyền {{roles}} · link hết hạn {{expires}}",
+    "resend": "Gửi lại",
+    "resent": "Đã gửi lại lời mời.",
+    "resendError": "Không gửi lại được lời mời.",
+    "revoke": "Thu hồi",
+    "revoked": "Đã thu hồi lời mời.",
+    "revokeError": "Không thu hồi được lời mời."
   }
 }

@@ -9,16 +9,19 @@ import { CLS_KEYS } from '@/core/database/request-context.js';
 const profileRows = {
   userId: 'u-1',
   email: 'a@x.test',
-  tenantId: 't-1',
+  homeTenantId: 't-1',
+  tenants: [{ id: 't-1', name: 'Acme' }],
   roles: [
     {
       id: SYSTEM_ROLES.TENANT_ADMIN.id,
       key: 'TENANT_ADMIN',
       name: 'Admin',
       scope: 'tenant' as const,
+      assignedTenantId: 't-1',
     },
   ],
-  grants: [...SYSTEM_ROLES.TENANT_ADMIN.grants],
+  platformGrants: [],
+  grantsByTenant: { 't-1': [...SYSTEM_ROLES.TENANT_ADMIN.grants] },
 };
 
 describe('AuthzService', () => {
@@ -61,9 +64,16 @@ describe('AuthzService', () => {
   it('marks a user holding any platform-scope role as platform', async () => {
     repository.loadProfileRows.mockResolvedValue({
       ...profileRows,
-      tenantId: null,
+      homeTenantId: null,
+      tenants: [],
       roles: [
-        { id: SYSTEM_ROLES.PLATFORM_ADMIN.id, key: 'PLATFORM_ADMIN', name: 'P', scope: 'platform' },
+        {
+          id: SYSTEM_ROLES.PLATFORM_ADMIN.id,
+          key: 'PLATFORM_ADMIN',
+          name: 'P',
+          scope: 'platform',
+          assignedTenantId: null,
+        },
       ],
     });
 
@@ -96,11 +106,22 @@ describe('AuthzService', () => {
   it('builds the request ability from the profile the guard stored, anonymous otherwise', () => {
     expect(service.current().can('read', 'User')).toBe(false);
 
-    cls.get.mockImplementation((key: string) =>
-      key === CLS_KEYS.profile ? { ...profileRows, scope: 'tenant' } : undefined,
-    );
+    cls.get.mockImplementation((key: string) => {
+      if (key === CLS_KEYS.profile) return { ...profileRows, scope: 'tenant' };
+      return key === CLS_KEYS.activeTenantId ? 't-1' : undefined;
+    });
     expect(service.current().can('read', 'User')).toBe(true);
     expect(service.current().can('create', 'Tenant')).toBe(false);
+  });
+
+  it('keeps the grants of one tenant out of another', () => {
+    cls.get.mockImplementation((key: string) => {
+      if (key === CLS_KEYS.profile) return { ...profileRows, scope: 'tenant' };
+      return key === CLS_KEYS.activeTenantId ? 't-2' : undefined;
+    });
+
+    expect(service.currentGrants()).toEqual([]);
+    expect(service.current().can('read', 'User')).toBe(false);
   });
 
   it('evicts users directly, or everyone holding a role', async () => {

@@ -12,10 +12,16 @@ import * as schema from './schema/index.js';
 const ARGON2_TIME_COST = 2;
 const ARGON2_PARALLELISM = 1;
 const SEED_PASSWORD = 'Password123!';
+const PLATFORM_ADMIN_EMAIL = 'admin@platform.com';
 
 /**
  * Development seed. Runs as the migration role because it writes across every
  * tenant — the one thing the runtime role must never be able to do.
+ *
+ * Seeds the one account that cannot be created through the API (there is no
+ * self sign-up) plus two empty tenants. Every other account is made from the
+ * admin UI: the platform admin holds `manage:all`, so it creates tenants and
+ * the first administrator of each.
  *
  * Idempotent: re-running it must not fail, or `just db-migrate && db-seed`
  * stops being something anyone is willing to type twice.
@@ -35,66 +41,47 @@ async function main(): Promise<void> {
       parallelism: ARGON2_PARALLELISM,
     });
 
-    const tenantRows = await db
-      .insert(schema.tenants)
-      .values([
-        { name: 'Acme Inc.', slug: 'acme' },
-        { name: 'Globex Corp.', slug: 'globex' },
-      ])
-      .onConflictDoUpdate({
-        target: schema.tenants.slug,
-        set: { updatedAt: sql`now()` },
-      })
-      .returning();
+    await db.transaction(async (tx) => {
+      const tenantRows = await tx
+        .insert(schema.tenants)
+        .values([
+          { name: 'Acme Inc.', slug: 'acme' },
+          { name: 'Globex Corp.', slug: 'globex' },
+        ])
+        .onConflictDoUpdate({
+          target: schema.tenants.slug,
+          set: { updatedAt: sql`now()` },
+        })
+        .returning();
 
-    const [tenantA, tenantB] = tenantRows;
-    if (tenantA === undefined || tenantB === undefined) throw new Error('tenant seed failed');
+      if (tenantRows.length !== 2) throw new Error('tenant seed failed');
 
-    const userRows = await db
-      .insert(schema.users)
-      .values(seedUsers(passwordHash, tenantA.id, tenantB.id))
-      .onConflictDoUpdate({ target: schema.users.email, set: { passwordHash } })
-      .returning();
+      // No tenant and no membership: a platform account sits above every tenant.
+      const [admin] = await tx
+        .insert(schema.users)
+        .values({
+          email: PLATFORM_ADMIN_EMAIL,
+          fullName: 'Platform Admin',
+          passwordHash,
+          isActive: true,
+          isEmailVerified: true,
+        })
+        .onConflictDoUpdate({ target: schema.users.email, set: { passwordHash } })
+        .returning();
+      if (admin === undefined) throw new Error('admin seed failed');
 
-    const roleByEmail = new Map<string, string>(SEED_ROLES.map(([email, role]) => [email, role]));
-    const assignments = userRows.flatMap((user) => {
-      const roleId = roleByEmail.get(user.email);
-      return roleId === undefined ? [] : [{ userId: user.id, roleId, tenantId: user.tenantId }];
+      await tx
+        .insert(schema.userRoles)
+        .values({ userId: admin.id, roleId: SYSTEM_ROLES.PLATFORM_ADMIN.id })
+        .onConflictDoNothing();
     });
-    await db.insert(schema.userRoles).values(assignments).onConflictDoNothing();
 
-    process.stdout.write(`Seeded. Every account uses the password: ${SEED_PASSWORD}\n`);
+    process.stdout.write(
+      `Seeded. Sign in as ${PLATFORM_ADMIN_EMAIL} with the password: ${SEED_PASSWORD}\n`,
+    );
   } finally {
     await pool.end();
   }
-}
-
-/** Which system role each seed account holds. Role ids are fixed, see SYSTEM_ROLES. */
-const SEED_ROLES: readonly (readonly [string, string])[] = [
-  ['admin@example.com', SYSTEM_ROLES.PLATFORM_ADMIN.id],
-  ['admin-a@example.com', SYSTEM_ROLES.TENANT_ADMIN.id],
-  ['member-a@example.com', SYSTEM_ROLES.TENANT_MEMBER.id],
-  ['admin-b@example.com', SYSTEM_ROLES.TENANT_ADMIN.id],
-];
-
-function seedUsers(
-  passwordHash: string,
-  tenantAId: string,
-  tenantBId: string,
-): (typeof schema.users.$inferInsert)[] {
-  const verified = { passwordHash, isActive: true, isEmailVerified: true };
-
-  return [
-    { ...verified, email: 'admin@example.com', fullName: 'Platform Admin' },
-    { ...verified, email: 'admin-a@example.com', fullName: 'Tenant A Admin', tenantId: tenantAId },
-    {
-      ...verified,
-      email: 'member-a@example.com',
-      fullName: 'Tenant A Member',
-      tenantId: tenantAId,
-    },
-    { ...verified, email: 'admin-b@example.com', fullName: 'Tenant B Admin', tenantId: tenantBId },
-  ];
 }
 
 main().catch((error: unknown) => {

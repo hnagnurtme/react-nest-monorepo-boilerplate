@@ -3,7 +3,13 @@ import { and, asc, count, desc, eq, ilike, isNull, or, sql, type SQL } from 'dri
 
 import type { SortSpec } from '@/common/index.js';
 import type { Tx } from '@/core/database/drizzle.module.js';
-import { tenants, users, type NewUser, type User } from '@/core/database/schema/index.js';
+import {
+  tenants,
+  users,
+  userTenants,
+  type NewUser,
+  type User,
+} from '@/core/database/schema/index.js';
 
 export const USER_SORT_FIELDS = ['createdAt', 'fullName', 'email'] as const;
 export type UserSortField = (typeof USER_SORT_FIELDS)[number];
@@ -109,6 +115,45 @@ export class UsersRepository {
       .returning();
 
     return row;
+  }
+
+  /**
+   * The account behind an email, across every tenant. Callers pass an
+   * `admin`-mode transaction: an email is one account platform-wide, so
+   * "does this email exist" cannot be answered from inside a single tenant.
+   */
+  async findByEmail(tx: Tx, email: string): Promise<User | undefined> {
+    const [row] = await tx
+      .select()
+      .from(users)
+      .where(and(eq(users.email, email), isNull(users.deletedAt)))
+      .limit(1);
+
+    return row;
+  }
+
+  /** Lets an account act in a tenant. Idempotent, so re-adding a member is not an error. */
+  async addMembership(tx: Tx, userId: string, tenantId: string): Promise<void> {
+    await tx.insert(userTenants).values({ userId, tenantId }).onConflictDoNothing();
+  }
+
+  async removeMembership(tx: Tx, userId: string, tenantId: string): Promise<boolean> {
+    const rows = await tx
+      .delete(userTenants)
+      .where(and(eq(userTenants.userId, userId), eq(userTenants.tenantId, tenantId)))
+      .returning({ tenantId: userTenants.tenantId });
+
+    return rows.length > 0;
+  }
+
+  /** Tenant ids the account belongs to, as far as the caller may see them. */
+  async membershipIds(tx: Tx, userId: string): Promise<string[]> {
+    const rows = await tx
+      .select({ tenantId: userTenants.tenantId })
+      .from(userTenants)
+      .where(eq(userTenants.userId, userId));
+
+    return rows.map((row) => row.tenantId);
   }
 
   async softDelete(tx: Tx, id: string): Promise<boolean> {

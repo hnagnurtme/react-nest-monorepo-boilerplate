@@ -15,6 +15,27 @@
       "when": 1791350078789,
       "tag": "0001_kind_serpent_society",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791430510944,
+      "tag": "0002_sour_runaways",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791433756148,
+      "tag": "0003_yummy_silver_samurai",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791434618755,
+      "tag": "0004_graceful_sprite",
+      "breakpoints": true
     }
   ]
 }

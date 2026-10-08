@@ -25,6 +25,7 @@ import {
   ApiProblemResponses,
   ClientInfoParam,
   CurrentUser,
+  NoTenantContext,
   Public,
   type AuthContext,
   type ClientInfo,
@@ -172,6 +173,7 @@ export class AuthController {
   }
 
   @Post('change-password')
+  @NoTenantContext()
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth(ACCESS_TOKEN_SECURITY_SCHEME)
   @ApiOperation({ summary: 'Change password for currently authenticated user' })
@@ -205,6 +207,7 @@ export class AuthController {
   }
 
   @Post('logout-all')
+  @NoTenantContext()
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiBearerAuth(ACCESS_TOKEN_SECURITY_SCHEME)
   @ApiOperation({ summary: 'Revoke every login of the current user' })
@@ -215,6 +218,7 @@ export class AuthController {
   }
 
   @Get('me')
+  @NoTenantContext()
   @ApiBearerAuth(ACCESS_TOKEN_SECURITY_SCHEME)
   @ApiOperation({ summary: 'The currently authenticated user' })
   @ApiResponse({ status: HttpStatus.OK, description: 'The caller', type: PublicUserEnvelopeDto })
@@ -224,6 +228,7 @@ export class AuthController {
   }
 
   @Get('me/abilities')
+  @NoTenantContext()
   @ApiBearerAuth(ACCESS_TOKEN_SECURITY_SCHEME)
   @ApiOperation({
     summary: "The caller's permissions as packed CASL rules, for the client to build its ability",

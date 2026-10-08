@@ -10,6 +10,16 @@ export {
   updateUserSchema,
 } from './user.dto.js';
 export {
+  AcceptTenantInvitationDto,
+  acceptTenantInvitationSchema,
+  InviteToTenantDto,
+  inviteToTenantSchema,
+  TenantInvitationListEnvelopeDto,
+  TenantInvitationPreviewEnvelopeDto,
+  tenantInvitationPreviewSchema,
+  tenantInvitationSummarySchema,
+} from './tenant-invitation.dto.js';
+export {
   UserEnvelopeDto,
   UserListEnvelopeDto,
   userResponseSchema,

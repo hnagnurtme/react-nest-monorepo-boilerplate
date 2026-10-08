@@ -4,4 +4,5 @@ export type {
   SendMailOptions,
   OtpEmailPayload,
   InvitationEmailPayload,
+  TenantInvitationEmailPayload,
 } from './mail.interfaces.js';

@@ -56,6 +56,23 @@ export class ResourceConflictError extends AppError {
   readonly status = HttpStatus.CONFLICT;
 }
 
+/**
+ * An account with this email already exists — somewhere on the platform, not
+ * necessarily in a tenant the caller can see.
+ *
+ * Its own code because the client acts on it: an email is one account across
+ * every tenant, so the next step is to invite that account into this tenant
+ * rather than to pick a different email.
+ */
+export class AccountAlreadyExistsError extends AppError {
+  readonly code = ERROR_CODES.ACCOUNT_ALREADY_EXISTS;
+  readonly status = HttpStatus.CONFLICT;
+
+  constructor() {
+    super('An account with this email already exists');
+  }
+}
+
 /** The request is well-formed but a value breaks a business rule (422). */
 export class InvalidInputError extends AppError {
   readonly code = ERROR_CODES.VALIDATION_FAILED;

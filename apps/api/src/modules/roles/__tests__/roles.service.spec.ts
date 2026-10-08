@@ -34,6 +34,7 @@ const ADMIN: AuthContext = {
   id: 'actor',
   email: 'a@x.test',
   tenantId: TENANT,
+  tenantIds: [TENANT],
   scope: 'tenant',
   roles: ['TENANT_ADMIN'],
   jti: 'j',
@@ -41,6 +42,7 @@ const ADMIN: AuthContext = {
 const ROOT: AuthContext = {
   id: 'root',
   email: 'r@x.test',
+  tenantIds: [],
   scope: 'platform',
   roles: ['PLATFORM_ADMIN'],
   jti: 'j',
@@ -61,12 +63,12 @@ describe('RolesService', () => {
     Mock
   >;
   let authzRepository: { loadRolesWithGrants: Mock };
-  let authz: { current: Mock; currentProfile: Mock; invalidateRole: Mock };
+  let authz: { current: Mock; currentGrants: Mock; invalidateRole: Mock };
   let audit: { record: Mock };
 
   const as = (actor: AuthContext, grants: readonly PermissionGrant[]): AuthContext => {
     authz.current.mockReturnValue(buildAbility(grants, { id: actor.id, tenantId: actor.tenantId }));
-    authz.currentProfile.mockReturnValue({ grants });
+    authz.currentGrants.mockReturnValue([...grants]);
     return actor;
   };
   const admin = (): AuthContext => as(ADMIN, SYSTEM_ROLES.TENANT_ADMIN.grants);
@@ -88,7 +90,7 @@ describe('RolesService', () => {
       count: vi.fn(),
     };
     authzRepository = { loadRolesWithGrants: vi.fn(() => Promise.resolve([])) };
-    authz = { current: vi.fn(), currentProfile: vi.fn(), invalidateRole: vi.fn() };
+    authz = { current: vi.fn(), currentGrants: vi.fn(), invalidateRole: vi.fn() };
     audit = { record: vi.fn() };
     const transactions = {
       runInRequestContext: vi.fn((fn: (tx: unknown) => Promise<unknown>) => fn({})),
@@ -276,7 +278,7 @@ describe('RolesService', () => {
 
   describe('grantable', () => {
     it('offers only what the caller holds, never platform-only entries', () => {
-      authz.currentProfile.mockReturnValue({ grants: SYSTEM_ROLES.TENANT_MEMBER.grants });
+      authz.currentGrants.mockReturnValue([...SYSTEM_ROLES.TENANT_MEMBER.grants]);
 
       const options = service.grantable();
       const keys = options.map((o) => `${o.action}:${o.subject}`);

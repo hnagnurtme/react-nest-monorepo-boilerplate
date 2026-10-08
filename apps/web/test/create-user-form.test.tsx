@@ -247,4 +247,43 @@ describe('CreateUserForm', () => {
 
     expect(await screen.findByText('A user with this email already exists.')).toBeInTheDocument();
   });
+
+  it('offers to invite the existing account when the email is already taken', async () => {
+    const handler: FetchHandler = (url, init) => {
+      if (init?.method === 'POST' && url.includes('/api/v1/tenant-invitations')) {
+        return jsonResponse(undefined, 204);
+      }
+      if (init?.method === 'POST' && url.includes('/api/v1/users')) {
+        return jsonResponse(
+          { status: 409, code: 'ACCOUNT_ALREADY_EXISTS', title: 'Conflict' },
+          409,
+        );
+      }
+      return makeHandler()(url, init);
+    };
+    const fetchMock = mockApi(makeTenantAdmin(), TENANT_ADMIN_GRANTS, handler);
+    renderWithProviders(<UsersPage />);
+    const user = userEvent.setup();
+
+    await openForm(user);
+    await user.type(screen.getByLabelText('Full name'), 'Jane Doe');
+    await user.type(screen.getByLabelText('Email'), 'jane@example.com');
+    await user.click(await screen.findByLabelText('Tenant member'));
+    await submit(user);
+
+    // An email is one account platform-wide, so the fix is an invitation, not
+    // a different address.
+    const inviteButton = await screen.findByRole('button', { name: 'Send invitation' });
+    await user.click(inviteButton);
+
+    await waitFor(() => {
+      const call = fetchMock.mock.calls.find(
+        ([url, init]) => url.includes('/api/v1/tenant-invitations') && init?.method === 'POST',
+      );
+      expect(JSON.parse(call?.[1]?.body as string)).toEqual({
+        email: 'jane@example.com',
+        roleIds: [ROLE_MEMBER],
+      });
+    });
+  });
 });

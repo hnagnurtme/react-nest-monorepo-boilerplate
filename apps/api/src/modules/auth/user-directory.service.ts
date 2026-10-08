@@ -167,6 +167,7 @@ function publicUserFrom(
     email: user.email,
     fullName: user.fullName,
     tenantId: user.tenantId ?? undefined,
+    tenants: profile.tenants,
     scope: profile.scope,
     roles: profile.roles.map((role) => ({ key: role.key, name: role.name })),
   };

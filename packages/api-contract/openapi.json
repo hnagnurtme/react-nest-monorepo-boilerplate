@@ -4,7 +4,18 @@
     "/healthz": {
       "get": {
         "operationId": "HealthController_getLiveness",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "in": "header",
+            "required": false,
+            "description": "The tenant to act in. Must be one of the tenants from `GET /auth/me`.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "The process is running"
@@ -19,7 +30,18 @@
     "/readyz": {
       "get": {
         "operationId": "HealthController_getReadiness",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "in": "header",
+            "required": false,
+            "description": "The tenant to act in. Must be one of the tenants from `GET /auth/me`.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Every dependency is reachable"
@@ -37,7 +59,18 @@
     "/api/v1/auth/login": {
       "post": {
         "operationId": "AuthController_login_v1",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "in": "header",
+            "required": false,
+            "description": "The tenant to act in. Must be one of the tenants from `GET /auth/me`.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -93,7 +126,18 @@
     "/api/v1/auth/refresh": {
       "post": {
         "operationId": "AuthController_refresh_v1",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "in": "header",
+            "required": false,
+            "description": "The tenant to act in. Must be one of the tenants from `GET /auth/me`.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -149,7 +193,18 @@
     "/api/v1/auth/forgot-password": {
       "post": {
         "operationId": "AuthController_forgotPassword_v1",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "in": "header",
+            "required": false,
+            "description": "The tenant to act in. Must be one of the tenants from `GET /auth/me`.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -193,7 +248,18 @@
     "/api/v1/auth/reset-password": {
       "post": {
         "operationId": "AuthController_resetPassword_v1",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "in": "header",
+            "required": false,
+            "description": "The tenant to act in. Must be one of the tenants from `GET /auth/me`.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -256,6 +322,16 @@
             "in": "path",
             "description": "The single-use token from the invitation email",
             "schema": {}
+          },
+          {
+            "name": "x-tenant-id",
+            "in": "header",
+            "required": false,
+            "description": "The tenant to act in. Must be one of the tenants from `GET /auth/me`.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         ],
         "responses": {
@@ -291,7 +367,18 @@
     "/api/v1/auth/accept-invitation": {
       "post": {
         "operationId": "AuthController_acceptInvitation_v1",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "in": "header",
+            "required": false,
+            "description": "The tenant to act in. Must be one of the tenants from `GET /auth/me`.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -341,7 +428,18 @@
     "/api/v1/auth/change-password": {
       "post": {
         "operationId": "AuthController_changePassword_v1",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "in": "header",
+            "required": false,
+            "description": "The tenant to act in. Must be one of the tenants from `GET /auth/me`.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -396,7 +494,18 @@
     "/api/v1/auth/logout": {
       "post": {
         "operationId": "AuthController_logout_v1",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "in": "header",
+            "required": false,
+            "description": "The tenant to act in. Must be one of the tenants from `GET /auth/me`.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -433,7 +542,18 @@
     "/api/v1/auth/logout-all": {
       "post": {
         "operationId": "AuthController_logoutAll_v1",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "in": "header",
+            "required": false,
+            "description": "The tenant to act in. Must be one of the tenants from `GET /auth/me`.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "responses": {
           "204": {
             "description": "All sessions revoked"
@@ -465,7 +585,18 @@
     "/api/v1/auth/me": {
       "get": {
         "operationId": "AuthController_me_v1",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "in": "header",
+            "required": false,
+            "description": "The tenant to act in. Must be one of the tenants from `GET /auth/me`.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "The caller",
@@ -498,7 +629,18 @@
     "/api/v1/auth/me/abilities": {
       "get": {
         "operationId": "AuthController_abilities_v1",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "in": "header",
+            "required": false,
+            "description": "The tenant to act in. Must be one of the tenants from `GET /auth/me`.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Packed CASL rules",
@@ -531,7 +673,18 @@
     "/api/v1/permissions": {
       "get": {
         "operationId": "RolesController_permissions_v1",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "in": "header",
+            "required": false,
+            "description": "The tenant to act in. Must be one of the tenants from `GET /auth/me`.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Grantable permissions",
@@ -570,7 +723,18 @@
     "/api/v1/roles": {
       "get": {
         "operationId": "RolesController_list_v1",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "in": "header",
+            "required": false,
+            "description": "The tenant to act in. Must be one of the tenants from `GET /auth/me`.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "A page of roles",
@@ -613,7 +777,18 @@
       },
       "post": {
         "operationId": "RolesController_create_v1",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "in": "header",
+            "required": false,
+            "description": "The tenant to act in. Must be one of the tenants from `GET /auth/me`.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -674,7 +849,18 @@
     "/api/v1/roles/{id}": {
       "get": {
         "operationId": "RolesController_get_v1",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "in": "header",
+            "required": false,
+            "description": "The tenant to act in. Must be one of the tenants from `GET /auth/me`.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "The role",
@@ -717,7 +903,18 @@
       },
       "patch": {
         "operationId": "RolesController_rename_v1",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "in": "header",
+            "required": false,
+            "description": "The tenant to act in. Must be one of the tenants from `GET /auth/me`.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -782,7 +979,18 @@
       },
       "delete": {
         "operationId": "RolesController_remove_v1",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "in": "header",
+            "required": false,
+            "description": "The tenant to act in. Must be one of the tenants from `GET /auth/me`.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "responses": {
           "401": {
             "description": "Not authenticated, or the token is invalid or expired",
@@ -823,7 +1031,18 @@
     "/api/v1/roles/{id}/permissions": {
       "put": {
         "operationId": "RolesController_setPermissions_v1",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "in": "header",
+            "required": false,
+            "description": "The tenant to act in. Must be one of the tenants from `GET /auth/me`.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -884,7 +1103,18 @@
     "/api/v1/tenants": {
       "get": {
         "operationId": "TenantsController_list_v1",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "in": "header",
+            "required": false,
+            "description": "The tenant to act in. Must be one of the tenants from `GET /auth/me`.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "A page of tenants",
@@ -927,7 +1157,18 @@
       },
       "post": {
         "operationId": "TenantsController_create_v1",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "in": "header",
+            "required": false,
+            "description": "The tenant to act in. Must be one of the tenants from `GET /auth/me`.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -988,7 +1229,18 @@
     "/api/v1/tenants/{id}": {
       "get": {
         "operationId": "TenantsController_get_v1",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "in": "header",
+            "required": false,
+            "description": "The tenant to act in. Must be one of the tenants from `GET /auth/me`.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "The tenant",
@@ -1031,7 +1283,18 @@
       },
       "patch": {
         "operationId": "TenantsController_update_v1",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "in": "header",
+            "required": false,
+            "description": "The tenant to act in. Must be one of the tenants from `GET /auth/me`.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -1092,7 +1355,18 @@
     "/api/v1/users": {
       "get": {
         "operationId": "UsersController_list_v1",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "in": "header",
+            "required": false,
+            "description": "The tenant to act in. Must be one of the tenants from `GET /auth/me`.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "A page of users",
@@ -1135,7 +1409,18 @@
       },
       "post": {
         "operationId": "UsersController_create_v1",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "in": "header",
+            "required": false,
+            "description": "The tenant to act in. Must be one of the tenants from `GET /auth/me`.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -1196,7 +1481,18 @@
     "/api/v1/users/{id}/resend-invitation": {
       "post": {
         "operationId": "UsersController_resendInvitation_v1",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "in": "header",
+            "required": false,
+            "description": "The tenant to act in. Must be one of the tenants from `GET /auth/me`.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "responses": {
           "204": {
             "description": "Invitation sent"
@@ -1240,7 +1536,18 @@
     "/api/v1/users/{id}": {
       "get": {
         "operationId": "UsersController_get_v1",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "in": "header",
+            "required": false,
+            "description": "The tenant to act in. Must be one of the tenants from `GET /auth/me`.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "The user",
@@ -1283,7 +1590,18 @@
       },
       "patch": {
         "operationId": "UsersController_update_v1",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "in": "header",
+            "required": false,
+            "description": "The tenant to act in. Must be one of the tenants from `GET /auth/me`.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -1342,7 +1660,18 @@
       },
       "delete": {
         "operationId": "UsersController_remove_v1",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "in": "header",
+            "required": false,
+            "description": "The tenant to act in. Must be one of the tenants from `GET /auth/me`.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "responses": {
           "401": {
             "description": "Not authenticated, or the token is invalid or expired",
@@ -1377,7 +1706,18 @@
     "/api/v1/users/{id}/roles": {
       "put": {
         "operationId": "UsersController_setRoles_v1",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "in": "header",
+            "required": false,
+            "description": "The tenant to act in. Must be one of the tenants from `GET /auth/me`.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -1436,6 +1776,346 @@
           }
         ],
         "summary": "Replace the roles of a user (never your own, never more than you hold)",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/api/v1/tenant-invitations/token/{token}": {
+      "get": {
+        "operationId": "TenantInvitationsController_preview_v1",
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "in": "header",
+            "required": false,
+            "description": "The tenant to act in. Must be one of the tenants from `GET /auth/me`.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The invitation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantInvitationPreviewEnvelopeDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such resource, or the caller may not know it exists",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "422": {
+            "description": "The payload failed validation",
+            "content": {
+              "application/problem+json": {}
+            }
+          }
+        },
+        "summary": "What an invitation link is offering, for the acceptance screen",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/api/v1/tenant-invitations/accept": {
+      "post": {
+        "operationId": "TenantInvitationsController_accept_v1",
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "in": "header",
+            "required": false,
+            "description": "The tenant to act in. Must be one of the tenants from `GET /auth/me`.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcceptTenantInvitationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "The account joined the tenant"
+          },
+          "404": {
+            "description": "No such resource, or the caller may not know it exists",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "409": {
+            "description": "The resource is in a state that forbids this change",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "422": {
+            "description": "The payload failed validation",
+            "content": {
+              "application/problem+json": {}
+            }
+          }
+        },
+        "summary": "Accept an invitation to join a tenant",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/api/v1/tenant-invitations": {
+      "get": {
+        "operationId": "TenantInvitationsController_listPending_v1",
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "in": "header",
+            "required": false,
+            "description": "The tenant to act in. Must be one of the tenants from `GET /auth/me`.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pending invitations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantInvitationListEnvelopeDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated, or the token is invalid or expired",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "403": {
+            "description": "Authenticated, but not allowed to do this",
+            "content": {
+              "application/problem+json": {}
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Invitations still waiting on their invitee",
+        "tags": [
+          "users"
+        ]
+      },
+      "post": {
+        "operationId": "TenantInvitationsController_invite_v1",
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "in": "header",
+            "required": false,
+            "description": "The tenant to act in. Must be one of the tenants from `GET /auth/me`.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InviteToTenantDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "The invitation was emailed"
+          },
+          "401": {
+            "description": "Not authenticated, or the token is invalid or expired",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "403": {
+            "description": "Authenticated, but not allowed to do this",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "404": {
+            "description": "No such resource, or the caller may not know it exists",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "409": {
+            "description": "The resource is in a state that forbids this change",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "422": {
+            "description": "The payload failed validation",
+            "content": {
+              "application/problem+json": {}
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Invite an existing account to join the tenant",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/api/v1/tenant-invitations/{id}/resend": {
+      "post": {
+        "operationId": "TenantInvitationsController_resend_v1",
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "in": "header",
+            "required": false,
+            "description": "The tenant to act in. Must be one of the tenants from `GET /auth/me`.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "The invitation was emailed again"
+          },
+          "401": {
+            "description": "Not authenticated, or the token is invalid or expired",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "403": {
+            "description": "Authenticated, but not allowed to do this",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "404": {
+            "description": "No such resource, or the caller may not know it exists",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "409": {
+            "description": "The resource is in a state that forbids this change",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "422": {
+            "description": "The payload failed validation",
+            "content": {
+              "application/problem+json": {}
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Email a fresh link for a pending invitation",
+        "tags": [
+          "users"
+        ]
+      }
+    },
+    "/api/v1/tenant-invitations/{id}": {
+      "delete": {
+        "operationId": "TenantInvitationsController_revoke_v1",
+        "parameters": [
+          {
+            "name": "x-tenant-id",
+            "in": "header",
+            "required": false,
+            "description": "The tenant to act in. Must be one of the tenants from `GET /auth/me`.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The invitation was withdrawn"
+          },
+          "401": {
+            "description": "Not authenticated, or the token is invalid or expired",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "403": {
+            "description": "Authenticated, but not allowed to do this",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "404": {
+            "description": "No such resource, or the caller may not know it exists",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "409": {
+            "description": "The resource is in a state that forbids this change",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "422": {
+            "description": "The payload failed validation",
+            "content": {
+              "application/problem+json": {}
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Withdraw a pending invitation",
         "tags": [
           "users"
         ]
@@ -1504,6 +2184,24 @@
                   "tenantId": {
                     "type": "string"
                   },
+                  "tenants": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name"
+                      ]
+                    }
+                  },
                   "scope": {
                     "type": "string",
                     "enum": [
@@ -1534,6 +2232,7 @@
                   "id",
                   "email",
                   "fullName",
+                  "tenants",
                   "scope",
                   "roles"
                 ]
@@ -1726,6 +2425,24 @@
               "tenantId": {
                 "type": "string"
               },
+              "tenants": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name"
+                  ]
+                }
+              },
               "scope": {
                 "type": "string",
                 "enum": [
@@ -1756,6 +2473,7 @@
               "id",
               "email",
               "fullName",
+              "tenants",
               "scope",
               "roles"
             ]
@@ -2511,9 +3229,136 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
           }
         },
         "required": [
+          "roleIds"
+        ]
+      },
+      "TenantInvitationPreviewEnvelopeDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "email": {
+                "type": "string",
+                "format": "email"
+              },
+              "tenantName": {
+                "type": "string"
+              },
+              "inviterName": {
+                "type": "string"
+              },
+              "roles": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "email",
+              "tenantName",
+              "inviterName",
+              "roles"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "AcceptTenantInvitationDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "token"
+        ]
+      },
+      "TenantInvitationListEnvelopeDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "email": {
+                  "type": "string",
+                  "format": "email"
+                },
+                "fullName": {
+                  "type": "string"
+                },
+                "roles": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "expiresAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "id",
+                "email",
+                "fullName",
+                "roles",
+                "expiresAt",
+                "createdAt"
+              ]
+            }
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "InviteToTenantDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 128
+          },
+          "roleIds": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 20,
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "tenantId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "email",
           "roleIds"
         ]
       }

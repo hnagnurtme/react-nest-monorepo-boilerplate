@@ -58,6 +58,7 @@ describe('AuthService', () => {
     email: 'member@example.com',
     fullName: 'Jane Member',
     tenantId: undefined,
+    tenants: [],
     scope: 'tenant',
     roles: [{ key: 'TENANT_MEMBER', name: 'Tenant member' }],
   };

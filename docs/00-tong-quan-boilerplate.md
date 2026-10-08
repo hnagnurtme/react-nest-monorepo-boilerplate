@@ -93,7 +93,7 @@ Khi áp dụng bộ khung này cho một dự án mới (ví dụ: `MyAwesomePro
    just install
    just up
    just db-migrate
-   just db-seed   # tài khoản dev: admin@example.com, admin-a@example.com, ... (mật khẩu Password123!)
+   just db-seed   # tài khoản dev duy nhất: admin@platform.com (mật khẩu Password123!) + 2 tenant rỗng
    just dev
    ```
 

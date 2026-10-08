@@ -2,6 +2,7 @@ import type { paths } from '@repo/api-contract';
 
 import { env } from '@/config/env';
 
+import { TENANT_HEADER_NAME } from './constants';
 import {
   CSRF_COOKIE_NAME,
   CSRF_HEADER_NAME,
@@ -19,10 +20,22 @@ import type {
 } from './types';
 
 let tokenProvider: (() => string | null) | null = null;
+let tenantProvider: (() => string | null) | null = null;
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 let unauthorizedHandler: (() => void) | null = null;
 
 const UNSAFE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
+/**
+ * Supplies the tenant every authenticated call acts in.
+ *
+ * An account can belong to several tenants, so the API refuses to guess: a
+ * request without the header is rejected unless the endpoint is one of the few
+ * that work before the choice is made.
+ */
+export function setTenantProvider(provider: () => string | null): void {
+  tenantProvider = provider;
+}
 
 export function setTokenProvider(provider: () => string | null): void {
   tokenProvider = provider;
@@ -137,6 +150,11 @@ function buildHeaders(headers?: HeadersInit, isFormData = false, method?: string
   const token = tokenProvider ? tokenProvider() : null;
   if (token) {
     requestHeaders.set('Authorization', `Bearer ${token}`);
+  }
+
+  if (!requestHeaders.has(TENANT_HEADER_NAME)) {
+    const tenantId = tenantProvider ? tenantProvider() : null;
+    if (tenantId) requestHeaders.set(TENANT_HEADER_NAME, tenantId);
   }
   return requestHeaders;
 }
@@ -285,6 +303,7 @@ export const apiClient = {
  */
 export function resetHttpClientForTests(): void {
   tokenProvider = null;
+  tenantProvider = null;
   unauthorizedHandler = null;
   resetRefreshForTests();
 }
