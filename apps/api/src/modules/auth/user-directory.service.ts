@@ -62,6 +62,42 @@ export class UserDirectory {
   }
 
   /**
+   * The account behind an invitation token, for the "set your password" screen.
+   * Already-verified accounts are refused: the token outlived its purpose.
+   */
+  async findInvited(
+    userId: string,
+  ): Promise<{ email: string; fullName: string; tenantName: string } | undefined> {
+    return this.transactions.run(
+      { accessMode: 'admin', reason: 'auth:invitation-preview' },
+      async (tx) => {
+        const user = await this.repository.findActiveUserById(tx, userId);
+        if (user === undefined || user.isEmailVerified) return undefined;
+
+        const tenantName =
+          user.tenantId === null
+            ? undefined
+            : await this.repository.findTenantName(tx, user.tenantId);
+
+        return { email: user.email, fullName: user.fullName, tenantName: tenantName ?? '' };
+      },
+    );
+  }
+
+  /** Sets the password an invited user chose and marks the account verified. */
+  async acceptInvitation(userId: string, password: string): Promise<void> {
+    const passwordHash = await this.credentials.hash(password);
+
+    await this.transactions.run(
+      { accessMode: 'admin', reason: 'auth:accept-invitation' },
+      async (tx) => this.repository.activateInvitedUser(tx, userId, passwordHash),
+    );
+
+    // The cached profile was built while the account was unverified.
+    await this.authz.invalidateUsers([userId]);
+  }
+
+  /**
    * Reset password for an account (called after OTP is verified)
    */
   async resetPassword(email: string, newPassword: string): Promise<string> {

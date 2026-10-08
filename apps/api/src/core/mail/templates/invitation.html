@@ -1,0 +1,51 @@
+<h1 style="margin: 0 0 16px; font-size: 22px; line-height: 30px; font-weight: 600; color: #1f2329">
+  You are invited to {{tenantName}}
+</h1>
+
+<p style="margin: 0 0 12px; font-size: 15px; line-height: 24px">
+  Hello <strong>{{recipientName}}</strong>,
+</p>
+
+<p style="margin: 0 0 24px; font-size: 15px; line-height: 24px">
+  {{inviterName}} created an account for you on {{appName}}. Set your password to activate it.
+</p>
+
+<!--[if mso]>
+  <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{{acceptUrl}}" style="height:46px;v-text-anchor:middle;width:260px;" arcsize="18%" stroke="f" fillcolor="{{brandColor}}">
+    <w:anchorlock/>
+    <center style="color:#ffffff;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">Set your password</center>
+  </v:roundrect>
+<![endif]-->
+<!--[if !mso]><!-- -->
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin: 0 0 24px">
+  <tr>
+    <td align="center" bgcolor="{{brandColor}}" style="border-radius: 8px">
+      <a
+        href="{{acceptUrl}}"
+        style="
+          display: inline-block;
+          padding: 13px 32px;
+          font-size: 15px;
+          font-weight: 600;
+          color: #ffffff;
+          text-decoration: none;
+          border-radius: 8px;
+        "
+        >Set your password</a
+      >
+    </td>
+  </tr>
+</table>
+<!--<![endif]-->
+
+<p style="margin: 0 0 8px; font-size: 13px; line-height: 20px; color: #646a73">
+  If the button does not work, copy this link into your browser:
+</p>
+<p style="margin: 0 0 24px; font-size: 13px; line-height: 20px; word-break: break-all">
+  <a href="{{acceptUrl}}" style="color: {{brandColor}}">{{acceptUrl}}</a>
+</p>
+
+<p style="margin: 0; font-size: 13px; line-height: 20px; color: #8f959e">
+  This link expires in {{ttlHours}} hours and can be used once. If you were not expecting this
+  invitation, ignore this email.
+</p>

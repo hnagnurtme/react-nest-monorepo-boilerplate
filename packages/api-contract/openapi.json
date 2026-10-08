@@ -246,6 +246,98 @@
         ]
       }
     },
+    "/api/v1/auth/invitation/{token}": {
+      "get": {
+        "operationId": "AuthController_previewInvitation_v1",
+        "parameters": [
+          {
+            "name": "token",
+            "required": true,
+            "in": "path",
+            "description": "The single-use token from the invitation email",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The invited account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitationPreviewEnvelopeDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such resource, or the caller may not know it exists",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded; see Retry-After",
+            "content": {
+              "application/problem+json": {}
+            }
+          }
+        },
+        "summary": "The account behind an invitation link, for the set-password screen",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/accept-invitation": {
+      "post": {
+        "operationId": "AuthController_acceptInvitation_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcceptInvitationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password set",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageEnvelopeDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such resource, or the caller may not know it exists",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "422": {
+            "description": "The payload failed validation",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded; see Retry-After",
+            "content": {
+              "application/problem+json": {}
+            }
+          }
+        },
+        "summary": "Set the first password of an invited account",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/v1/auth/change-password": {
       "post": {
         "operationId": "AuthController_changePassword_v1",
@@ -1101,6 +1193,50 @@
         ]
       }
     },
+    "/api/v1/users/{id}/resend-invitation": {
+      "post": {
+        "operationId": "UsersController_resendInvitation_v1",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": "Invitation sent"
+          },
+          "401": {
+            "description": "Not authenticated, or the token is invalid or expired",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "403": {
+            "description": "Authenticated, but not allowed to do this",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "404": {
+            "description": "No such resource, or the caller may not know it exists",
+            "content": {
+              "application/problem+json": {}
+            }
+          },
+          "409": {
+            "description": "The resource is in a state that forbids this change",
+            "content": {
+              "application/problem+json": {}
+            }
+          }
+        },
+        "security": [
+          {
+            "access-token": []
+          }
+        ],
+        "summary": "Email a fresh invitation link to a user who has not accepted yet",
+        "tags": [
+          "users"
+        ]
+      }
+    },
     "/api/v1/users/{id}": {
       "get": {
         "operationId": "UsersController_get_v1",
@@ -1504,6 +1640,53 @@
         },
         "required": [
           "data"
+        ]
+      },
+      "InvitationPreviewEnvelopeDto": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "email": {
+                "type": "string",
+                "format": "email"
+              },
+              "fullName": {
+                "type": "string"
+              },
+              "tenantName": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "email",
+              "fullName",
+              "tenantName"
+            ]
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "AcceptInvitationDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "token",
+          "password"
         ]
       },
       "ChangePasswordDto": {
@@ -2130,6 +2313,9 @@
                 "isActive": {
                   "type": "boolean"
                 },
+                "isEmailVerified": {
+                  "type": "boolean"
+                },
                 "createdAt": {
                   "type": "string",
                   "format": "date-time"
@@ -2143,6 +2329,7 @@
                 "roles",
                 "tenantId",
                 "isActive",
+                "isEmailVerified",
                 "createdAt"
               ]
             }
@@ -2215,7 +2402,6 @@
         "required": [
           "email",
           "fullName",
-          "password",
           "roleIds"
         ]
       },
@@ -2271,6 +2457,9 @@
               "isActive": {
                 "type": "boolean"
               },
+              "isEmailVerified": {
+                "type": "boolean"
+              },
               "createdAt": {
                 "type": "string",
                 "format": "date-time"
@@ -2284,6 +2473,7 @@
               "roles",
               "tenantId",
               "isActive",
+              "isEmailVerified",
               "createdAt"
             ]
           }

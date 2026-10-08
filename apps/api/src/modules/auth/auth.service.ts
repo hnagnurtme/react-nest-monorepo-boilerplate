@@ -1,24 +1,28 @@
 import { Inject, Injectable } from '@nestjs/common';
 
 import type { AuthContext, ClientInfo } from '@/common/index.js';
-import { UnauthenticatedError } from '@/core/errors/index.js';
+import { ResourceNotFoundError, UnauthenticatedError } from '@/core/errors/index.js';
 import { MailService } from '@/core/mail/mail.service.js';
 
 import { AuthCookieFactory } from './auth-cookie.factory.js';
 import {
   AuthResult,
+  type AcceptInvitationResponse,
   type AuthBody,
   type ChangePasswordResponse,
   type ForgotPasswordResponse,
+  type InvitationPreview,
   type PublicUser,
   type ResetPasswordResponse,
 } from './auth.types.js';
 import type {
+  AcceptInvitationDto,
   ChangePasswordDto,
   ForgotPasswordDto,
   LoginDto,
   ResetPasswordDto,
 } from './dto/index.js';
+import { InvitationService } from './invitation.service.js';
 import { OtpService } from './otp.service.js';
 import { SessionService, type IssuedSession } from './session.service.js';
 import { UserDirectory } from './user-directory.service.js';
@@ -36,6 +40,7 @@ export class AuthService {
     @Inject(AuthCookieFactory) private readonly cookies: AuthCookieFactory,
     @Inject(OtpService) private readonly otpService: OtpService,
     @Inject(MailService) private readonly mailService: MailService,
+    @Inject(InvitationService) private readonly invitations: InvitationService,
   ) {}
 
   async login(dto: LoginDto, client: ClientInfo): Promise<AuthResult<AuthBody>> {
@@ -71,6 +76,41 @@ export class AuthService {
     await this.sessions.revokeEverySession(userId);
 
     return { message: 'Password reset successfully. Please log in with your new password.' };
+  }
+
+  /**
+   * Pre-fills the "set your password" screen. The token is only peeked at, not
+   * spent: a user who opens the link and closes the tab must be able to return.
+   */
+  async previewInvitation(token: string): Promise<InvitationPreview> {
+    const userId = await this.invitations.peek(token);
+    const invited = userId === undefined ? undefined : await this.users.findInvited(userId);
+
+    // One error for "no such token", "expired" and "already accepted": the
+    // endpoint is public, and distinguishing them turns it into an oracle.
+    if (invited === undefined) throw new ResourceNotFoundError('Invitation');
+
+    return {
+      email: invited.email,
+      fullName: invited.fullName,
+      tenantName: invited.tenantName,
+    };
+  }
+
+  async acceptInvitation(dto: AcceptInvitationDto): Promise<AcceptInvitationResponse> {
+    const userId = await this.invitations.consume(dto.token);
+    if (userId === undefined) throw new ResourceNotFoundError('Invitation');
+
+    const invited = await this.users.findInvited(userId);
+    if (invited === undefined) throw new ResourceNotFoundError('Invitation');
+
+    await this.users.acceptInvitation(userId, dto.password);
+
+    // Nothing legitimate can hold a session for an account that has never had a
+    // password, so anything outstanding is revoked rather than kept.
+    await this.sessions.revokeEverySession(userId);
+
+    return { message: 'Password set successfully. Please log in.' };
   }
 
   async changePassword(userId: string, dto: ChangePasswordDto): Promise<ChangePasswordResponse> {

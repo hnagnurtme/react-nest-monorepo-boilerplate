@@ -3,6 +3,8 @@ export type {
   CookieSettings,
   DatabaseSettings,
   JwtSettings,
+  MailBrandSettings,
+  SmtpSettings,
   TelemetrySettings,
 } from './app.config.js';
 export { envSchema, getEnv, resetEnvCache, validateEnv } from './env.schema.js';

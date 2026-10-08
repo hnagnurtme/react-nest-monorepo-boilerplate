@@ -21,3 +21,15 @@ export interface OtpEmailPayload {
   otp: string;
   ttlMinutes?: number;
 }
+
+export interface InvitationEmailPayload {
+  toEmail: string;
+  recipientName: string;
+  /** Full name of the admin who created the account. */
+  inviterName: string;
+  /** Falls back to the product name for a platform-scope account. */
+  tenantName: string;
+  /** Absolute link to the web page that accepts the invitation. */
+  acceptUrl: string;
+  ttlHours: number;
+}

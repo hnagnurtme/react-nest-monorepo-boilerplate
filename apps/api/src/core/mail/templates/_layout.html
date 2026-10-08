@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="x-apple-disable-message-reformatting" />
+    <title>{{subject}}</title>
+  </head>
+  <!--
+    Table layout and inline styles are not a style choice: Outlook renders with
+    Word, and Gmail strips <style> blocks on forwarded mail. Anything that is
+    not inline on a <td> is advisory.
+  -->
+  <body
+    style="
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      background-color: #f4f5f7;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+      color: #1f2329;
+    "
+  >
+    <div style="display: none; max-height: 0; overflow: hidden; opacity: 0">{{preheader}}</div>
+
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+      <tr>
+        <td align="center" style="padding: 32px 12px">
+          <table
+            role="presentation"
+            width="600"
+            cellspacing="0"
+            cellpadding="0"
+            border="0"
+            style="
+              width: 100%;
+              max-width: 600px;
+              background-color: #ffffff;
+              border-radius: 12px;
+              overflow: hidden;
+              border: 1px solid #e4e6eb;
+            "
+          >
+            <!--
+              Header. The brand colour is the real background; the image only
+              sits on top of it, so a client that blocks images still shows a
+              branded band instead of white.
+            -->
+            <tr>
+              <td
+                align="left"
+                background="{{backgroundUrl}}"
+                bgcolor="{{brandColor}}"
+                style="
+                  padding: 28px 32px;
+                  background-color: {{brandColor}};
+                  background-image: url('{{backgroundUrl}}');
+                  background-size: cover;
+                  background-position: center;
+                "
+              >
+                {{logoBlock}}
+              </td>
+            </tr>
+
+            <tr>
+              <td style="padding: 32px">{{content}}</td>
+            </tr>
+
+            <tr>
+              <td
+                style="
+                  padding: 20px 32px 28px;
+                  border-top: 1px solid #eef0f3;
+                  color: #8f959e;
+                  font-size: 12px;
+                  line-height: 18px;
+                "
+              >
+                {{supportBlock}}
+                <div>&copy; {{year}} {{appName}}</div>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

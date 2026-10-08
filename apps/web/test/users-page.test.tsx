@@ -37,7 +37,7 @@ function roleRow(role: { id: string; key: string; name: string }) {
   };
 }
 
-function page(pageNumber: number): Response {
+function page(pageNumber: number, overrides: Record<string, unknown> = {}): Response {
   return jsonResponse({
     data: [
       {
@@ -48,12 +48,23 @@ function page(pageNumber: number): Response {
         roles: [MEMBER_ROLE],
         tenantId: 'tenant-1',
         isActive: true,
+        isEmailVerified: true,
         createdAt: '2026-01-01T00:00:00.000Z',
+        ...overrides,
       },
     ],
     meta: { page: pageNumber, limit: 20, total: 40, totalPages: 2 },
   });
 }
+
+/** Same list, but the only row is an invited account that never accepted. */
+const pendingInviteHandler: FetchHandler = (url, init) => {
+  if (init?.method === 'POST' && url.includes('/resend-invitation')) {
+    return new Response(null, { status: 204 });
+  }
+  if (url.includes('/api/v1/roles')) return listHandler(url, init);
+  return page(1, { isEmailVerified: false });
+};
 
 const listHandler: FetchHandler = (url, init) => {
   if (init?.method === 'DELETE') return new Response(null, { status: 204 });
@@ -213,6 +224,30 @@ describe('UsersPage', () => {
     await waitFor(() => {
       expect(dialog).not.toBeInTheDocument();
     });
+  });
+
+  it('marks an unaccepted invitation and resends it via POST /users/:id/resend-invitation', async () => {
+    const fetchMock = mockApi(makeTenantAdmin(), TENANT_ADMIN_GRANTS, pendingInviteHandler);
+    renderWithProviders(<UsersPage />, ['/users']);
+
+    expect(await screen.findByText('Invitation pending')).toBeInTheDocument();
+
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Resend invitation' }));
+
+    await waitFor(() => {
+      const post = fetchMock.mock.calls.find(([, init]) => init?.method === 'POST');
+      expect(post?.[0]).toContain('/api/v1/users/user-1/resend-invitation');
+    });
+    expect(await screen.findByText('Invitation sent to user1@example.com.')).toBeInTheDocument();
+  });
+
+  it('offers no resend action on an account that already accepted', async () => {
+    mockApi(makeTenantAdmin(), TENANT_ADMIN_GRANTS, listHandler);
+    renderWithProviders(<UsersPage />, ['/users']);
+
+    expect(await screen.findByText('user1@example.com')).toBeInTheDocument();
+    expect(screen.queryByText('Invitation pending')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Resend invitation' })).not.toBeInTheDocument();
   });
 
   it('platform admins can edit roles of users anywhere', async () => {

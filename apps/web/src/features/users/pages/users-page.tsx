@@ -7,6 +7,7 @@ import { Link } from 'react-router-dom';
 import { useAuthStore } from '@/entities/session';
 import { CanAction, useAbility } from '@/features/auth';
 import { useDeleteUser } from '@/features/users/api/use-delete-user';
+import { useResendInvitation } from '@/features/users/api/use-resend-invitation';
 import { useUpdateUser } from '@/features/users/api/use-update-user';
 import { useUsers } from '@/features/users/api/use-users';
 import { CreateUserForm } from '@/features/users/components/create-user-form';
@@ -53,6 +54,7 @@ export function UsersPage() {
   const editingRoles = data?.items.find((user) => user.id === editingRolesId);
   const updateUser = useUpdateUser();
   const deleteUser = useDeleteUser();
+  const resendInvitation = useResendInvitation();
 
   /** CASL needs the loaded record: a string subject would ignore every condition. */
   const toTarget = (user: UserListItem) =>
@@ -67,6 +69,19 @@ export function UsersPage() {
     !isSelf(user) && ability.can('update', toTarget(user));
   const canDelete = (user: UserListItem): boolean =>
     !isSelf(user) && ability.can('delete', toTarget(user));
+  /** An invited account stays unverified until it follows the emailed link. */
+  const isPendingInvite = (user: UserListItem): boolean => !user.isEmailVerified;
+
+  const resend = (user: UserListItem): void => {
+    resendInvitation.mutate(user.id, {
+      onSuccess: () => {
+        showToast({ type: 'success', message: t('actions.resendSuccess', { email: user.email }) });
+      },
+      onError: (error) => {
+        showToast({ type: 'error', message: toMessage(error, t('actions.resendError')) });
+      },
+    });
+  };
 
   const toggleActive = (user: UserListItem): void => {
     updateUser.mutate(
@@ -119,9 +134,12 @@ export function UsersPage() {
       key: 'status',
       header: t('columns.status'),
       cell: (user) => (
-        <Badge tone={user.isActive ? 'success' : 'neutral'}>
-          {user.isActive ? t('status.active') : t('status.inactive')}
-        </Badge>
+        <div className="flex flex-wrap gap-1">
+          <Badge tone={user.isActive ? 'success' : 'neutral'}>
+            {user.isActive ? t('status.active') : t('status.inactive')}
+          </Badge>
+          {isPendingInvite(user) ? <Badge tone="warning">{t('status.pendingInvite')}</Badge> : null}
+        </div>
       ),
     },
     {
@@ -150,6 +168,18 @@ export function UsersPage() {
               >
                 {user.isActive ? t('actions.deactivate') : t('actions.activate')}
               </Button>
+              {isPendingInvite(user) ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={resendInvitation.isPending}
+                  onClick={() => {
+                    resend(user);
+                  }}
+                >
+                  {t('actions.resendInvitation')}
+                </Button>
+              ) : null}
             </>
           ) : null}
           {canDelete(user) ? (

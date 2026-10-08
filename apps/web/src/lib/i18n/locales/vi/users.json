@@ -11,7 +11,8 @@
   },
   "status": {
     "active": "Hoạt động",
-    "inactive": "Ngưng hoạt động"
+    "inactive": "Ngưng hoạt động",
+    "pendingInvite": "Chờ xác nhận lời mời"
   },
   "empty": "Không có người dùng.",
   "loading": "Đang tải người dùng...",
@@ -41,7 +42,10 @@
     "editRoles": "Sửa vai trò",
     "rolesSuccess": "Đã cập nhật vai trò.",
     "rolesError": "Không thể cập nhật vai trò.",
-    "rolesForbidden": "Bạn không được phép gán các vai trò này."
+    "rolesForbidden": "Bạn không được phép gán các vai trò này.",
+    "resendInvitation": "Gửi lại lời mời",
+    "resendSuccess": "Đã gửi lời mời tới {{email}}.",
+    "resendError": "Không thể gửi lời mời."
   },
   "create": {
     "open": "Tạo người dùng",
@@ -73,7 +77,11 @@
     "rolesHint": "Chọn ít nhất một vai trò.",
     "rolesEmpty": "Không có vai trò nào.",
     "rolesLoading": "Đang tải vai trò...",
-    "systemBadge": "Hệ thống"
+    "systemBadge": "Hệ thống",
+    "sendInvitation": "Gửi email mời để người dùng tự đặt mật khẩu",
+    "sendInvitationHint": "Không đặt mật khẩu ngay. Người dùng nhận một liên kết có thời hạn.",
+    "manualPasswordHint": "Bạn tự đặt mật khẩu và chuyển cho người dùng bằng kênh khác.",
+    "invitationSent": "Đã tạo người dùng. Email mời đã được gửi."
   },
   "rolesDialog": {
     "title": "Sửa vai trò của {{email}}",

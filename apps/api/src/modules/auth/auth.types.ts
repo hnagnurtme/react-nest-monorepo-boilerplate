@@ -2,6 +2,7 @@ import type { z } from 'zod';
 
 import type {
   authBodySchema,
+  invitationPreviewSchema,
   forgotPasswordResponseSchema,
   messageResponseSchema,
   publicUserSchema,
@@ -16,6 +17,10 @@ export type ForgotPasswordResponse = z.infer<typeof forgotPasswordResponseSchema
 export type ResetPasswordResponse = z.infer<typeof messageResponseSchema>;
 
 export type ChangePasswordResponse = z.infer<typeof messageResponseSchema>;
+
+export type InvitationPreview = z.infer<typeof invitationPreviewSchema>;
+
+export type AcceptInvitationResponse = z.infer<typeof messageResponseSchema>;
 
 export interface CookieInstruction {
   name: string;

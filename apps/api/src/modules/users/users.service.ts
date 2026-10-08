@@ -1,5 +1,7 @@
+import { randomBytes } from 'node:crypto';
+
 import { subject } from '@casl/ability';
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 
 import { grantsCover, type Action, type AppAbility } from '@repo/shared-types';
 
@@ -10,6 +12,7 @@ import {
   type AuthContext,
   type PaginationMeta,
 } from '@/common/index.js';
+import { AppConfig } from '@/config/index.js';
 import { AuditService } from '@/core/audit/audit.service.js';
 import {
   AuthzRepository,
@@ -25,16 +28,30 @@ import {
   ResourceConflictError,
   ResourceNotFoundError,
 } from '@/core/errors/index.js';
-import { CredentialsService } from '@/modules/auth/index.js';
+import { MailService } from '@/core/mail/index.js';
+import { CredentialsService, InvitationService } from '@/modules/auth/index.js';
 
 import type { CreateUserDto, ListUsersQuery, SetUserRolesDto, UpdateUserDto } from './dto/index.js';
 import { USER_SORT_FIELDS, UsersRepository, type UserPatch } from './users.repository.js';
 import type { UserResponse } from './users.types.js';
 
 const TENANT_ADMIN_KEY = 'TENANT_ADMIN';
+/** Length of the unusable password an invited account is parked on. */
+const PLACEHOLDER_PASSWORD_BYTES = 32;
+
+/** What the invitation email needs, gathered while the transaction is open. */
+interface InvitationContext {
+  userId: string;
+  email: string;
+  fullName: string;
+  inviterName: string;
+  tenantName: string;
+}
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(
     @Inject(TransactionManager) private readonly transactions: TransactionManager,
     @Inject(UsersRepository) private readonly repository: UsersRepository,
@@ -42,6 +59,9 @@ export class UsersService {
     @Inject(AuditService) private readonly audit: AuditService,
     @Inject(AuthzService) private readonly authz: AuthzService,
     @Inject(AuthzRepository) private readonly authzRepository: AuthzRepository,
+    @Inject(MailService) private readonly mail: MailService,
+    @Inject(InvitationService) private readonly invitations: InvitationService,
+    @Inject(AppConfig) private readonly config: AppConfig,
   ) {}
 
   async list(query: ListUsersQuery): Promise<{ items: UserResponse[]; meta: PaginationMeta }> {
@@ -78,14 +98,20 @@ export class UsersService {
    */
   async create(actor: AuthContext, dto: CreateUserDto): Promise<UserResponse> {
     const ability = this.authz.current();
+    const isInvited = dto.password === undefined;
 
-    const created = await this.transactions.runInRequestContext(async (tx) => {
+    const { summary, invitation } = await this.transactions.runInRequestContext(async (tx) => {
       const roles = await this.loadRolesOrThrow(tx, dto.roleIds);
       const tenantId = this.resolveTenantId(actor, dto, roles);
       this.assertCan(ability, 'create', { id: 'new', tenantId });
       this.assertAssignable(roles, tenantId);
 
-      const passwordHash = await this.credentials.hash(dto.password);
+      // An invited account is parked on a random hash rather than a null one:
+      // `password_hash` is NOT NULL, and a value nobody can produce fails the
+      // login comparison exactly like a wrong password.
+      const passwordHash = await this.credentials.hash(
+        dto.password ?? randomBytes(PLACEHOLDER_PASSWORD_BYTES).toString('base64url'),
+      );
       const row = await this.repository.create(tx, {
         email: dto.email,
         passwordHash,
@@ -93,23 +119,87 @@ export class UsersService {
         phoneNumber: dto.phoneNumber ?? null,
         tenantId,
         isActive: true,
-        isEmailVerified: true,
+        // An invited user verifies the address by following the emailed link.
+        isEmailVerified: !isInvited,
       });
       await this.authzRepository.replaceUserRoles(tx, row.id, dto.roleIds, actor.id);
 
-      const summary = toUserResponse(row, roles);
+      const created = toUserResponse(row, roles);
       await this.audit.record(tx, {
         actorId: actor.id,
         tenantId,
         action: 'user.create',
         resourceType: 'User',
         resourceId: row.id,
-        afterState: summary,
+        afterState: created,
       });
-      return summary;
+
+      return {
+        summary: created,
+        invitation: isInvited ? await this.invitationContext(tx, actor, row) : undefined,
+      };
     });
 
-    return created;
+    // Outside the transaction on purpose: an SMTP outage must not roll back an
+    // account that was created correctly. The admin resends instead.
+    if (invitation !== undefined) await this.deliverInvitation(invitation);
+
+    return summary;
+  }
+
+  /** Issues a fresh link for an account that has not accepted its invitation yet. */
+  async resendInvitation(actor: AuthContext, id: string): Promise<void> {
+    const { user } = await this.loadOrThrow(id);
+    this.assertCan(this.authz.current(), 'update', user);
+    if (user.isEmailVerified) {
+      throw new ResourceConflictError('This account has already accepted its invitation');
+    }
+
+    const invitation = await this.transactions.runInRequestContext(async (tx) =>
+      this.invitationContext(tx, actor, user),
+    );
+
+    await this.deliverInvitation(invitation);
+  }
+
+  private async invitationContext(
+    tx: Tx,
+    actor: AuthContext,
+    user: User,
+  ): Promise<InvitationContext> {
+    const inviter = await this.repository.findById(tx, actor.id);
+    const tenantName =
+      user.tenantId === null ? undefined : await this.repository.findTenantName(tx, user.tenantId);
+
+    return {
+      userId: user.id,
+      email: user.email,
+      fullName: user.fullName,
+      inviterName: inviter?.fullName ?? actor.email,
+      tenantName: tenantName ?? this.config.appName,
+    };
+  }
+
+  private async deliverInvitation(invitation: InvitationContext): Promise<void> {
+    try {
+      const token = await this.invitations.issue(invitation.userId);
+      const acceptUrl = `${this.config.webOrigin}/accept-invitation?token=${encodeURIComponent(token)}`;
+
+      await this.mail.sendInvitationMail({
+        toEmail: invitation.email,
+        recipientName: invitation.fullName,
+        inviterName: invitation.inviterName,
+        tenantName: invitation.tenantName,
+        acceptUrl,
+        ttlHours: this.invitations.ttlHours,
+      });
+    } catch (error) {
+      // The account exists either way; a failed send is an operational problem,
+      // not a reason to fail the request the admin already succeeded at.
+      this.logger.error(
+        `Failed to send the invitation for user [${invitation.userId}]: ${String(error)}`,
+      );
+    }
   }
 
   async findOrThrow(id: string): Promise<UserResponse> {
@@ -334,6 +424,7 @@ function toUserResponse(user: User, roles: readonly RoleSummary[]): UserResponse
     roles: roles.map((role) => ({ id: role.id, key: role.key, name: role.name })),
     tenantId: user.tenantId,
     isActive: user.isActive,
+    isEmailVerified: user.isEmailVerified,
     createdAt: user.createdAt.toISOString(),
   };
 }

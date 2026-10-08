@@ -19,3 +19,10 @@ export {
   messageResponseSchema,
   publicUserSchema,
 } from './auth-response.dto.js';
+export {
+  acceptInvitationSchema,
+  invitationPreviewSchema,
+  invitationTokenSchema,
+  AcceptInvitationDto,
+  InvitationPreviewEnvelopeDto,
+} from './invitation.dto.js';
