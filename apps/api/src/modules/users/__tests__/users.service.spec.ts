@@ -112,6 +112,13 @@ function platformAdmin(): Actor {
 
 describe('UsersService', () => {
   let service: UsersService;
+  /**
+   * `create` answers with an id and the service reads the row back, because in
+   * `tenant` mode the policy only sees an account through its membership. The
+   * double keeps the row so `findById` can serve it, exactly as the database
+   * does once the membership is in.
+   */
+  let createdUser: User | undefined;
   let repository: Record<
     | 'findById'
     | 'update'
@@ -166,15 +173,19 @@ describe('UsersService', () => {
   }
 
   beforeEach(() => {
+    createdUser = undefined;
     repository = {
-      findById: vi.fn(),
+      findById: vi.fn((_tx: unknown, id: string) =>
+        Promise.resolve(createdUser?.id === id ? createdUser : undefined),
+      ),
       update: vi.fn(),
       softDelete: vi.fn(),
       list: vi.fn(),
       count: vi.fn(),
-      create: vi.fn((_tx: unknown, values: Partial<User>) =>
-        Promise.resolve(makeUser({ id: 'new-id', ...values })),
-      ),
+      create: vi.fn((_tx: unknown, values: Partial<User>) => {
+        createdUser = makeUser({ id: 'new-id', ...values });
+        return Promise.resolve(createdUser.id);
+      }),
       findTenantName: vi.fn(() => Promise.resolve('Acme')),
       findByEmail: vi.fn(() => Promise.resolve(undefined)),
       addMembership: vi.fn(),
@@ -441,7 +452,13 @@ describe('UsersService', () => {
     it('emails an invitation and leaves the account unverified when no password is given', async () => {
       const admin = act(tenantAdmin());
       authzRepository.loadRolesWithGrants.mockResolvedValue([ROLE_MEMBER]);
-      repository.findById.mockResolvedValue(makeUser({ id: 'actor', fullName: 'Ada Admin' }));
+      // Two reads now share this mock: the inviter, and the new row the service
+      // reads back after adding the membership.
+      repository.findById.mockImplementation((_tx: unknown, id: string) =>
+        Promise.resolve(
+          id === 'actor' ? makeUser({ id: 'actor', fullName: 'Ada Admin' }) : createdUser,
+        ),
+      );
 
       const withoutPassword = invitationBody();
       await service.create(admin, { ...withoutPassword, roleIds: [ROLE_MEMBER.id] });

@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import { Injectable } from '@nestjs/common';
 import { and, asc, count, desc, eq, ilike, isNull, or, sql, type SQL } from 'drizzle-orm';
 
@@ -98,10 +100,20 @@ export class UsersRepository {
     return row;
   }
 
-  async create(tx: Tx, values: NewUser): Promise<User> {
-    const [row] = await tx.insert(users).values(values).returning();
-    if (row === undefined) throw new Error('user insert returned no row');
-    return row;
+  /**
+   * Returns the id, not the row, and inserts without `RETURNING`.
+   *
+   * Postgres applies a policy's USING clause to the row an INSERT returns, and
+   * the `users` policy resolves tenant visibility through `user_tenants`. That
+   * membership cannot exist yet — it has a foreign key to this very row — so
+   * `INSERT ... RETURNING` in `tenant` mode is refused with SQLSTATE 42501 and
+   * the whole create fails. The id is generated here so the caller can add the
+   * membership and then read the row back through the policy.
+   */
+  async create(tx: Tx, values: NewUser): Promise<string> {
+    const id = values.id ?? randomUUID();
+    await tx.insert(users).values({ ...values, id });
+    return id;
   }
 
   async update(tx: Tx, id: string, patch: UserPatch): Promise<User | undefined> {

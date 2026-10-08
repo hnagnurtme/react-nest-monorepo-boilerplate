@@ -136,7 +136,7 @@ export class UsersService {
       const passwordHash = await this.credentials.hash(
         dto.password ?? randomBytes(PLACEHOLDER_PASSWORD_BYTES).toString('base64url'),
       );
-      const row = await this.repository.create(tx, {
+      const userId = await this.repository.create(tx, {
         email: dto.email,
         passwordHash,
         fullName: dto.fullName,
@@ -147,8 +147,12 @@ export class UsersService {
         isEmailVerified: !isInvited,
       });
       // Before the roles: the assignment trigger checks the membership, and the
-      // deferred home-tenant trigger checks it at commit.
-      if (tenantId !== null) await this.repository.addMembership(tx, row.id, tenantId);
+      // deferred home-tenant trigger checks it at commit. Before reading the row
+      // back, too — in `tenant` mode the policy only sees an account through its
+      // membership, which is why `create` cannot return the row itself.
+      if (tenantId !== null) await this.repository.addMembership(tx, userId, tenantId);
+      const row = await this.repository.findById(tx, userId);
+      if (row === undefined) throw new Error('the created account is not visible to its creator');
       await this.authzRepository.replaceUserRoles(tx, row.id, tenantId, dto.roleIds, actor.id);
 
       const created = toUserResponse(row, roles);
