@@ -44,6 +44,9 @@
   /* Named widths so no layout needs an arbitrary `max-w-[...]`. */
   --container-form: 26rem;
   --container-page: 56rem;
+  /* The app shell: full sidebar, and the collapsed rail that shows icons only. */
+  --container-sidebar: 16rem;
+  --container-rail: 4.5rem;
 
   --color-primary: #006a43;
   --color-primary-hover: #005233;

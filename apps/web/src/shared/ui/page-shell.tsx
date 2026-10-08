@@ -20,9 +20,13 @@ export interface PageShellProps {
 }
 
 /**
- * The page frame: background, min height, outer padding, content width. Repeated
- * by hand in every page before this existed, which is how three pages ended up
- * with three different maximum widths.
+ * The page frame: background, outer padding, content width. Repeated by hand in
+ * every page before this existed, which is how three pages ended up with three
+ * different maximum widths.
+ *
+ * It fills its slot rather than claiming the viewport: inside the app shell the
+ * header already takes part of the screen, and a `min-h-screen` page under it
+ * puts a scrollbar on every page that has nothing to scroll.
  */
 export function PageShell({
   children,
@@ -33,7 +37,7 @@ export function PageShell({
   return (
     <div
       className={cn(
-        'bg-background min-h-screen p-6',
+        'bg-background min-h-full p-6',
         isCentered ? 'flex flex-col items-center justify-center' : '',
         className,
       )}

@@ -8,7 +8,7 @@ import { useAbility, useAbilityLoading, useActiveTenant } from '@/features/auth'
 import { PageLoader } from '@/shared/ui';
 
 interface RouteGuardProps {
-  checkAbility?: (ability: AppAbility) => boolean;
+  checkAbility?: ((ability: AppAbility) => boolean) | undefined;
   children: ReactNode;
 }
 

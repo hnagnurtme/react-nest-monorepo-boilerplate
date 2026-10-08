@@ -8,7 +8,8 @@ export { LoginPage } from './pages/login-page';
 export { AcceptInvitationPage } from './pages/accept-invitation-page';
 export { SelectTenantPage } from './pages/select-tenant-page';
 export { TenantSwitcher } from './components/tenant-switcher';
-export { useActiveTenant, type ActiveTenant } from './hooks/use-active-tenant';
+export { useActiveTenant, TENANT_PARAM, type ActiveTenant } from './hooks/use-active-tenant';
+export { useTenantHref } from './hooks/use-tenant-href';
 export {
   AbilityProvider,
   abilityKeys,
@@ -19,6 +20,7 @@ export { CanAction, type CanActionProps } from './ability/can-action';
 
 export { useInitAuthSession } from './api/use-init-auth-session';
 export { useLogin } from './api/use-login';
+export { useLogout } from './api/use-logout';
 export { useForgotPassword } from './api/use-forgot-password';
 export { useResetPassword } from './api/use-reset-password';
 export { useChangePassword } from './api/use-change-password';

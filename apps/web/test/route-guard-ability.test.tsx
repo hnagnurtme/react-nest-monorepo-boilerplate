@@ -125,8 +125,8 @@ describe('RouteGuard with abilities', () => {
     setSessionUser(
       makeUser({
         tenants: [
-          { id: 'tenant-1', name: 'Acme' },
-          { id: 'tenant-2', name: 'Globex' },
+          { id: 'tenant-1', name: 'Acme', slug: 'acme' },
+          { id: 'tenant-2', name: 'Globex', slug: 'globex' },
         ],
       }),
     );

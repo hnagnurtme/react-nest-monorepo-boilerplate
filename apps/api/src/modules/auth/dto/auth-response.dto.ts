@@ -18,9 +18,10 @@ export const publicUserSchema = z.object({
   /**
    * Every tenant the account may act in. The client picks one and sends it as
    * `x-tenant-id` on each request; a single membership is still a choice the
-   * client makes explicitly.
+   * client makes explicitly. `slug` is what the web shows in the URL, so a link
+   * carries the tenant it was taken from instead of the reader's current one.
    */
-  tenants: z.array(z.object({ id: z.string(), name: z.string() })),
+  tenants: z.array(z.object({ id: z.string(), name: z.string(), slug: z.string() })),
   /** 'platform' users sit above every tenant. */
   scope: z.enum(ROLE_SCOPES),
   roles: z.array(z.object({ key: z.string(), name: z.string() })),
