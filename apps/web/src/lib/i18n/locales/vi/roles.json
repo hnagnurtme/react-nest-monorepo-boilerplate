@@ -19,7 +19,7 @@
   },
   "scope": {
     "platform": "Nền tảng",
-    "tenant": "Tenant"
+    "tenant": "Tổ chức"
   },
   "pagination": {
     "previous": "Trước",
@@ -28,7 +28,7 @@
   },
   "subjects": {
     "User": "Người dùng",
-    "Tenant": "Tenant",
+    "Tenant": "Tổ chức",
     "Role": "Vai trò",
     "all": "Tất cả"
   },
@@ -42,7 +42,7 @@
   "presets": {
     "none": "Không",
     "own_record": "Chỉ bản ghi của mình",
-    "own_tenant": "Toàn tenant",
+    "own_tenant": "Toàn tổ chức",
     "any": "Tất cả"
   },
   "matrix": {
@@ -52,16 +52,16 @@
     "open": "Tạo vai trò",
     "title": "Tạo vai trò",
     "name": "Tên",
-    "tenant": "Tenant",
-    "tenantPlaceholder": "Chọn tenant",
+    "tenant": "Tổ chức",
+    "tenantPlaceholder": "Chọn tổ chức",
     "submit": "Tạo vai trò",
     "success": "Đã tạo vai trò.",
     "error": "Không thể tạo vai trò.",
     "validation": {
       "nameMin": "Tên phải có ít nhất 2 ký tự",
-      "tenantRequired": "Vui lòng chọn tenant"
+      "tenantRequired": "Vui lòng chọn tổ chức"
     },
-    "panelDescription": "Vai trò là một nhóm quyền có tên, trong phạm vi một tenant."
+    "panelDescription": "Vai trò là một nhóm quyền có tên, trong phạm vi một tổ chức."
   },
   "editor": {
     "title": "Vai trò: {{name}}",

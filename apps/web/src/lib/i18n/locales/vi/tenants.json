@@ -1,9 +1,9 @@
 {
-  "title": "Tenant",
-  "subtitle": "Các tenant trên nền tảng.",
-  "loading": "Đang tải danh sách tenant...",
-  "error": "Không thể tải danh sách tenant.",
-  "empty": "Không có tenant.",
+  "title": "Tổ chức",
+  "subtitle": "Các tổ chức trên nền tảng.",
+  "loading": "Đang tải danh sách tổ chức...",
+  "error": "Không thể tải danh sách tổ chức.",
+  "empty": "Không có tổ chức.",
   "columns": {
     "name": "Tên",
     "slug": "Slug",
@@ -17,22 +17,22 @@
   "toggle": {
     "activate": "Kích hoạt",
     "deactivate": "Vô hiệu hóa",
-    "success": "Đã cập nhật tenant.",
-    "error": "Không thể cập nhật tenant."
+    "success": "Đã cập nhật tổ chức.",
+    "error": "Không thể cập nhật tổ chức."
   },
   "pagination": {
     "previous": "Trước",
     "next": "Sau",
-    "summary": "Trang {{page}} / {{totalPages}} ({{total, number}} tenant)"
+    "summary": "Trang {{page}} / {{totalPages}} ({{total, number}} tổ chức)"
   },
   "create": {
     "name": "Tên",
     "slug": "Slug (tùy chọn)",
     "slugPlaceholder": "tự tạo từ tên",
-    "submit": "Tạo tenant",
-    "success": "Đã tạo tenant.",
-    "duplicate": "Tên hoặc slug của tenant đã tồn tại.",
-    "error": "Không thể tạo tenant.",
+    "submit": "Tạo tổ chức",
+    "success": "Đã tạo tổ chức.",
+    "duplicate": "Tên hoặc slug của tổ chức đã tồn tại.",
+    "error": "Không thể tạo tổ chức.",
     "validation": {
       "nameMin": "Tên phải có ít nhất 2 ký tự",
       "nameMax": "Tên tối đa 100 ký tự",
@@ -48,28 +48,28 @@
     "logo": "Logo",
     "logoChoose": "Chọn ảnh",
     "logoClear": "Xoá",
-    "logoFailed": "Đã tạo tenant nhưng chưa tải được logo. Thêm lại từ trang tenant.",
+    "logoFailed": "Đã tạo tổ chức nhưng chưa tải được logo. Thêm lại từ trang tổ chức.",
     "logoHint": "PNG, JPEG hoặc WebP, tối đa {{size}} MB.",
     "province": "Tỉnh / Thành phố",
     "provinceAny": "Không có địa chỉ",
     "ward": "Phường / Xã",
     "cancel": "Huỷ",
-    "open": "Tạo tenant",
+    "open": "Tạo tổ chức",
     "panelDescription": "Slug xuất hiện trong URL; để trống thì hệ thống tự tạo từ tên.",
-    "title": "Tạo tenant"
+    "title": "Tạo tổ chức"
   },
   "edit": {
     "open": "Sửa",
-    "title": "Sửa tenant",
+    "title": "Sửa tổ chức",
     "panelDescription": "Slug không đổi được: nó nằm trong các liên kết đã chia sẻ.",
     "submit": "Lưu thay đổi",
-    "success": "Đã cập nhật tenant.",
-    "error": "Không cập nhật được tenant.",
+    "success": "Đã cập nhật tổ chức.",
+    "error": "Không cập nhật được tổ chức.",
     "logoFailed": "Không tải được logo nên chưa lưu gì cả."
   },
   "map": {
     "noAddress": "Chưa có địa chỉ",
-    "label": "Bản đồ Việt Nam với các tỉnh có tenant của bạn",
+    "label": "Bản đồ Việt Nam với các tỉnh có tổ chức của bạn",
     "unavailable": "Không tải được bản đồ.",
     "tab": "Bản đồ",
     "listTab": "Danh sách",
@@ -82,6 +82,6 @@
       "paracel": "Quần đảo Hoàng Sa",
       "spratly": "Quần đảo Trường Sa"
     },
-    "more": "+{{count}} tenant nữa"
+    "more": "+{{count}} tổ chức nữa"
   }
 }
