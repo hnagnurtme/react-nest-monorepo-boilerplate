@@ -3605,6 +3605,25 @@
                   "format": "uuid",
                   "nullable": true
                 },
+                "tenants": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name"
+                    ]
+                  }
+                },
                 "isActive": {
                   "type": "boolean"
                 },
@@ -3623,6 +3642,7 @@
                 "phoneNumber",
                 "roles",
                 "tenantId",
+                "tenants",
                 "isActive",
                 "isEmailVerified",
                 "createdAt"
@@ -3749,6 +3769,25 @@
                 "format": "uuid",
                 "nullable": true
               },
+              "tenants": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name"
+                  ]
+                }
+              },
               "isActive": {
                 "type": "boolean"
               },
@@ -3767,6 +3806,7 @@
               "phoneNumber",
               "roles",
               "tenantId",
+              "tenants",
               "isActive",
               "isEmailVerified",
               "createdAt"

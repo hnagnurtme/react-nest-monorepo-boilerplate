@@ -47,6 +47,7 @@ function page(pageNumber: number, overrides: Record<string, unknown> = {}): Resp
         phoneNumber: null,
         roles: [MEMBER_ROLE],
         tenantId: 'tenant-1',
+        tenants: [{ id: 'tenant-1', name: 'Acme' }],
         isActive: true,
         isEmailVerified: true,
         createdAt: '2026-01-01T00:00:00.000Z',

@@ -5,9 +5,13 @@
     "fullName": "Họ tên",
     "email": "Email",
     "role": "Vai trò",
+    "tenant": "Tenant",
     "status": "Trạng thái",
     "createdAt": "Ngày tạo",
     "actions": "Thao tác"
+  },
+  "tenantScope": {
+    "platform": "Nền tảng"
   },
   "status": {
     "active": "Hoạt động",

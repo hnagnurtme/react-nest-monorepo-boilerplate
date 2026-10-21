@@ -46,6 +46,7 @@ import type {
   TenantInvitationPreview,
   TenantInvitationSummary,
   UserResponse,
+  UserTenantResponse,
 } from './users.types.js';
 
 const TENANT_ADMIN_KEY = 'TENANT_ADMIN';
@@ -85,25 +86,28 @@ export class UsersService {
     const sort = parseSort(query, USER_SORT_FIELDS);
     const filter = { search: query.search, ...this.reachOfRead() };
 
-    const [rows, total, roles] = await this.transactions.runInRequestContext(async (tx) => {
-      const page = await this.repository.list(
-        tx,
-        { limit: query.limit, offset: toOffset(query.page, query.limit) },
-        sort,
-        filter,
-      );
-      return [
-        page,
-        await this.repository.count(tx, filter),
-        await this.authzRepository.rolesForUsers(
+    const [rows, total, roles, tenantsByUser] = await this.transactions.runInRequestContext(
+      async (tx) => {
+        const page = await this.repository.list(
           tx,
-          page.map((u) => u.id),
-        ),
-      ] as const;
-    });
+          { limit: query.limit, offset: toOffset(query.page, query.limit) },
+          sort,
+          filter,
+        );
+        const ids = page.map((u) => u.id);
+        return [
+          page,
+          await this.repository.count(tx, filter),
+          await this.authzRepository.rolesForUsers(tx, ids),
+          await this.repository.tenantsForUsers(tx, ids),
+        ] as const;
+      },
+    );
 
     return {
-      items: rows.map((row) => toUserResponse(row, roles.get(row.id) ?? [])),
+      items: rows.map((row) =>
+        toUserResponse(row, roles.get(row.id) ?? [], tenantsByUser.get(row.id) ?? []),
+      ),
       meta: buildPaginationMeta(query, total),
     };
   }
@@ -180,7 +184,11 @@ export class UsersService {
       if (row === undefined) throw new Error('the created account is not visible to its creator');
       await this.authzRepository.replaceUserRoles(tx, row.id, tenantId, dto.roleIds, actor.id);
 
-      const created = toUserResponse(row, roles);
+      const created = toUserResponse(
+        row,
+        roles,
+        (await this.repository.tenantsForUsers(tx, [row.id])).get(row.id) ?? [],
+      );
       await this.audit.record(tx, {
         actorId: actor.id,
         tenantId,
@@ -529,14 +537,14 @@ export class UsersService {
   }
 
   async findOrThrow(id: string): Promise<UserResponse> {
-    const { user, roles, tenantIds } = await this.loadOrThrow(id);
+    const { user, roles, tenantIds, tenants } = await this.loadOrThrow(id);
     this.assertCan(this.authz.current(), 'read', { ...user, tenantIds });
 
-    return toUserResponse(user, roles);
+    return toUserResponse(user, roles, tenants);
   }
 
   async update(actor: AuthContext, id: string, dto: UpdateUserDto): Promise<UserResponse> {
-    const { user: existing, roles, tenantIds } = await this.loadOrThrow(id);
+    const { user: existing, roles, tenantIds, tenants } = await this.loadOrThrow(id);
     const ability = this.authz.current();
     const target = { ...existing, tenantIds };
     this.assertCan(ability, 'update', target);
@@ -571,7 +579,7 @@ export class UsersService {
 
     // The profile of a deactivated user must stop resolving immediately.
     await this.authz.invalidateUsers([id]);
-    return toUserResponse(updated, roles);
+    return toUserResponse(updated, roles, tenants);
   }
 
   /**
@@ -582,7 +590,7 @@ export class UsersService {
    * admin administers their tenant, and nothing outside it.
    */
   async setRoles(actor: AuthContext, id: string, dto: SetUserRolesDto): Promise<UserResponse> {
-    const { user, roles: before, tenantIds } = await this.loadOrThrow(id);
+    const { user, roles: before, tenantIds, tenants } = await this.loadOrThrow(id);
     this.assertCan(this.authz.current(), 'update', { ...user, tenantIds });
     if (user.id === actor.id) throw new ForbiddenActionError('change roles of', 'own account');
 
@@ -612,7 +620,7 @@ export class UsersService {
     });
 
     await this.authz.invalidateUsers([id]);
-    return toUserResponse(user, after);
+    return toUserResponse(user, after, tenants);
   }
 
   /**
@@ -802,15 +810,19 @@ export class UsersService {
   }
 
   /** RLS hides other tenants' rows, so a foreign id is indistinguishable from a missing one. */
-  private async loadOrThrow(
-    id: string,
-  ): Promise<{ user: User; roles: RoleSummary[]; tenantIds: string[] }> {
+  private async loadOrThrow(id: string): Promise<{
+    user: User;
+    roles: RoleSummary[];
+    tenantIds: string[];
+    tenants: UserTenantResponse[];
+  }> {
     const found = await this.transactions.runInRequestContext(async (tx) => {
       const user = await this.repository.findById(tx, id);
       if (user === undefined) return undefined;
       const roles = (await this.authzRepository.rolesForUsers(tx, [id])).get(id) ?? [];
       const tenantIds = await this.repository.membershipIds(tx, id);
-      return { user, roles, tenantIds };
+      const tenants = (await this.repository.tenantsForUsers(tx, [id])).get(id) ?? [];
+      return { user, roles, tenantIds, tenants };
     });
     if (found === undefined) throw new ResourceNotFoundError('User', id);
 
@@ -852,7 +864,11 @@ function toPatch(dto: UpdateUserDto): UserPatch {
   };
 }
 
-function toUserResponse(user: User, roles: readonly RoleSummary[]): UserResponse {
+function toUserResponse(
+  user: User,
+  roles: readonly RoleSummary[],
+  tenants: readonly UserTenantResponse[] = [],
+): UserResponse {
   return {
     id: user.id,
     email: user.email,
@@ -860,6 +876,7 @@ function toUserResponse(user: User, roles: readonly RoleSummary[]): UserResponse
     phoneNumber: user.phoneNumber,
     roles: roles.map((role) => ({ id: role.id, key: role.key, name: role.name })),
     tenantId: user.tenantId,
+    tenants: tenants.map((tenant) => ({ id: tenant.id, name: tenant.name })),
     isActive: user.isActive,
     isEmailVerified: user.isEmailVerified,
     createdAt: user.createdAt.toISOString(),

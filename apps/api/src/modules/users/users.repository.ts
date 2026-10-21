@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { Injectable } from '@nestjs/common';
-import { and, asc, count, desc, eq, ilike, isNull, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, inArray, isNull, or, sql, type SQL } from 'drizzle-orm';
 
 import type { SortSpec } from '@/common/index.js';
 import type { Tx } from '@/core/database/drizzle.module.js';
@@ -168,6 +168,38 @@ export class UsersRepository {
       .returning({ tenantId: userTenants.tenantId });
 
     return rows.length > 0;
+  }
+
+  /**
+   * The tenants each of these accounts belongs to, keyed by account id.
+   *
+   * One query for the whole page rather than one per row: a 100-row page would
+   * otherwise cost 100 round trips. Accounts with no visible membership are
+   * absent from the map — a platform account has none, and a tenant admin sees
+   * nothing of the other tenants a member of theirs also belongs to, because
+   * the policy on `user_tenants` filters the join.
+   */
+  async tenantsForUsers(
+    tx: Tx,
+    userIds: readonly string[],
+  ): Promise<Map<string, { id: string; name: string }[]>> {
+    if (userIds.length === 0) return new Map();
+
+    const rows = await tx
+      .select({ userId: userTenants.userId, id: tenants.id, name: tenants.name })
+      .from(userTenants)
+      .innerJoin(tenants, eq(tenants.id, userTenants.tenantId))
+      .where(inArray(userTenants.userId, [...userIds]))
+      .orderBy(asc(tenants.name));
+
+    const byUser = new Map<string, { id: string; name: string }[]>();
+    for (const row of rows) {
+      const list = byUser.get(row.userId) ?? [];
+      list.push({ id: row.id, name: row.name });
+      byUser.set(row.userId, list);
+    }
+
+    return byUser;
   }
 
   /** Tenant ids the account belongs to, as far as the caller may see them. */

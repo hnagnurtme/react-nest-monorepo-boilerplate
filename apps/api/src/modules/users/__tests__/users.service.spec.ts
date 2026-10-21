@@ -130,7 +130,8 @@ describe('UsersService', () => {
     | 'findByEmail'
     | 'addMembership'
     | 'removeMembership'
-    | 'membershipIds',
+    | 'membershipIds'
+    | 'tenantsForUsers',
     Mock
   >;
   let authzRepository: Record<
@@ -193,6 +194,7 @@ describe('UsersService', () => {
       addMembership: vi.fn(),
       removeMembership: vi.fn(() => Promise.resolve(true)),
       membershipIds: vi.fn(() => Promise.resolve([TENANT])),
+      tenantsForUsers: vi.fn(() => Promise.resolve(new Map())),
     };
     authzRepository = {
       loadRolesWithGrants: vi.fn(),

@@ -5,9 +5,13 @@
     "fullName": "Name",
     "email": "Email",
     "role": "Roles",
+    "tenant": "Tenant",
     "status": "Status",
     "createdAt": "Created",
     "actions": "Actions"
+  },
+  "tenantScope": {
+    "platform": "Platform"
   },
   "status": {
     "active": "Active",

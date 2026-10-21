@@ -873,6 +873,11 @@ export interface components {
                 }[];
                 /** Format: uuid */
                 tenantId: string | null;
+                tenants: {
+                    /** Format: uuid */
+                    id: string;
+                    name: string;
+                }[];
                 isActive: boolean;
                 isEmailVerified: boolean;
                 /** Format: date-time */
@@ -911,6 +916,11 @@ export interface components {
                 }[];
                 /** Format: uuid */
                 tenantId: string | null;
+                tenants: {
+                    /** Format: uuid */
+                    id: string;
+                    name: string;
+                }[];
                 isActive: boolean;
                 isEmailVerified: boolean;
                 /** Format: date-time */

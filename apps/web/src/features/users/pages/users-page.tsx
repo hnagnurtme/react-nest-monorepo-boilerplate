@@ -33,6 +33,7 @@ import {
   ConfirmDialog,
   DataTable,
   DateTimeCell,
+  EmptyCell,
   EmptyState,
   ErrorState,
   PageHeader,
@@ -173,6 +174,35 @@ export function UsersPage() {
           ))}
         </BadgeGroupCell>
       ),
+    },
+    {
+      id: 'tenants',
+      header: t('columns.tenant'),
+      kind: 'badge',
+      width: 'md',
+      /*
+       * An account can belong to several tenants, so this is a list, not one
+       * name. A platform account belongs to none, which is a fact worth saying
+       * rather than an empty cell: it is why that row has no tenant roles.
+       * RLS trims the list, so a tenant admin only ever reads its own tenant
+       * back here.
+       */
+      cell: (user) =>
+        user.tenants.length === 0 ? (
+          user.tenantId === null ? (
+            <Badge tone="info">{t('tenantScope.platform')}</Badge>
+          ) : (
+            <EmptyCell />
+          )
+        ) : (
+          <BadgeGroupCell>
+            {user.tenants.map((tenant) => (
+              <Badge key={tenant.id} tone="neutral">
+                {tenant.name}
+              </Badge>
+            ))}
+          </BadgeGroupCell>
+        ),
     },
     {
       id: 'createdAt',
