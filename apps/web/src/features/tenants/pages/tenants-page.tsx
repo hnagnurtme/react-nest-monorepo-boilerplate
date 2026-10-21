@@ -19,7 +19,6 @@ import {
 } from '@/shared/hooks';
 import {
   ActionsCell,
-  Badge,
   Button,
   CodeCell,
   ColumnVisibilityMenu,
@@ -31,6 +30,7 @@ import {
   Pagination,
   SidePanel,
   Spinner,
+  StatusDot,
   TableToolbar,
   TextCell,
   useColumnVisibility,
@@ -116,9 +116,9 @@ export function TenantsPage() {
       kind: 'status',
       width: 'sm',
       cell: (tenant) => (
-        <Badge tone={tenant.isActive ? 'success' : 'neutral'}>
+        <StatusDot tone={tenant.isActive ? 'active' : 'inactive'}>
           {tenant.isActive ? t('status.active') : t('status.inactive')}
-        </Badge>
+        </StatusDot>
       ),
     },
     {

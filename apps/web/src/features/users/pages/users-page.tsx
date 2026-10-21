@@ -40,6 +40,7 @@ import {
   PageShell,
   Pagination,
   SidePanel,
+  StatusDot,
   TableToolbar,
   TextCell,
   parseSort,
@@ -221,9 +222,9 @@ export function UsersPage() {
       width: 'sm',
       cell: (user) => (
         <BadgeGroupCell>
-          <Badge tone={user.isActive ? 'success' : 'neutral'}>
+          <StatusDot tone={user.isActive ? 'active' : 'inactive'}>
             {user.isActive ? t('status.active') : t('status.inactive')}
-          </Badge>
+          </StatusDot>
           {isPendingInvite(user) ? <Badge tone="warning">{t('status.pendingInvite')}</Badge> : null}
         </BadgeGroupCell>
       ),

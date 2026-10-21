@@ -69,6 +69,7 @@ export { LinkButton, type LinkButtonProps } from './link-button';
 export { Select, type SelectOption, type SelectProps } from './select';
 export { Skeleton, SkeletonTable, type SkeletonProps, type SkeletonTableProps } from './skeleton';
 export { Spinner, type SpinnerProps } from './spinner';
+export { StatusDot, type StatusDotProps, type StatusDotTone } from './status-dot';
 export { Stack, type StackProps } from './stack';
 export { Textarea, type TextareaProps } from './textarea';
 export { ThemeProvider, type ThemeProviderProps } from './theme-provider';
