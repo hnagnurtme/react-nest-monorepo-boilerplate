@@ -97,7 +97,7 @@ function renderRoles() {
       <Route
         path="/roles"
         element={
-          <RouteGuard checkAbility={(ability) => ability.can('read', 'Role')}>
+          <RouteGuard allowsNoTenant checkAbility={(ability) => ability.can('read', 'Role')}>
             <RolesPage />
           </RouteGuard>
         }
@@ -199,7 +199,7 @@ describe('RolesPage', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Open role Support' }));
     const dialog = await screen.findByRole('dialog');
-    const input = await within(dialog).findByLabelText('Role name');
+    const input = await within(dialog).findByLabelText(/^Role name/);
     await user.clear(input);
     await user.type(input, 'Helpdesk');
     await user.click(within(dialog).getByRole('button', { name: 'Rename' }));
@@ -251,7 +251,7 @@ describe('RolesPage', () => {
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).queryByLabelText('Tenant')).not.toBeInTheDocument();
 
-    await user.type(within(dialog).getByLabelText('Name'), 'Auditor');
+    await user.type(within(dialog).getByLabelText(/^Name/), 'Auditor');
     await user.selectOptions(await within(dialog).findByLabelText('Read Role'), 'own_tenant');
     await user.click(within(dialog).getByRole('button', { name: 'Create role' }));
 
@@ -270,13 +270,13 @@ describe('RolesPage', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Create role' }));
     const dialog = await screen.findByRole('dialog');
-    await user.type(within(dialog).getByLabelText('Name'), 'Auditor');
+    await user.type(within(dialog).getByLabelText(/^Name/), 'Auditor');
     await user.click(within(dialog).getByRole('button', { name: 'Create role' }));
 
     expect(await within(dialog).findByText('Please select a tenant')).toBeInTheDocument();
     expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false);
 
-    await user.selectOptions(await within(dialog).findByLabelText('Tenant'), 'Acme');
+    await user.selectOptions(await within(dialog).findByLabelText(/^Tenant/), 'Acme');
     await user.click(within(dialog).getByRole('button', { name: 'Create role' }));
 
     await waitFor(() => {

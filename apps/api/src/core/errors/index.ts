@@ -10,6 +10,7 @@ export {
   ResourceConflictError,
   ResourceNotFoundError,
   ServiceUnavailableError,
+  UpstreamUnavailableError,
   TokenReuseDetectedError,
   UnauthenticatedError,
   InvalidOtpError,

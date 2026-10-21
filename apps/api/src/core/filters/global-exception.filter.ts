@@ -22,6 +22,7 @@ import {
   type ErrorCode,
 } from '@/common/index.js';
 import { AppError } from '@/core/errors/index.js';
+import { reportError } from '@/core/telemetry/error-reporter.js';
 import { getActiveTraceId } from '@/core/telemetry/trace.util.js';
 
 export function toInvalidParams(error: ZodError): InvalidParam[] {
@@ -138,6 +139,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     if (mapped.status >= SERVER_ERROR_THRESHOLD) {
       const payload = { err: exception, code: mapped.code, status: mapped.status, traceId };
       this.logger.error(payload, 'Request failed');
+      reportError(exception, { trace_id: traceId, code: mapped.code });
     } else {
       const payload = { code: mapped.code, problem, status: mapped.status, traceId };
       this.logger.warn(payload, 'Request rejected');

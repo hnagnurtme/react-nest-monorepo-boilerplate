@@ -3,8 +3,7 @@ import { NavLink } from 'react-router-dom';
 
 import { cn } from '@/lib/utils';
 
-import { CONTROL_HEIGHT, CONTROL_PADDING } from './control';
-import { FOCUS_RING_INSET } from './focus-ring';
+import { NAV_ROW_BASE, NAV_ROW_TONE, navRowLayout } from './nav-row';
 
 export interface NavItemProps {
   to: string;
@@ -25,7 +24,8 @@ export interface NavItemProps {
  * answers to "is this the current page" is one too many.
  *
  * The ring is the inset variant — an offset ring would be clipped by the
- * sidebar's own edge.
+ * sidebar's own edge. The colours come from `nav-row`, so a leaf and a section
+ * header cannot drift apart.
  */
 export function NavItem({
   to,
@@ -43,13 +43,9 @@ export function NavItem({
       aria-label={isIconOnly ? label : undefined}
       title={isIconOnly ? label : undefined}
       className={cn(
-        'text-body rounded-control flex items-center gap-3 font-semibold transition-colors',
-        CONTROL_HEIGHT.md,
-        isIconOnly ? 'justify-center px-0' : CONTROL_PADDING.md,
-        isActive
-          ? 'bg-primary-light text-primary'
-          : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-        FOCUS_RING_INSET,
+        NAV_ROW_BASE,
+        navRowLayout(isIconOnly),
+        isActive ? NAV_ROW_TONE.current : NAV_ROW_TONE.idle,
       )}
     >
       {icon ? <span className="shrink-0">{icon}</span> : null}

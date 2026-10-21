@@ -27,7 +27,7 @@
   },
   "create": {
     "name": "Name",
-    "slug": "Slug (optional)",
+    "slug": "Slug",
     "slugPlaceholder": "derived from the name",
     "submit": "Create tenant",
     "success": "Tenant created.",
@@ -37,7 +37,51 @@
       "nameMin": "Name must be at least 2 characters",
       "nameMax": "Name must be at most 100 characters",
       "slugMax": "Slug must be at most 60 characters",
-      "slugFormat": "Use lowercase letters, digits and hyphens"
-    }
+      "slugFormat": "Use lowercase letters, digits and hyphens",
+      "addressMax": "Address must be at most 200 characters",
+      "wardRequired": "Choose a ward",
+      "wardRequiredForAddress": "Choose a province and ward for this address"
+    },
+    "addressLine": "Street address",
+    "addressPlaceholder": "House number and street",
+    "loadingUnits": "Loading...",
+    "logo": "Logo",
+    "logoChoose": "Choose an image",
+    "logoClear": "Remove",
+    "logoFailed": "The tenant was created, but its logo could not be uploaded. Add it from the tenant page.",
+    "logoHint": "PNG, JPEG or WebP, up to {{size}} MB.",
+    "province": "Province or city",
+    "provinceAny": "No address",
+    "ward": "Ward",
+    "cancel": "Cancel",
+    "open": "Create tenant",
+    "panelDescription": "The slug appears in URLs; leave it empty to derive it from the name.",
+    "title": "Create tenant"
+  },
+  "edit": {
+    "open": "Edit",
+    "title": "Edit tenant",
+    "panelDescription": "The slug cannot change: it appears in links people have already shared.",
+    "submit": "Save changes",
+    "success": "Tenant updated.",
+    "error": "Could not update the tenant.",
+    "logoFailed": "The logo could not be uploaded, so nothing was saved."
+  },
+  "map": {
+    "noAddress": "No address yet",
+    "label": "Map of Vietnam with the provinces your tenants are in",
+    "unavailable": "The map could not be loaded.",
+    "tab": "Map",
+    "listTab": "List",
+    "region": {
+      "north": "North",
+      "central": "Central",
+      "south": "South"
+    },
+    "archipelago": {
+      "paracel": "Hoàng Sa (Paracel) Islands",
+      "spratly": "Trường Sa (Spratly) Islands"
+    },
+    "more": "+{{count}} more"
   }
 }

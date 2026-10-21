@@ -1,8 +1,10 @@
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
 
-import { USERS_ENDPOINT, usersKeys } from '@/features/users/api/use-users';
+import { usersKeys } from '@/features/users/api/use-users';
+import { USER_ENDPOINTS } from '@/features/users/endpoints';
 import type { UpdateUserBody, UserListItem } from '@/features/users/types';
 import { rawRequest, type ApiError } from '@/lib/http/client';
+import { apiPath } from '@/lib/http/path';
 
 export interface UpdateUserVariables {
   id: string;
@@ -14,7 +16,7 @@ export function useUpdateUser(): UseMutationResult<UserListItem, ApiError, Updat
 
   return useMutation<UserListItem, ApiError, UpdateUserVariables>({
     mutationFn: ({ id, body }) =>
-      rawRequest<UserListItem>(`${USERS_ENDPOINT}/${encodeURIComponent(id)}`, {
+      rawRequest<UserListItem>(apiPath(USER_ENDPOINTS.USER, { id }), {
         method: 'PATCH',
         body: JSON.stringify(body),
       }),

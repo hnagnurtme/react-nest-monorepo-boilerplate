@@ -1,14 +1,13 @@
 {
   "sections": {
     "access": "Quản trị truy cập",
-    "organisation": "Tổ chức",
     "system": "Hệ thống"
   },
   "items": {
     "home": "Trang chủ",
     "users": "Người dùng",
     "roles": "Vai trò",
-    "tenants": "Tenant",
+    "tenants": "Tổ chức",
     "status": "Trạng thái"
   },
   "sidebar": {

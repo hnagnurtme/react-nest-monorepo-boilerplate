@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, type OnModuleDestroy } from '@nestjs/common';
 import nodemailer, { type Transporter } from 'nodemailer';
 
 import { AppConfig } from '@/config/index.js';
@@ -15,8 +15,32 @@ import type {
 
 const DEFAULT_OTP_TTL_MINUTES = 5;
 
+/**
+ * Transport limits.
+ *
+ * Without a pool every message opened its own SMTP connection, and a burst —
+ * a batch of invitations, or one retried send — is what gets a relay to answer
+ * `552 Your IP Address is blocked from further use`. Pooled and rate-limited,
+ * the same batch travels down two connections at a few messages per second.
+ *
+ * The timeouts matter just as much: a send issued inside a request's
+ * transaction would otherwise hold it — and its row locks — open for
+ * nodemailer's minutes-long defaults whenever a relay keeps the socket alive.
+ */
+const SMTP_POOL_MAX_CONNECTIONS = 2;
+const SMTP_POOL_MAX_MESSAGES = 100;
+/** At most {@link SMTP_RATE_LIMIT} messages per {@link SMTP_RATE_DELTA_MS}. */
+const SMTP_RATE_DELTA_MS = 1000;
+const SMTP_RATE_LIMIT = 5;
+const SMTP_CONNECTION_TIMEOUT_MS = 10_000;
+const SMTP_GREETING_TIMEOUT_MS = 10_000;
+const SMTP_SOCKET_TIMEOUT_MS = 20_000;
+
 /** Placeholders whose value is already HTML and must not be escaped again. */
 const RAW_PLACEHOLDERS = new Set(['content', 'logoBlock', 'supportBlock', 'otpCells']);
+
+/** `{{name}}`, matched in one pass so a substituted value is never rescanned. */
+const PLACEHOLDER = /{{(\w+)}}/g;
 
 /**
  * Values interpolated into a template come from user input (a full name, a
@@ -33,7 +57,7 @@ function escapeHtml(value: string): string {
 }
 
 @Injectable()
-export class MailService {
+export class MailService implements OnModuleDestroy {
   private readonly logger = new Logger(MailService.name);
   private transporter: Transporter | undefined;
 
@@ -63,7 +87,21 @@ export class MailService {
         user: smtp.user,
         pass: smtp.pass,
       },
+      pool: true,
+      maxConnections: SMTP_POOL_MAX_CONNECTIONS,
+      maxMessages: SMTP_POOL_MAX_MESSAGES,
+      rateDelta: SMTP_RATE_DELTA_MS,
+      rateLimit: SMTP_RATE_LIMIT,
+      connectionTimeout: SMTP_CONNECTION_TIMEOUT_MS,
+      greetingTimeout: SMTP_GREETING_TIMEOUT_MS,
+      socketTimeout: SMTP_SOCKET_TIMEOUT_MS,
     });
+  }
+
+  /** A pooled transport keeps sockets open; shutdown has to close them. */
+  onModuleDestroy(): void {
+    this.transporter?.close();
+    this.transporter = undefined;
   }
 
   /**
@@ -231,14 +269,20 @@ export class MailService {
       }
     }
 
-    let rendered = template;
-    for (const [key, value] of Object.entries(variables)) {
-      rendered = rendered.replaceAll(
-        `{{${key}}}`,
-        RAW_PLACEHOLDERS.has(key) ? value : escapeHtml(value),
-      );
-    }
-    return rendered;
+    /*
+      One pass, so a value cannot be read as a placeholder.
+      `escapeHtml` leaves braces alone, and substituting key by key meant a
+      display name of `{{otp}}` was replaced by the real code on the next
+      iteration — the layout pass was worse, since `content` goes in first and
+      `logoBlock` / `supportBlock` are injected unescaped. A replacer function
+      never re-scans what it just wrote.
+    */
+    return template.replaceAll(PLACEHOLDER, (match: string, key: string) => {
+      const value = variables[key];
+      if (value === undefined) return match;
+
+      return RAW_PLACEHOLDERS.has(key) ? value : escapeHtml(value);
+    });
   }
 }
 

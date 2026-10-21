@@ -10,12 +10,14 @@ import {
 } from '@/lib/i18n/languages';
 import enAuth from '@/lib/i18n/locales/en/auth.json';
 import enCommon from '@/lib/i18n/locales/en/common.json';
+import enHome from '@/lib/i18n/locales/en/home.json';
 import enNav from '@/lib/i18n/locales/en/nav.json';
 import enRoles from '@/lib/i18n/locales/en/roles.json';
 import enTenants from '@/lib/i18n/locales/en/tenants.json';
 import enUsers from '@/lib/i18n/locales/en/users.json';
 import viAuth from '@/lib/i18n/locales/vi/auth.json';
 import viCommon from '@/lib/i18n/locales/vi/common.json';
+import viHome from '@/lib/i18n/locales/vi/home.json';
 import viNav from '@/lib/i18n/locales/vi/nav.json';
 import viRoles from '@/lib/i18n/locales/vi/roles.json';
 import viTenants from '@/lib/i18n/locales/vi/tenants.json';
@@ -29,6 +31,7 @@ export const resources = {
     common: enCommon,
     auth: enAuth,
     nav: enNav,
+    home: enHome,
     users: enUsers,
     tenants: enTenants,
     roles: enRoles,
@@ -37,6 +40,7 @@ export const resources = {
     common: viCommon,
     auth: viAuth,
     nav: viNav,
+    home: viHome,
     users: viUsers,
     tenants: viTenants,
     roles: viRoles,

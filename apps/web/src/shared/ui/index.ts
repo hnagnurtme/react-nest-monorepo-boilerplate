@@ -8,6 +8,7 @@ export {
   type ButtonVariant,
 } from './button';
 export { Card, type CardProps } from './card';
+export { Combobox, type ComboboxProps } from './combobox';
 export { CheckboxField, type CheckboxFieldProps } from './checkbox-field';
 export { ConfirmDialog, type ConfirmDialogProps } from './confirm-dialog';
 export { CONTROL_HEIGHT, CONTROL_SIZE, type ControlSize } from './control';
@@ -68,9 +69,17 @@ export { LinkButton, type LinkButtonProps } from './link-button';
 export { Select, type SelectOption, type SelectProps } from './select';
 export { Skeleton, SkeletonTable, type SkeletonProps, type SkeletonTableProps } from './skeleton';
 export { Spinner, type SpinnerProps } from './spinner';
+export { StatusDot, type StatusDotProps, type StatusDotTone } from './status-dot';
 export { Stack, type StackProps } from './stack';
 export { Textarea, type TextareaProps } from './textarea';
 export { ThemeProvider, type ThemeProviderProps } from './theme-provider';
 export { ThemeToggle } from './theme-toggle';
 export { ToastProvider } from './toast';
 export { useToast, type ToastMessage } from './use-toast';
+export { TenantAvatar, tenantInitials, type TenantAvatarProps } from './tenant-avatar';
+export { FileInput, type FileInputProps } from './file-input';
+export { ImageField, type ImageFieldProps, type ImageFieldShape } from './image-field';
+export { TypeCard, type TypeCardProps } from './type-card';
+export { PanelForm, type PanelFormProps, type PanelFormVariant } from './panel-form';
+export { SidePanel, type SidePanelProps, type SidePanelWidth } from './side-panel';
+export { OtpInput, type OtpInputProps } from './otp-input';

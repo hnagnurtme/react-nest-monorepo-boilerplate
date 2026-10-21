@@ -2,15 +2,23 @@ import { Inject, Injectable, type CanActivate, type ExecutionContext } from '@ne
 import { Reflector } from '@nestjs/core';
 import { ClsService } from 'nestjs-cls';
 
-import { IS_PUBLIC_KEY, NO_TENANT_CONTEXT_KEY, type AuthContext } from '@/common/index.js';
+import {
+  IS_PUBLIC_KEY,
+  NO_TENANT_CONTEXT_KEY,
+  PLATFORM_WIDE_KEY,
+  type AuthContext,
+} from '@/common/index.js';
 import { AccessTokenService, type AccessTokenPayload } from '@/core/auth/access-token.service.js';
 import type { AuthzProfile } from '@/core/authz/index.js';
 import { AuthzService } from '@/core/authz/index.js';
 import { CLS_KEYS, type AccessContext, type AppClsStore } from '@/core/database/request-context.js';
-import { UnauthenticatedError } from '@/core/errors/index.js';
+import { ResourceNotFoundError, UnauthenticatedError } from '@/core/errors/index.js';
 
 const BEARER_PREFIX = 'Bearer ';
 export const TENANT_HEADER = 'x-tenant-id';
+
+/** Rejected before it reaches a policy, where `::uuid` would raise a 500. */
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 interface RequestLike {
   headers: { authorization?: string | undefined; [TENANT_HEADER]?: string | string[] | undefined };
@@ -32,13 +40,25 @@ interface RequestLike {
  * "which tenant is this". A missing header is rejected for the same reason,
  * even when the account has exactly one tenant; routes that have to work before
  * the choice is made say so with `@NoTenantContext()`.
+ *
+ * A platform account has no memberships and may act in any tenant, so its
+ * choice is checked against the tenants that exist rather than against a
+ * membership list — the guard does that before calling this, because it takes a
+ * (cached) read. Having chosen, it runs under that tenant's policies like
+ * anybody else. With no choice, or on a route marked `@PlatformWide()` — the
+ * endpoints that administer the platform itself — it stays in `admin` mode and
+ * sees everything.
  */
 export function accessContextFor(
   profile: Pick<AuthzProfile, 'userId' | 'scope' | 'tenants'>,
   requestedTenantId: string | undefined,
+  options: { isPlatformWide?: boolean } = {},
 ): AccessContext {
   if (profile.scope === 'platform') {
-    return { accessMode: 'admin', reason: `platform-user:${profile.userId}` };
+    if (requestedTenantId === undefined || options.isPlatformWide === true) {
+      return { accessMode: 'admin', reason: `platform-user:${profile.userId}` };
+    }
+    return { accessMode: 'tenant', tenantId: requestedTenantId };
   }
 
   if (requestedTenantId === undefined) {
@@ -76,6 +96,11 @@ export class JwtAuthGuard implements CanActivate {
       context.getClass(),
     ]);
 
+    const isPlatformWide = this.reflector.getAllAndOverride<boolean>(PLATFORM_WIDE_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+
     const request = context.switchToHttp().getRequest<RequestLike>();
     const token = extractBearerToken(request.headers.authorization);
     const payload = token === undefined ? undefined : await this.accessTokens.verify(token);
@@ -87,6 +112,28 @@ export class JwtAuthGuard implements CanActivate {
       if (profile === undefined) throw new UnauthenticatedError('Account is no longer active');
 
       const requestedTenantId = readTenantHeader(request);
+      /*
+        A platform account's choice is not a membership, so it is checked
+        against the tenants that exist. The uuid shape is checked here too: the
+        value reaches a policy as `::uuid`, where anything else is a 500 rather
+        than a rejected request.
+      */
+      if (
+        profile.scope === 'platform' &&
+        requestedTenantId !== undefined &&
+        !isPlatformWide &&
+        !(
+          UUID_PATTERN.test(requestedTenantId) && (await this.authz.tenantExists(requestedTenantId))
+        )
+      ) {
+        /*
+          404, not 401: the tenant is a thing the caller asked for and did not
+          find, and an expired tenant choice left in a tab must not read to the
+          client as an expired session — that is how a stale `x-tenant-id`
+          turns into a sign-out loop.
+        */
+        throw new ResourceNotFoundError('Tenant', requestedTenantId);
+      }
       // `@NoTenantContext()` tolerates a caller that has not chosen yet — it
       // does not ignore a choice. A header naming a tenant the account does not
       // belong to is still rejected, and one that fits is still honoured, so
@@ -94,7 +141,7 @@ export class JwtAuthGuard implements CanActivate {
       const accessContext =
         skipsTenantContext && profile.scope !== 'platform' && requestedTenantId === undefined
           ? undefined
-          : accessContextFor(profile, requestedTenantId);
+          : accessContextFor(profile, requestedTenantId, { isPlatformWide });
       const activeTenantId =
         accessContext?.accessMode === 'tenant' ? accessContext.tenantId : undefined;
 

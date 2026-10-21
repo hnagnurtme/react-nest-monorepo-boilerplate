@@ -1,4 +1,5 @@
 import { type INestApplication, RequestMethod, VersioningType } from '@nestjs/common';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import cookieParser from 'cookie-parser';
 import express from 'express';
 import type { Response } from 'express';
@@ -17,7 +18,9 @@ import {
 
 import { ACCESS_TOKEN_SECURITY_SCHEME } from './modules/auth/auth.constants.js';
 
-export function setupSecurity(app: INestApplication, env: EnvConfig): void {
+export function setupSecurity(app: NestExpressApplication, env: EnvConfig): void {
+  // Before anything reads `req.ip` (the throttler keys on it).
+  app.set('trust proxy', env.TRUST_PROXY_HOPS);
   app.use(helmet());
   app.use(cookieParser());
   app.use(express.json({ limit: JSON_BODY_LIMIT }));
@@ -93,7 +96,7 @@ export async function setupSwagger(app: INestApplication, env: EnvConfig): Promi
   }
 }
 
-export async function setupApp(app: INestApplication, env: EnvConfig): Promise<void> {
+export async function setupApp(app: NestExpressApplication, env: EnvConfig): Promise<void> {
   setupGlobals(app);
   setupSecurity(app, env);
   setupRouting(app, env);

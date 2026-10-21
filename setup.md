@@ -46,7 +46,7 @@ Start Postgres 16 and Redis 7:
 just up
 ```
 
-Check containers (`boilerplate-postgres`, `boilerplate-redis`):
+Check containers (`react-nest-postgres`, `react-nest-redis`):
 
 ```bash
 docker compose ps
@@ -250,7 +250,7 @@ Restart the API after env changes.
 
 ### Port Clashes and Container Names
 
-`just up` fails with "port is already allocated" or "container name already in use" when another project holds `5432` or `6379`, or already has containers named `boilerplate-postgres` / `boilerplate-redis`.
+`just up` fails with "port is already allocated" when another project holds `5432` or `6379`, and with "container name is already in use" when another project already has containers of these names — a container name is global to the Docker daemon. Set `CONTAINER_PREFIX` in `.env` (it defaults to `react-nest`) to move this checkout's containers out of the way; the named volumes are scoped to the compose project, so the data stays where it was.
 
 - Change the host ports in the root `.env` (used by docker-compose): `POSTGRES_PORT=5433` and/or `REDIS_PORT=6380`.
 - Then update `apps/api/.env` to match: `REDIS_URL=redis://localhost:6380`, and the port inside `DATABASE_URL` and `MIGRATION_DATABASE_URL` (`...@localhost:5433/...`).

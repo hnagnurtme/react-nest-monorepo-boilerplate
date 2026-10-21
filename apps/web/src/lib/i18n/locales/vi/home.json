@@ -1,0 +1,8 @@
+{
+  "launcher": {
+    "subtitle": "Chọn một tổ chức để xem chi tiết.",
+    "error": "Không thể tải danh sách tổ chức.",
+    "emptyTitle": "Chưa có tổ chức nào",
+    "emptyDescription": "Tạo tổ chức đầu tiên ở trang Tổ chức để bắt đầu."
+  }
+}

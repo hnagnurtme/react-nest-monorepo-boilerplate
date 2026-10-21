@@ -10,7 +10,7 @@ import { useResendInvitation } from '@/features/users/api/use-resend-invitation'
 import { useUpdateUser } from '@/features/users/api/use-update-user';
 import { USER_SORT_FIELDS, useUsers } from '@/features/users/api/use-users';
 import { CreateUserForm } from '@/features/users/components/create-user-form';
-import { EditUserRolesDialog } from '@/features/users/components/edit-user-roles-dialog';
+import { EditUserRolesForm } from '@/features/users/components/edit-user-roles-form';
 import { PendingInvitations } from '@/features/users/components/pending-invitations';
 import type { UserListItem } from '@/features/users/types';
 import {
@@ -33,11 +33,14 @@ import {
   ConfirmDialog,
   DataTable,
   DateTimeCell,
+  EmptyCell,
   EmptyState,
   ErrorState,
   PageHeader,
   PageShell,
   Pagination,
+  SidePanel,
+  StatusDot,
   TableToolbar,
   TextCell,
   parseSort,
@@ -174,6 +177,35 @@ export function UsersPage() {
       ),
     },
     {
+      id: 'tenants',
+      header: t('columns.tenant'),
+      kind: 'badge',
+      width: 'md',
+      /*
+       * An account can belong to several tenants, so this is a list, not one
+       * name. A platform account belongs to none, which is a fact worth saying
+       * rather than an empty cell: it is why that row has no tenant roles.
+       * RLS trims the list, so a tenant admin only ever reads its own tenant
+       * back here.
+       */
+      cell: (user) =>
+        user.tenants.length === 0 ? (
+          user.tenantId === null ? (
+            <Badge tone="info">{t('tenantScope.platform')}</Badge>
+          ) : (
+            <EmptyCell />
+          )
+        ) : (
+          <BadgeGroupCell>
+            {user.tenants.map((tenant) => (
+              <Badge key={tenant.id} tone="neutral">
+                {tenant.name}
+              </Badge>
+            ))}
+          </BadgeGroupCell>
+        ),
+    },
+    {
       id: 'createdAt',
       header: t('columns.createdAt'),
       kind: 'datetime',
@@ -190,9 +222,9 @@ export function UsersPage() {
       width: 'sm',
       cell: (user) => (
         <BadgeGroupCell>
-          <Badge tone={user.isActive ? 'success' : 'neutral'}>
+          <StatusDot tone={user.isActive ? 'active' : 'inactive'}>
             {user.isActive ? t('status.active') : t('status.inactive')}
-          </Badge>
+          </StatusDot>
           {isPendingInvite(user) ? <Badge tone="warning">{t('status.pendingInvite')}</Badge> : null}
         </BadgeGroupCell>
       ),
@@ -293,12 +325,6 @@ export function UsersPage() {
         }
       />
 
-      {createForm.isOpen ? (
-        <CanAction I="create" a="User">
-          <CreateUserForm onCreated={createForm.close} onCancel={createForm.close} />
-        </CanAction>
-      ) : null}
-
       <PendingInvitations />
 
       <DataTable
@@ -398,14 +424,46 @@ export function UsersPage() {
         }
       />
 
+      {createForm.isOpen ? (
+        <CanAction I="create" a="User">
+          <SidePanel
+            title={t('create.title')}
+            description={t('create.panelDescription')}
+            closeLabel={tCommon('actions.close')}
+            onClose={createForm.close}
+            // A half-filled form must not vanish on a stray click outside it.
+            closeOnOverlayClick={false}
+            // The form owns the scroll: its action row stays pinned below it.
+            isFlush
+          >
+            <CreateUserForm
+              variant="panel"
+              onCreated={createForm.close}
+              onCancel={createForm.close}
+            />
+          </SidePanel>
+        </CanAction>
+      ) : null}
+
       {editingRoles ? (
-        <EditUserRolesDialog
-          key={editingRoles.id}
-          user={editingRoles}
+        <SidePanel
+          title={t('rolesDialog.title', { email: editingRoles.email })}
+          description={t('rolesDialog.panelDescription')}
+          closeLabel={tCommon('actions.close')}
           onClose={() => {
             setEditingRolesId(null);
           }}
-        />
+          closeOnOverlayClick={false}
+          isFlush
+        >
+          <EditUserRolesForm
+            key={editingRoles.id}
+            user={editingRoles}
+            onClose={() => {
+              setEditingRolesId(null);
+            }}
+          />
+        </SidePanel>
       ) : null}
 
       {pendingDelete ? (

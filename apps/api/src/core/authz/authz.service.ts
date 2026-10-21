@@ -16,6 +16,7 @@ import { AuthzRepository } from './authz.repository.js';
 import type { AuthzProfile } from './authz.types.js';
 
 const CACHE_PREFIX = 'authz:profile:';
+const TENANT_CACHE_PREFIX = 'authz:tenant:';
 /** Short on purpose: explicit invalidation is the primary mechanism, this is the safety net. */
 const CACHE_TTL_SECONDS = 300;
 
@@ -56,6 +57,29 @@ export class AuthzService {
     );
 
     return profile;
+  }
+
+  /**
+   * Whether the tenant a caller asked to act in exists and is active.
+   *
+   * Cached beside the profiles and for the same reason: it is one row, read on
+   * every request that names a tenant the memberships cannot vouch for, and a
+   * tenant appearing or being switched off may take up to the TTL to be
+   * noticed — unless {@link AuthzService.invalidateTenant} is called, which is
+   * what the tenant writes do.
+   */
+  async tenantExists(tenantId: string): Promise<boolean> {
+    const key = `${TENANT_CACHE_PREFIX}${tenantId}`;
+    const cached = await this.redis.get(key);
+    if (cached !== null) return cached === '1';
+
+    const exists = await this.transactions.run(
+      { accessMode: 'admin', reason: 'authz:tenant-exists' },
+      async (tx) => this.repository.tenantExists(tx, tenantId),
+    );
+    await this.redis.setWithTtl(key, exists ? '1' : '0', CACHE_TTL_SECONDS);
+
+    return exists;
   }
 
   /** The caller's profile as stored by the auth guard, `undefined` on a public route. */
@@ -103,6 +127,23 @@ export class AuthzService {
       async (tx) => this.repository.userIdsWithRole(tx, roleId),
     );
     await this.invalidateUsers(userIds);
+  }
+
+  /**
+   * Drops everything cached about a tenant: its existence flag and the profile
+   * of every member. Switching a tenant off removes it from its members'
+   * memberships, and a cached profile would keep offering it in the picker for
+   * up to the TTL.
+   */
+  async invalidateTenant(tenantId: string): Promise<void> {
+    const userIds = await this.transactions.run(
+      { accessMode: 'admin', reason: 'authz:invalidate-tenant' },
+      async (tx) => this.repository.userIdsInTenant(tx, tenantId),
+    );
+    await Promise.all([
+      this.redis.delete(`${TENANT_CACHE_PREFIX}${tenantId}`),
+      this.invalidateUsers(userIds),
+    ]);
   }
 
   private async readCache(userId: string): Promise<AuthzProfile | undefined> {

@@ -21,7 +21,7 @@ function renderRoute() {
       <Route
         path="/tenants"
         element={
-          <RouteGuard checkAbility={(ability) => ability.can('create', 'Tenant')}>
+          <RouteGuard allowsNoTenant checkAbility={(ability) => ability.can('create', 'Tenant')}>
             <TenantsPage />
           </RouteGuard>
         }

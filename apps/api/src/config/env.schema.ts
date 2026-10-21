@@ -61,6 +61,15 @@ export const envSchema = z
     /** Origin of the SPA, used for the CSRF `Origin` allowlist check. */
     WEB_ORIGIN: z.string().url().default('http://localhost:5173'),
 
+    /**
+     * Reverse proxies in front of the API (Express `trust proxy`). Behind
+     * nginx this must be 1, or `req.ip` is the proxy's address and every
+     * client shares one per-IP throttle bucket (login 5/min for everyone).
+     * Leave 0 when clients reach the API directly: a trusted hop that is not
+     * there lets any client pick its own IP through `X-Forwarded-For`.
+     */
+    TRUST_PROXY_HOPS: z.coerce.number().int().min(0).default(0),
+
     COOKIE_DOMAIN: z.preprocess(
       (value) => (value === '' ? undefined : value),
       z.string().optional(),
@@ -80,9 +89,33 @@ export const envSchema = z
       z.string().url().optional(),
     ),
 
+    /** Sentry-compatible DSN for error reporting. Blank switches it off. */
+    SENTRY_DSN: z.preprocess(
+      (value) => (value === '' ? undefined : value),
+      z.string().url().optional(),
+    ),
+
+    /**
+     * Port for the Prometheus scrape endpoint. Blank switches metrics off, the
+     * same way a blank OTLP endpoint switches trace export off.
+     *
+     * It is a port of its own, not a route on the API: a scrape endpoint must
+     * not sit behind the auth stack, and leaving it off the public listener
+     * means no deployment can expose it by accident.
+     */
+    PROMETHEUS_METRICS_PORT: blankToUndefined(z.coerce.number().int().positive().optional()),
+
+    /**
+     * Loki push URL (`http://localhost:3100` locally). Blank switches log
+     * shipping off and the logs stay on stdout.
+     */
+    LOKI_URL: blankToUndefined(z.string().url().optional()),
+
     // Email Configuration
-    SMTP_HOST: z.string().default('smtp.gmail.com'),
-    SMTP_PORT: z.coerce.number().int().positive().default(587),
+    // Mailpit by default (docker compose): an unset SMTP host must never fall
+    // back to a real relay, or a developer machine mails real addresses.
+    SMTP_HOST: z.string().default('localhost'),
+    SMTP_PORT: z.coerce.number().int().positive().default(1025),
     SMTP_SECURE: z
       .enum(['true', 'false'])
       .default('false')
@@ -90,6 +123,35 @@ export const envSchema = z
     SMTP_USER: z.string().default(''),
     SMTP_PASS: z.string().default(''),
     SMTP_FROM: z.string().default('Starter App <no-reply@example.com>'),
+
+    /**
+     * Object storage (MinIO in dev, any S3-compatible service in production).
+     * Optional as a block: with `S3_ENDPOINT` blank the `StorageService` builds
+     * no client and the upload endpoints answer 503 instead of a stack trace,
+     * so an existing deployment keeps booting until its env file catches up.
+     *
+     * The bucket is private. Nothing here is ever handed to a browser; the API
+     * signs a short-lived URL per request instead.
+     */
+    S3_ENDPOINT: blankToUndefined(z.string().url().optional()),
+    S3_REGION: z.string().default('us-east-1'),
+    S3_BUCKET: z.string().default('app-private'),
+    S3_ACCESS_KEY: blankToUndefined(z.string().optional()),
+    S3_SECRET_KEY: blankToUndefined(z.string().optional()),
+    /** MinIO serves buckets as a path, not a subdomain. AWS wants the opposite. */
+    S3_FORCE_PATH_STYLE: z
+      .enum(['true', 'false'])
+      .default('true')
+      .transform((value) => value === 'true'),
+    /** How long a presigned GET on an image stays usable. */
+    S3_PRESIGN_TTL_SECONDS: z.coerce.number().int().min(60).max(3600).default(900),
+    /** The ceiling a signed upload may carry, enforced again on confirmation. */
+    S3_MAX_UPLOAD_BYTES: z.coerce
+      .number()
+      .int()
+      .min(1024)
+      .max(10 * 1024 * 1024)
+      .default(2 * 1024 * 1024),
 
     /** How long an invitation link stays usable. One week is the hard ceiling. */
     INVITATION_TTL_HOURS: z.coerce

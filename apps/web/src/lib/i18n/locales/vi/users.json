@@ -5,9 +5,13 @@
     "fullName": "Họ tên",
     "email": "Email",
     "role": "Vai trò",
+    "tenant": "Tổ chức",
     "status": "Trạng thái",
     "createdAt": "Ngày tạo",
     "actions": "Thao tác"
+  },
+  "tenantScope": {
+    "platform": "Nền tảng"
   },
   "status": {
     "active": "Hoạt động",
@@ -51,11 +55,11 @@
     "title": "Tạo người dùng",
     "fullName": "Họ tên",
     "email": "Email",
-    "phone": "Số điện thoại (tùy chọn)",
+    "phone": "Số điện thoại",
     "phonePlaceholder": "+84901234567",
     "password": "Mật khẩu",
-    "tenant": "Tenant",
-    "tenantPlaceholder": "Chọn tenant",
+    "tenant": "Tổ chức",
+    "tenantPlaceholder": "Chọn tổ chức",
     "cancel": "Hủy",
     "submit": "Tạo người dùng",
     "success": "Đã tạo người dùng.",
@@ -68,9 +72,9 @@
       "emailInvalid": "Địa chỉ email không hợp lệ",
       "phone": "Số điện thoại không hợp lệ",
       "passwordMin": "Mật khẩu phải có ít nhất 8 ký tự",
-      "tenantRequired": "Vui lòng chọn tenant",
+      "tenantRequired": "Vui lòng chọn tổ chức",
       "rolesRequired": "Chọn ít nhất một vai trò",
-      "mixedScope": "Không được trộn vai trò nền tảng và tenant"
+      "mixedScope": "Không được trộn vai trò nền tảng và tổ chức"
     },
     "roles": "Vai trò",
     "rolesHint": "Chọn ít nhất một vai trò.",
@@ -80,20 +84,22 @@
     "sendInvitation": "Gửi email mời để người dùng tự đặt mật khẩu",
     "sendInvitationHint": "Không đặt mật khẩu ngay. Người dùng nhận một liên kết có thời hạn.",
     "manualPasswordHint": "Bạn tự đặt mật khẩu và chuyển cho người dùng bằng kênh khác.",
-    "invitationSent": "Đã tạo người dùng. Email mời đã được gửi."
+    "invitationSent": "Đã tạo người dùng. Email mời đã được gửi.",
+    "panelDescription": "Tài khoản được tạo ở trạng thái hoạt động; bỏ trống mật khẩu thì hệ thống gửi lời mời."
   },
   "rolesDialog": {
     "title": "Sửa vai trò của {{email}}",
     "save": "Lưu vai trò",
     "cancel": "Hủy",
-    "loading": "Đang tải vai trò..."
+    "loading": "Đang tải vai trò...",
+    "panelDescription": "Chọn các vai trò của tài khoản trong tổ chức đang làm việc."
   },
   "invite": {
-    "prompt": "{{email}} đã có tài khoản. Hãy mời tài khoản đó tham gia tenant này — chủ tài khoản phải chấp nhận.",
+    "prompt": "{{email}} đã có tài khoản. Hãy mời tài khoản đó tham gia tổ chức này — chủ tài khoản phải chấp nhận.",
     "submit": "Gửi lời mời",
     "dismiss": "Dùng email khác",
     "sent": "Đã gửi lời mời tới {{email}}. Họ tham gia sau khi chấp nhận.",
-    "alreadyMember": "Tài khoản đó đã thuộc tenant này.",
+    "alreadyMember": "Tài khoản đó đã thuộc tổ chức này.",
     "error": "Không gửi được lời mời."
   },
   "joinTenant": {
@@ -104,7 +110,7 @@
     "subtitle": "{{inviter}} đã mời {{email}} tham gia. Tài khoản và mật khẩu của bạn không đổi.",
     "roles": "Bạn sẽ tham gia với quyền: {{roles}}",
     "accept": "Chấp nhận và tham gia",
-    "success": "Bạn đã tham gia tenant. Đăng nhập để bắt đầu làm việc.",
+    "success": "Bạn đã tham gia tổ chức. Đăng nhập để bắt đầu làm việc.",
     "error": "Không chấp nhận được lời mời."
   },
   "pendingInvitations": {

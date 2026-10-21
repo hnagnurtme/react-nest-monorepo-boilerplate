@@ -80,6 +80,28 @@ export function formatNumber(
 }
 
 /** @internal Test seam: formatters are cached for the lifetime of the page. */
+/** 1 KiB, not 1 kB: the ceilings the API enforces are powers of two. */
+const FILE_SIZE_STEP = 1024;
+const FILE_SIZE_UNITS = ['B', 'KB', 'MB', 'GB'] as const;
+
+/** A byte count as an upload dialog shows it: `1.4 MB`, localised. */
+export function formatFileSize(
+  bytes: number | null | undefined,
+  locale: AppLanguage = FALLBACK_LANGUAGE,
+): string {
+  if (bytes === null || bytes === undefined || Number.isNaN(bytes)) return EMPTY_VALUE;
+
+  let value = Math.max(bytes, 0);
+  let step = 0;
+  while (value >= FILE_SIZE_STEP && step < FILE_SIZE_UNITS.length - 1) {
+    value /= FILE_SIZE_STEP;
+    step += 1;
+  }
+
+  const digits = step === 0 ? 0 : 1;
+  return `${formatNumber(value, locale, { maximumFractionDigits: digits })} ${FILE_SIZE_UNITS[step] ?? 'B'}`;
+}
+
 export function clearFormatterCacheForTests(): void {
   formatterCache.clear();
 }

@@ -60,7 +60,8 @@
     "validation": {
       "nameMin": "Name must be at least 2 characters",
       "tenantRequired": "Please select a tenant"
-    }
+    },
+    "panelDescription": "A role is a named set of permissions inside one tenant."
   },
   "editor": {
     "title": "Role: {{name}}",
@@ -77,7 +78,8 @@
     "saveSuccess": "Permissions saved.",
     "saveError": "Could not save the permissions.",
     "deleteSuccess": "Role deleted.",
-    "deleteError": "Could not delete the role."
+    "deleteError": "Could not delete the role.",
+    "panelDescription": "Rename the role, or change what it may do."
   },
   "errors": {
     "forbidden": "You are not allowed to do this.",

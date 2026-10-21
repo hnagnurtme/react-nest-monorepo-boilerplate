@@ -1,10 +1,9 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 
+import { ROLE_ENDPOINTS } from '@/features/roles/endpoints';
 import type { PermissionOption, RoleItem, RolesPageData } from '@/features/roles/types';
 import { rawPagedRequest, rawRequest, type ApiError } from '@/lib/http/client';
-
-export const ROLES_ENDPOINT = '/api/v1/roles';
-export const PERMISSIONS_ENDPOINT = '/api/v1/permissions';
+import { apiPath } from '@/lib/http/path';
 
 export const rolesKeys = {
   all: ['roles'] as const,
@@ -22,7 +21,7 @@ export function useRoles(
     queryKey: rolesKeys.list(page, limit),
     enabled: options.enabled ?? true,
     queryFn: async () => {
-      const response = await rawPagedRequest<RoleItem>(ROLES_ENDPOINT, {
+      const response = await rawPagedRequest<RoleItem>(ROLE_ENDPOINTS.ROLES, {
         params: { page, limit },
       });
       return { items: response.data, meta: response.meta };
@@ -34,7 +33,7 @@ export function useRole(id: string | null): UseQueryResult<RoleItem, ApiError> {
   return useQuery<RoleItem, ApiError>({
     queryKey: rolesKeys.detail(id ?? ''),
     enabled: id !== null,
-    queryFn: () => rawRequest<RoleItem>(`${ROLES_ENDPOINT}/${encodeURIComponent(id ?? '')}`),
+    queryFn: () => rawRequest<RoleItem>(apiPath(ROLE_ENDPOINTS.ROLE, { id: id ?? '' })),
   });
 }
 
@@ -45,6 +44,6 @@ export function usePermissionOptions(
   return useQuery<PermissionOption[], ApiError>({
     queryKey: rolesKeys.permissions,
     enabled: options.enabled ?? true,
-    queryFn: () => rawRequest<PermissionOption[]>(PERMISSIONS_ENDPOINT),
+    queryFn: () => rawRequest<PermissionOption[]>(ROLE_ENDPOINTS.PERMISSIONS),
   });
 }

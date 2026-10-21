@@ -24,4 +24,5 @@ export {
   UserListEnvelopeDto,
   userResponseSchema,
   userRoleResponseSchema,
+  userTenantResponseSchema,
 } from './user-response.dto.js';

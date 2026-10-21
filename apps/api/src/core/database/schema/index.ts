@@ -18,3 +18,7 @@ export { userTenants } from './user-tenants.js';
 export type { NewUserTenant, UserTenant } from './user-tenants.js';
 export { tenantInvitations } from './tenant-invitations.js';
 export type { NewTenantInvitation, TenantInvitationRow } from './tenant-invitations.js';
+export { administrativeUnits } from './administrative-units.js';
+export type { AdministrativeUnit, NewAdministrativeUnit } from './administrative-units.js';
+export { tenantDetails } from './tenant-details.js';
+export type { NewTenantDetail, TenantDetail } from './tenant-details.js';

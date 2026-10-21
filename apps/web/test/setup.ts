@@ -20,6 +20,11 @@ if (typeof window.matchMedia !== 'function') {
   });
 }
 
+// jsdom has no scrollIntoView; the Combobox keeps its active option in view.
+if (typeof Element.prototype.scrollIntoView !== 'function') {
+  Element.prototype.scrollIntoView = () => undefined;
+}
+
 // Stub fetch to fail by default — tests must explicitly mock endpoints
 const defaultFetchStub = vi.fn((url: string) => {
   if (url.includes('/api/v1/auth/refresh')) {

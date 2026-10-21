@@ -10,6 +10,8 @@ import { Label } from './label';
 export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> {
   error?: string | undefined;
   label?: string | undefined;
+  /** Shows the asterisk on the label and sets `aria-required`. */
+  isRequired?: boolean | undefined;
   size?: ControlSize | undefined;
   /** Decorative leading icon; the input's padding makes room for it. */
   startIcon?: ReactNode;
@@ -26,6 +28,7 @@ export function Input({
   id,
   label,
   error,
+  isRequired = false,
   size = 'md',
   startIcon,
   endAction,
@@ -36,7 +39,11 @@ export function Input({
 
   return (
     <div className="w-full space-y-1.5">
-      {label === undefined ? null : <Label htmlFor={id}>{label}</Label>}
+      {label === undefined ? null : (
+        <Label htmlFor={id} isRequired={isRequired}>
+          {label}
+        </Label>
+      )}
       <div className="relative">
         {startIcon === undefined ? null : (
           <span
@@ -48,6 +55,7 @@ export function Input({
         )}
         <input
           id={id}
+          aria-required={isRequired}
           aria-invalid={hasError}
           aria-describedby={fieldErrorId(id, hasError)}
           className={cn(

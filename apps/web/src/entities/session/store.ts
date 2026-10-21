@@ -41,7 +41,7 @@ interface AuthState {
   status: SessionStatus;
   accessToken: string | null;
   user: PublicUser | null;
-  /** The tenant this tab acts in; `null` for a platform user or before the choice. */
+  /** The tenant this tab acts in; `null` before the choice is made. */
   activeTenantId: string | null;
   isAuthenticated: boolean;
   setAuth: (accessToken: string, user: PublicUser) => void;
@@ -54,9 +54,16 @@ interface AuthState {
  * The stored choice, but only while it is still one of the account's tenants.
  * With a single membership there is nothing to choose, so it is chosen here
  * instead of showing a one-item picker.
+ *
+ * A platform account has no memberships and may act in any tenant, so its
+ * stored choice is kept as it is: the authority on it is the tenant directory,
+ * which `useActiveTenant` resolves against once it arrives, and the API answers
+ * 404 for a tenant that has since gone away. Dropping it here instead meant
+ * every `GET /auth/me` — a reload, a refresh, another tab signing in — put the
+ * account back on the chooser one render after it had chosen.
  */
 function resolveActiveTenant(user: PublicUser, stored: string | null): string | null {
-  if (user.scope === 'platform') return null;
+  if (user.scope === 'platform') return stored;
   if (stored !== null && user.tenants.some((tenant) => tenant.id === stored)) return stored;
   const [only] = user.tenants;
   return user.tenants.length === 1 && only !== undefined ? only.id : null;

@@ -64,6 +64,23 @@ describe('MailService', () => {
     expect(html).toContain('&lt;script&gt;');
   });
 
+  it('never re-reads a substituted value as a placeholder', async () => {
+    // A display name that looks like a placeholder: substituting key by key
+    // replaced it with the real code on a later pass.
+    await service.sendResetPasswordMail({
+      toEmail: 'user@example.com',
+      recipientName: '{{otp}}',
+      otp: '104795',
+      ttlMinutes: 5,
+    });
+
+    // The name survives as itself: a second pass would have turned it into the
+    // code, and the greeting would read "Hi 104795".
+    const [html] = htmls;
+    expect(html).toContain('{{otp}}');
+    expect(html).not.toContain('>104795<');
+  });
+
   it('renders one box per digit of the reset code and leaves no placeholder behind', async () => {
     await service.sendResetPasswordMail({
       toEmail: 'user@example.com',

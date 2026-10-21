@@ -43,8 +43,11 @@ const PLATFORM_ADMIN: AuthContext = {
 describe('TenantsService', () => {
   let service: TenantsService;
   let repository: Record<'findById' | 'create' | 'update' | 'list' | 'count', Mock>;
+  let details: Record<'findByTenantId' | 'listByTenantIds' | 'upsert', Mock>;
+  let units: { resolveWard: Mock };
+  let storage: Record<'isEnabled' | 'signDownload' | 'deleteQuietly', unknown>;
   let audit: { record: Mock };
-  let authz: { current: Mock };
+  let authz: { current: Mock; invalidateTenant: Mock };
 
   const as = (actor: AuthContext, grants: readonly PermissionGrant[]): AuthContext => {
     authz.current.mockReturnValue(buildAbility(grants, { id: actor.id, tenantId: actor.tenantId }));
@@ -61,13 +64,29 @@ describe('TenantsService', () => {
       list: vi.fn(),
       count: vi.fn(),
     };
+    details = {
+      findByTenantId: vi.fn(() => Promise.resolve(undefined)),
+      listByTenantIds: vi.fn(() => Promise.resolve([])),
+      upsert: vi.fn(),
+    };
+    units = { resolveWard: vi.fn() };
+    // Storage off: a tenant without a logo never reaches the bucket.
+    storage = { isEnabled: false, signDownload: vi.fn(), deleteQuietly: vi.fn() };
     audit = { record: vi.fn() };
-    authz = { current: vi.fn() };
+    authz = { current: vi.fn(), invalidateTenant: vi.fn().mockResolvedValue(undefined) };
     const transactions = {
       runInRequestContext: vi.fn((fn: (tx: unknown) => Promise<unknown>) => fn({})),
     };
 
-    service = new TenantsService(transactions as never, repository as never, audit, authz as never);
+    service = new TenantsService(
+      transactions as never,
+      repository as never,
+      details as never,
+      audit,
+      authz as never,
+      units as never,
+      storage as never,
+    );
   });
 
   it('lets only a platform admin create a tenant, and audits it', async () => {

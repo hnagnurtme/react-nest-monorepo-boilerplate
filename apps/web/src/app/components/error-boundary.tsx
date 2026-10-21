@@ -2,6 +2,7 @@ import { RefreshCw } from 'lucide-react';
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 
 import i18n from '@/lib/i18n';
+import { isStaleChunkError, reloadForStaleChunk } from '@/lib/stale-chunk';
 import { Button, ErrorState, PageShell } from '@/shared/ui';
 
 interface Props {
@@ -24,6 +25,9 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   public override componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
+    // React.lazy surfaces a missing chunk here rather than through Vite's
+    // preload event. A stale tab after a deploy recovers with one reload.
+    if (isStaleChunkError(error) && reloadForStaleChunk()) return;
     // eslint-disable-next-line no-console
     console.error('Uncaught error in React Component:', error, errorInfo);
   }

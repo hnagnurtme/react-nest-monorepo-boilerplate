@@ -43,6 +43,7 @@ export function EmailStep({ isPending, onSubmit }: EmailStepProps) {
       <Input
         id="forgot-email"
         label={t('forgotPasswordModal.emailLabel')}
+        isRequired
         type="email"
         autoComplete="email"
         placeholder={t('forgotPasswordModal.inputPlaceholder')}

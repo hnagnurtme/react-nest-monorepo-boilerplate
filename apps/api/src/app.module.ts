@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 
 import { CoreModule } from './core/core.module.js';
+import { AdministrativeUnitsModule } from './modules/administrative-units/index.js';
 import { AuthModule } from './modules/auth/index.js';
 import { HealthModule } from './modules/health/index.js';
 import { RolesModule } from './modules/roles/index.js';
@@ -13,6 +14,14 @@ import { UsersModule } from './modules/users/index.js';
  * module that injects them.
  */
 @Module({
-  imports: [CoreModule, HealthModule, AuthModule, RolesModule, TenantsModule, UsersModule],
+  imports: [
+    CoreModule,
+    HealthModule,
+    AuthModule,
+    RolesModule,
+    TenantsModule,
+    UsersModule,
+    AdministrativeUnitsModule,
+  ],
 })
 export class AppModule {}

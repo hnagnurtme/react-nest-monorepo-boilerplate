@@ -5,9 +5,13 @@
     "fullName": "Name",
     "email": "Email",
     "role": "Roles",
+    "tenant": "Tenant",
     "status": "Status",
     "createdAt": "Created",
     "actions": "Actions"
+  },
+  "tenantScope": {
+    "platform": "Platform"
   },
   "status": {
     "active": "Active",
@@ -51,7 +55,7 @@
     "title": "Create user",
     "fullName": "Full name",
     "email": "Email",
-    "phone": "Phone (optional)",
+    "phone": "Phone",
     "phonePlaceholder": "+84901234567",
     "password": "Password",
     "tenant": "Tenant",
@@ -80,13 +84,15 @@
     "sendInvitation": "Email an invitation so the user sets their own password",
     "sendInvitationHint": "No password is set now. The user receives a link that expires after a limited time.",
     "manualPasswordHint": "You set the password yourself and pass it to the user out of band.",
-    "invitationSent": "User created. An invitation email has been sent."
+    "invitationSent": "User created. An invitation email has been sent.",
+    "panelDescription": "The account is created active; leaving the password blank sends an invitation instead."
   },
   "rolesDialog": {
     "title": "Edit roles for {{email}}",
     "save": "Save roles",
     "cancel": "Cancel",
-    "loading": "Loading roles..."
+    "loading": "Loading roles...",
+    "panelDescription": "Choose the roles this account holds in the active tenant."
   },
   "invite": {
     "prompt": "{{email}} already has an account. Invite it to join this tenant instead — the account holder has to accept.",

@@ -11,6 +11,11 @@ import { ToastProvider } from '@/shared/ui';
 
 import { jsonResponse } from './fixtures/auth';
 
+/** The OTP is six boxes now, labelled `1/6` … `6/6`. */
+function otpBox(position: number): HTMLElement {
+  return screen.getByLabelText(`${String(position)}/6`);
+}
+
 /**
  * Drives the real mutation hooks (nothing mocked but `fetch`), so the request
  * bodies the API will receive are asserted, not just the step transitions.
@@ -74,9 +79,10 @@ describe('forgot-password flow against the real mutation hooks', () => {
       });
     });
 
-    const otpInput = await screen.findByPlaceholderText('Enter the 6-digit code...');
-    // Non-digits are dropped, so a pasted "12 34-56" still submits a valid code.
-    await user.type(otpInput, '12 34-56');
+    await screen.findByLabelText('1/6');
+    // Non-digits are dropped, so a pasted "12 34-56" still fills the six boxes.
+    await user.click(otpBox(1));
+    await user.paste('12 34-56');
     await user.type(screen.getByPlaceholderText('Minimum 8 characters'), 'newpassword123');
     await user.type(screen.getByPlaceholderText('Re-enter your new password'), 'newpassword123');
     await user.click(screen.getByRole('button', { name: /Reset password/ }));
@@ -103,7 +109,10 @@ describe('forgot-password flow against the real mutation hooks', () => {
     await user.type(screen.getByPlaceholderText('Enter your email...'), 'user@example.com');
     await user.click(screen.getByRole('button', { name: /Send verification code/ }));
 
-    await user.type(await screen.findByPlaceholderText('Enter the 6-digit code...'), '123456');
+    await screen.findByLabelText('1/6');
+    for (const [index, digit] of Array.from('123456').entries()) {
+      await user.type(otpBox(index + 1), digit);
+    }
     await user.type(screen.getByPlaceholderText('Minimum 8 characters'), 'newpassword123');
     await user.type(screen.getByPlaceholderText('Re-enter your new password'), 'different');
     await user.click(screen.getByRole('button', { name: /Reset password/ }));

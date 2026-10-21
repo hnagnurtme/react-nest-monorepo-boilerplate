@@ -50,20 +50,19 @@ redact: {
 
 ## 3. GitHub Actions CI Pipeline (`.github/workflows/ci.yml`)
 
-Chạy khi push/PR vào `main` và `develop`. `ci-gate` gom kết quả mọi job và là check duy nhất cần đặt làm branch protection.
+Chỉ chạy khi mở PR vào `main` — không chạy khi push, không chạy với PR vào nhánh khác. Chạy tay trên nhánh khác: `gh workflow run "CI Pipeline" --ref <branch>`. Pipeline là **một job duy nhất** tên `CI Gate`; đó cũng là check duy nhất cần đặt làm branch protection (kèm "require branches to be up to date"). Bảng dưới liệt kê các **bước** bên trong job đó.
 
-| Job             | Chặn cái gì                                                                            | Cưỡng chế quy tắc                                                   |
-| :-------------- | :------------------------------------------------------------------------------------- | :------------------------------------------------------------------ |
-| `secret-scan`   | Secret lọt vào repo (gitleaks)                                                         | [rules/07-security.md](rules/07-security.md) A1                     |
-| `changes`       | Phát hiện phạm vi thay đổi (docs-only thì bỏ qua job code)                             | [rules/09-git-va-ci.md](rules/09-git-va-ci.md)                      |
-| `commitlint`    | Commit không theo Conventional Commits (chỉ trên PR)                                   | [rules/09-git-va-ci.md](rules/09-git-va-ci.md) B1                   |
-| `quality`       | `format:check` + lint `--max-warnings=0` (gồm ranh giới kiến trúc)                     | rules 00–04                                                         |
-| `typecheck`     | Lỗi kiểu TypeScript                                                                    | [rules/01-typescript.md](rules/01-typescript.md)                    |
-| `test-unit`     | Unit test và dependency audit (`pnpm audit:ci`)                                        | [rules/08-testing.md](rules/08-testing.md)                          |
-| `integration`   | Postgres 16 + Redis 7 thật: migrate (hai lần), integration test bằng role app, RLS     | [rules/08-testing.md](rules/08-testing.md) C, D                     |
-| `openapi-drift` | API contract lệch với code                                                             | [rules/06-api-design.md](rules/06-api-design.md) F2                 |
-| `conventions`   | Grep nhanh: `timestamp()` thiếu `withTimezone`, `pgEnum`, import `axios` trong modules | [rules/03-database-drizzle.md](rules/03-database-drizzle.md) B2, B6 |
-| `ci-gate`       | Tổng hợp kết quả mọi job                                                               | [rules/09-git-va-ci.md](rules/09-git-va-ci.md)                      |
+| Bước            | Chặn cái gì                                                                                       | Cưỡng chế quy tắc                                                   |
+| :-------------- | :------------------------------------------------------------------------------------------------ | :------------------------------------------------------------------ |
+| `secret-scan`   | Secret lọt vào repo (gitleaks)                                                                    | [rules/07-security.md](rules/07-security.md) A1                     |
+| `scope`         | Phát hiện phạm vi thay đổi; chỉ còn tác dụng với `workflow_dispatch` (PR vào `main` luôn chạy đủ) | [rules/09-git-va-ci.md](rules/09-git-va-ci.md)                      |
+| `commitlint`    | Commit không theo Conventional Commits (chỉ trên PR)                                              | [rules/09-git-va-ci.md](rules/09-git-va-ci.md) B1                   |
+| `quality`       | `format:check` + lint `--max-warnings=0` (gồm ranh giới kiến trúc)                                | rules 00–04                                                         |
+| `typecheck`     | Lỗi kiểu TypeScript                                                                               | [rules/01-typescript.md](rules/01-typescript.md)                    |
+| `test-unit`     | Unit test và dependency audit (`pnpm audit:ci`)                                                   | [rules/08-testing.md](rules/08-testing.md)                          |
+| `integration`   | Postgres 16 + Redis 7 thật: migrate (hai lần), integration test bằng role app, RLS                | [rules/08-testing.md](rules/08-testing.md) C, D                     |
+| `openapi-drift` | API contract lệch với code                                                                        | [rules/06-api-design.md](rules/06-api-design.md) F2                 |
+| `conventions`   | Grep nhanh: `timestamp()` thiếu `withTimezone`, `pgEnum`, import `axios` trong modules            | [rules/03-database-drizzle.md](rules/03-database-drizzle.md) B2, B6 |
 
 File đầy đủ nằm tại [`.github/workflows/ci.yml`](../.github/workflows/ci.yml). Các điểm đáng chú ý:
 

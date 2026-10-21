@@ -314,6 +314,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tenants/mine": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Every tenant the caller may act in — the tenant picker
+         * @description Answers before a tenant has been chosen, so it needs no x-tenant-id header. Membership comes from the database-loaded profile; a platform account gets every active tenant.
+         */
+        get: operations["TenantsController_listMine_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tenants/{id}": {
         parameters: {
             query?: never;
@@ -330,6 +350,57 @@ export interface paths {
         head?: never;
         /** Update a tenant (platform admin may also activate or deactivate) */
         patch: operations["TenantsController_update_v1"];
+        trace?: never;
+    };
+    "/api/v1/tenants/{id}/logo/upload-url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Sign an upload for a tenant logo */
+        post: operations["TenantsController_signLogoUpload_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/administrative-units/provinces": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Every province and centrally-governed city */
+        get: operations["AdministrativeUnitsController_listProvinces_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/administrative-units/provinces/{code}/wards": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The wards of one province */
+        get: operations["AdministrativeUnitsController_listWards_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/users": {
@@ -676,6 +747,16 @@ export interface components {
                 isActive: boolean;
                 /** Format: date-time */
                 createdAt: string;
+                detail: {
+                    /** Format: uri */
+                    logoUrl: string | null;
+                    addressLine: string | null;
+                    wardCode: string | null;
+                    wardName: string | null;
+                    provinceCode: string | null;
+                    provinceName: string | null;
+                    fullAddress: string | null;
+                } | null;
             }[];
             meta: {
                 page: number;
@@ -686,6 +767,12 @@ export interface components {
         };
         CreateTenantDto: {
             name: string;
+            detail?: {
+                addressLine?: string | null;
+                wardCode?: string | null;
+                provinceCode?: string | null;
+                logoObjectKey?: string | null;
+            };
             slug?: string;
         };
         TenantEnvelopeDto: {
@@ -697,11 +784,78 @@ export interface components {
                 isActive: boolean;
                 /** Format: date-time */
                 createdAt: string;
+                detail: {
+                    /** Format: uri */
+                    logoUrl: string | null;
+                    addressLine: string | null;
+                    wardCode: string | null;
+                    wardName: string | null;
+                    provinceCode: string | null;
+                    provinceName: string | null;
+                    fullAddress: string | null;
+                } | null;
             };
+        };
+        TenantPickerEnvelopeDto: {
+            data: {
+                /** Format: uuid */
+                id: string;
+                name: string;
+                slug: string;
+                isActive: boolean;
+                /** Format: date-time */
+                createdAt: string;
+                detail: {
+                    /** Format: uri */
+                    logoUrl: string | null;
+                    addressLine: string | null;
+                    wardCode: string | null;
+                    wardName: string | null;
+                    provinceCode: string | null;
+                    provinceName: string | null;
+                    fullAddress: string | null;
+                } | null;
+            }[];
         };
         UpdateTenantDto: {
             name?: string;
             isActive?: boolean;
+            detail?: {
+                addressLine?: string | null;
+                wardCode?: string | null;
+                provinceCode?: string | null;
+                logoObjectKey?: string | null;
+            };
+        };
+        LogoUploadUrlDto: {
+            /** @enum {string} */
+            contentType: "image/png" | "image/jpeg" | "image/webp";
+        };
+        LogoUploadEnvelopeDto: {
+            data: {
+                objectKey: string;
+                /** Format: uri */
+                url: string;
+                expiresIn: number;
+                contentType: string;
+                maxBytes: number;
+            };
+        };
+        ProvinceListEnvelopeDto: {
+            data: {
+                code: string;
+                name: string;
+                fullName: string;
+                parentCode: string | null;
+            }[];
+        };
+        WardListEnvelopeDto: {
+            data: {
+                code: string;
+                name: string;
+                fullName: string;
+                parentCode: string | null;
+            }[];
         };
         UserListEnvelopeDto: {
             data: {
@@ -719,6 +873,11 @@ export interface components {
                 }[];
                 /** Format: uuid */
                 tenantId: string | null;
+                tenants: {
+                    /** Format: uuid */
+                    id: string;
+                    name: string;
+                }[];
                 isActive: boolean;
                 isEmailVerified: boolean;
                 /** Format: date-time */
@@ -757,6 +916,11 @@ export interface components {
                 }[];
                 /** Format: uuid */
                 tenantId: string | null;
+                tenants: {
+                    /** Format: uuid */
+                    id: string;
+                    name: string;
+                }[];
                 isActive: boolean;
                 isEmailVerified: boolean;
                 /** Format: date-time */
@@ -1898,6 +2062,38 @@ export interface operations {
             };
         };
     };
+    TenantsController_listMine_v1: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description The tenant to act in. Must be one of the tenants from `GET /auth/me`. */
+                "x-tenant-id"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's tenants, ordered by name */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenantPickerEnvelopeDto"];
+                };
+            };
+            /** @description Not authenticated, or the token is invalid or expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+        };
+    };
     TenantsController_get_v1: {
         parameters: {
             query?: never;
@@ -2002,6 +2198,145 @@ export interface operations {
             };
             /** @description The payload failed validation */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+        };
+    };
+    TenantsController_signLogoUpload_v1: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description The tenant to act in. Must be one of the tenants from `GET /auth/me`. */
+                "x-tenant-id"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LogoUploadUrlDto"];
+            };
+        };
+        responses: {
+            /** @description The signed PUT and the key to confirm */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LogoUploadEnvelopeDto"];
+                };
+            };
+            /** @description Not authenticated, or the token is invalid or expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description Authenticated, but not allowed to do this */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description No such resource, or the caller may not know it exists */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description The payload failed validation */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+        };
+    };
+    AdministrativeUnitsController_listProvinces_v1: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description The tenant to act in. Must be one of the tenants from `GET /auth/me`. */
+                "x-tenant-id"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The provinces, ordered by code */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProvinceListEnvelopeDto"];
+                };
+            };
+            /** @description Not authenticated, or the token is invalid or expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+        };
+    };
+    AdministrativeUnitsController_listWards_v1: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description The tenant to act in. Must be one of the tenants from `GET /auth/me`. */
+                "x-tenant-id"?: string;
+            };
+            path: {
+                /** @description Province code, zero-padded to two digits */
+                code: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The wards, ordered by code */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WardListEnvelopeDto"];
+                };
+            };
+            /** @description Not authenticated, or the token is invalid or expired */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": unknown;
+                };
+            };
+            /** @description No such resource, or the caller may not know it exists */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

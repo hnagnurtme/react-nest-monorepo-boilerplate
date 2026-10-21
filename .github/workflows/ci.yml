@@ -1,11 +1,17 @@
 # Enforces docs/rules/09-git-va-ci.md section E.
 name: CI Pipeline
 
+# Pull requests into `main` only, no `push`: a merge would re-test the tree the
+# pull request already passed, and a pull request into any other branch is not
+# a release gate. That makes branch protection load-bearing — require
+# `CI Gate` **and** an up-to-date branch, or a merged tree may never have been
+# tested. Drafts are skipped; marking one ready for review runs the pipeline.
+# Need a run on another branch? `gh workflow run "CI Pipeline" --ref <branch>`.
 on:
-  push:
-    branches: [main, develop]
+  workflow_dispatch:
   pull_request:
-    branches: [main, develop]
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -20,200 +26,16 @@ permissions:
   pull-requests: read
 
 jobs:
-  # E1: secret scan — runs first so it fails fast
-  secret-scan:
-    name: Secret Scan
+  # One job on purpose. Actions bills every job rounded up to a whole minute and
+  # each one paid for its own checkout + pnpm install; nine jobs cost roughly
+  # 14 billed minutes for 5 minutes of work. The job keeps the name branch
+  # protection requires. Every check step runs with `!cancelled()`, so one
+  # failure does not hide the rest.
+  ci:
+    name: CI Gate
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: read
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-      # The CLI instead of gitleaks/gitleaks-action: the action demands a paid
-      # GITLEAKS_LICENSE for GitHub organisations, the CLI is free. The release
-      # is pinned and its tarball is checked against the published checksums.
-      - name: Install gitleaks
-        env:
-          GITLEAKS_VERSION: 8.30.1
-        run: |
-          base="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}"
-          archive="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
-          curl -sSfL -o "$archive" "${base}/${archive}"
-          curl -sSfL -o checksums.txt "${base}/gitleaks_${GITLEAKS_VERSION}_checksums.txt"
-          grep " ${archive}\$" checksums.txt | sha256sum -c -
-          tar -xzf "$archive" gitleaks
-          sudo install gitleaks /usr/local/bin/gitleaks
-      - name: Scan the repository history
-        run: gitleaks detect --config .gitleaks.toml --no-banner --redact --verbose
-
-  # Path & Branch change detection
-  changes:
-    name: Detect Changes & Scope
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: read
-    outputs:
-      is_main: ${{ steps.branch.outputs.is_main }}
-      docs_only: ${{ steps.filter.outputs.docs_only }}
-      ts_any: ${{ steps.evaluate.outputs.ts_any }}
-      api_any: ${{ steps.evaluate.outputs.api_any }}
-      web_any: ${{ steps.evaluate.outputs.web_any }}
-    steps:
-      - uses: actions/checkout@v6
-      - id: branch
-        run: |
-          if [ "${{ github.base_ref }}" = "main" ] || [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            echo "is_main=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "is_main=false" >> "$GITHUB_OUTPUT"
-          fi
-      - uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          filters: |
-            docs_only:
-              - 'docs/**'
-              - '*.md'
-              - 'LICENSE'
-              - 'AGENTS.md'
-              - '.github/ISSUE_TEMPLATE/**'
-              - '.github/pull_request_template.md'
-            shared:
-              - 'packages/**'
-              - 'package.json'
-              - 'pnpm-lock.yaml'
-              - 'turbo.json'
-              - 'tsconfig.json'
-              - '.github/workflows/ci.yml'
-            api:
-              - 'apps/api/**'
-            web:
-              - 'apps/web/**'
-      - id: evaluate
-        run: |
-          is_main="${{ steps.branch.outputs.is_main }}"
-          shared="${{ steps.filter.outputs.shared }}"
-          api="${{ steps.filter.outputs.api }}"
-          web="${{ steps.filter.outputs.web }}"
-
-          if [ "$is_main" = "true" ] || [ "$shared" = "true" ] || [ "$api" = "true" ] || [ "$web" = "true" ]; then
-            echo "ts_any=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "ts_any=false" >> "$GITHUB_OUTPUT"
-          fi
-
-          if [ "$is_main" = "true" ] || [ "$shared" = "true" ] || [ "$api" = "true" ]; then
-            echo "api_any=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "api_any=false" >> "$GITHUB_OUTPUT"
-          fi
-
-          if [ "$is_main" = "true" ] || [ "$shared" = "true" ] || [ "$web" = "true" ]; then
-            echo "web_any=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "web_any=false" >> "$GITHUB_OUTPUT"
-          fi
-
-  # 09 section B: commits must follow Conventional Commits (lightweight, no pnpm install)
-  commitlint:
-    name: Commit Message
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    permissions:
-      contents: read
-      pull-requests: read
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-      - uses: wagoid/commitlint-github-action@v6
-        with:
-          configFile: commitlint.config.mjs
-
-  # Parallel Node/TS job 1: Format & Lint
-  quality:
-    name: Code Quality (Format & Lint)
-    needs: changes
-    if: needs.changes.outputs.ts_any == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-      - uses: actions/setup-node@v5
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-      - name: Cache Turborepo
-        uses: actions/cache@v4
-        with:
-          path: .turbo
-          key: turbo-quality-${{ runner.os }}-${{ github.sha }}
-          restore-keys: turbo-quality-${{ runner.os }}-
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm format:check
-      - run: pnpm turbo run lint -- --max-warnings=0
-
-  # Parallel Node/TS job 2: Typecheck
-  typecheck:
-    name: Typecheck
-    needs: changes
-    if: needs.changes.outputs.ts_any == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-      - uses: actions/setup-node@v5
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-      - name: Cache Turborepo
-        uses: actions/cache@v4
-        with:
-          path: .turbo
-          key: turbo-typecheck-${{ runner.os }}-${{ github.sha }}
-          restore-keys: turbo-typecheck-${{ runner.os }}-
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm turbo run typecheck
-
-  # Parallel Node/TS job 3: Unit tests & Audit
-  test-unit:
-    name: Unit Tests & Dependency Audit
-    needs: changes
-    if: needs.changes.outputs.ts_any == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-      - uses: actions/setup-node@v5
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-      - name: Cache Turborepo
-        uses: actions/cache@v4
-        with:
-          path: .turbo
-          key: turbo-test-${{ runner.os }}-${{ github.sha }}
-          restore-keys: turbo-test-${{ runner.os }}-
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm turbo run test
-      - run: pnpm audit:ci
-
-  # 08-testing.md sections C+D: RLS and integration tests need a real Postgres
-  integration:
-    name: Integration & RLS
-    needs: changes
-    if: needs.changes.outputs.api_any == 'true'
-    runs-on: ubuntu-latest
+    timeout-minutes: 20
     services:
       postgres:
         image: postgres:16-alpine
@@ -231,144 +53,189 @@ jobs:
         options: >-
           --health-cmd "redis-cli ping" --health-interval 10s
           --health-timeout 5s --health-retries 5
-    env:
-      MIGRATION_DATABASE_URL: postgres://postgres:postgres@localhost:5432/boilerplate_test
-      DATABASE_URL: postgres://boilerplate_app:app@localhost:5432/boilerplate_test
-      REDIS_URL: redis://localhost:6379
-      COOKIE_SECURE: 'false'
     steps:
+      # Full history: gitleaks scans all of it, commitlint walks the PR range.
       - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v4
         with:
-          version: ${{ env.PNPM_VERSION }}
-      - uses: actions/setup-node@v5
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+          fetch-depth: 0
 
-      - name: Generate throwaway JWT secrets
+      # ---- Scope -------------------------------------------------------------
+      - id: branch
         run: |
-          {
-            echo "JWT_ACCESS_SECRET=$(openssl rand -hex 32)"
-            echo "JWT_REFRESH_SECRET=$(openssl rand -hex 32)"
-          } >> "$GITHUB_ENV"
-
-      - name: Check if SQL migrations exist
-        id: check-migrations
-        run: |
-          if find apps/api/drizzle -type f -name '*.sql' -print -quit 2>/dev/null | grep -q .; then
-            echo "has_migrations=true" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.base_ref }}" = "main" ] || [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "is_main=true" >> "$GITHUB_OUTPUT"
           else
-            echo "has_migrations=false" >> "$GITHUB_OUTPUT"
-            echo "No SQL migrations found in apps/api/drizzle. Skipping DB migration and RLS tests."
+            echo "is_main=false" >> "$GITHUB_OUTPUT"
           fi
-
-      - name: Run migrations (privileged connection, SET ROLE boilerplate_owner)
-        if: steps.check-migrations.outputs.has_migrations == 'true'
-        run: pnpm db:migrate
-
-      # Deploys re-run migrate.ts against a database that already has roles and
-      # tables; a non-idempotent step here broke production once.
-      - name: Re-run migrations (must be idempotent)
-        if: steps.check-migrations.outputs.has_migrations == 'true'
-        run: pnpm db:migrate
-
-      - name: Integration tests (app role, RLS in effect)
-        if: steps.check-migrations.outputs.has_migrations == 'true'
-        run: pnpm test:integration
-
-  # 06-api-design.md section F2: a regenerated spec must produce no diff
-  openapi-drift:
-    name: OpenAPI Contract Drift
-    needs: changes
-    if: needs.changes.outputs.api_any == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
         with:
-          version: ${{ env.PNPM_VERSION }}
-      - uses: actions/setup-node@v5
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm contract:generate
-      - name: Fail if the contract was not re-committed
+          token: ${{ secrets.GITHUB_TOKEN }}
+          filters: |
+            shared:
+              - 'packages/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'turbo.json'
+              - 'tsconfig.json'
+              - '.github/workflows/ci.yml'
+            api:
+              - 'apps/api/**'
+            web:
+              - 'apps/web/**'
+      # PRs into main always run everything (09 E3); a docs-only change runs
+      # none of the code checks and still reports a green CI Gate.
+      - id: scope
         run: |
-          if ! git diff --quiet; then
-            echo "::error::API contract is out of sync with the code. Run 'pnpm contract:generate' and commit the result."
-            git diff --stat
-            exit 1
-          fi
+          is_main="${{ steps.branch.outputs.is_main }}"
+          shared="${{ steps.filter.outputs.shared }}"
+          api="${{ steps.filter.outputs.api }}"
+          web="${{ steps.filter.outputs.web }}"
+          any() { for v in "$@"; do [ "$v" = "true" ] && return 0; done; return 1; }
+          any "$is_main" "$shared" "$api" "$web" && ts=true || ts=false
+          any "$is_main" "$shared" "$api" && api_any=true || api_any=false
+          any "$is_main" "$shared" "$web" && web_any=true || web_any=false
+          {
+            echo "ts_any=$ts"
+            echo "api_any=$api_any"
+            echo "web_any=$web_any"
+          } >> "$GITHUB_OUTPUT"
+          echo "scope: ts=$ts api=$api_any web=$web_any"
 
-  # Cheap grep guards for conventions no linter covers (docs/rules/03-database-drizzle.md B2/B6,
-  # docs/rules/02-backend-nestjs.md A2). ESLint already blocks axios in modules; this catches it
-  # even if the lint config is edited.
-  conventions:
-    name: Conventions
-    needs: changes
-    if: needs.changes.outputs.api_any == 'true' || needs.changes.outputs.web_any == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
-        if: needs.changes.outputs.web_any == 'true'
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-      # docs/rules/11-ui-design-system.md: tokens, type and radius scales, one icon
-      # set, no emoji. Pure Node, so it needs no install step.
-      - name: UI design-system conventions (apps/web)
-        if: needs.changes.outputs.web_any == 'true'
-        run: node scripts/check-ui-conventions.mjs
-      - name: No bare timestamp() in the schema (use withTimezone)
-        if: needs.changes.outputs.api_any == 'true'
+      # ---- E1: secret scan (always) -----------------------------------------
+      # The CLI instead of gitleaks/gitleaks-action: the action demands a paid
+      # GITLEAKS_LICENSE for GitHub organisations, the CLI is free. The release
+      # is pinned and its tarball is checked against the published checksums.
+      - name: Install gitleaks
+        env:
+          GITLEAKS_VERSION: 8.30.1
+        run: |
+          base="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}"
+          archive="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSfL -o "$archive" "${base}/${archive}"
+          curl -sSfL -o checksums.txt "${base}/gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+          grep " ${archive}\$" checksums.txt | sha256sum -c -
+          tar -xzf "$archive" gitleaks
+          sudo install gitleaks /usr/local/bin/gitleaks
+          rm -f "$archive" checksums.txt gitleaks
+      - name: Secret scan (repository history)
+        run: gitleaks detect --config .gitleaks.toml --no-banner --redact --verbose
+
+      # ---- Conventions: plain grep/node, no install needed -------------------
+      # Cheap guards for conventions no linter covers (docs/rules/03-database-drizzle.md
+      # B2/B6, docs/rules/02-backend-nestjs.md A2). ESLint already blocks axios in
+      # modules; this catches it even if the lint config is edited.
+      - name: 'Conventions: no bare timestamp() in the schema (use withTimezone)'
+        if: ${{ !cancelled() && steps.scope.outputs.api_any == 'true' }}
         run: |
           if grep -nE "timestamp\(" apps/api/src/core/database/schema/*.ts | grep -v "withTimezone"; then
             echo "::error::timestamp() without withTimezone in apps/api/src/core/database/schema"
             exit 1
           fi
-      - name: No pgEnum in the schema (use text + CHECK)
-        if: needs.changes.outputs.api_any == 'true'
+      - name: 'Conventions: no pgEnum in the schema (use text + CHECK)'
+        if: ${{ !cancelled() && steps.scope.outputs.api_any == 'true' }}
         run: |
           if grep -nE "pgEnum\(" apps/api/src/core/database/schema/*.ts; then
             echo "::error::pgEnum is banned; use a text column with a CHECK constraint"
             exit 1
           fi
-      - name: No axios import in modules (outbound HTTP belongs in integrations)
-        if: needs.changes.outputs.api_any == 'true'
+      - name: 'Conventions: no axios import in modules (outbound HTTP belongs in integrations)'
+        if: ${{ !cancelled() && steps.scope.outputs.api_any == 'true' }}
         run: |
           if grep -rnE "from ['\"]axios['\"]" apps/api/src/modules; then
             echo "::error::axios imported under apps/api/src/modules; use an adapter in src/integrations"
             exit 1
           fi
 
-  # Aggregator Gate: Single required check for GitHub Branch Protection
-  ci-gate:
-    name: CI Gate
-    needs:
-      - secret-scan
-      - commitlint
-      - changes
-      - quality
-      - typecheck
-      - test-unit
-      - openapi-drift
-      - integration
-      - conventions
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Evaluate pipeline results
-        run: |
-          results='${{ toJSON(needs) }}'
-          echo "CI Status Evaluation: $results"
+      # ---- Toolchain (once) --------------------------------------------------
+      # Installed when there is TS to check, or on a PR for commitlint.
+      - uses: pnpm/action-setup@v4
+        if: ${{ !cancelled() && (steps.scope.outputs.ts_any == 'true' || github.event_name == 'pull_request') }}
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v5
+        if: ${{ !cancelled() && (steps.scope.outputs.ts_any == 'true' || github.event_name == 'pull_request') }}
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - name: Cache Turborepo
+        if: ${{ !cancelled() && steps.scope.outputs.ts_any == 'true' }}
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-ci-${{ runner.os }}-${{ github.sha }}
+          restore-keys: turbo-ci-${{ runner.os }}-
+      - name: Install dependencies
+        id: install
+        if: ${{ !cancelled() && (steps.scope.outputs.ts_any == 'true' || github.event_name == 'pull_request') }}
+        run: pnpm install --frozen-lockfile
 
-          failed=$(echo "$results" | jq -r 'to_entries[] | select(.value.result == "failure" or .value.result == "cancelled") | .key')
-          if [ -n "$failed" ]; then
-            echo "::error::The following required CI jobs failed: $failed"
+      # ---- 09 B: Conventional Commits on the PR's commits --------------------
+      - name: Commit messages
+        if: ${{ !cancelled() && github.event_name == 'pull_request' && steps.install.outcome == 'success' }}
+        run: >-
+          pnpm exec commitlint --verbose
+          --from ${{ github.event.pull_request.base.sha }}
+          --to ${{ github.event.pull_request.head.sha }}
+
+      # ---- Code checks -------------------------------------------------------
+      # docs/rules/11-ui-design-system.md: tokens, type and radius scales, one icon set, no emoji.
+      - name: UI design-system conventions (apps/web)
+        if: ${{ !cancelled() && steps.scope.outputs.web_any == 'true' }}
+        run: node scripts/check-ui-conventions.mjs
+      - name: Format check
+        if: ${{ !cancelled() && steps.scope.outputs.ts_any == 'true' && steps.install.outcome == 'success' }}
+        run: pnpm format:check
+      # One turbo graph: shared `^build` deps are built once and the tasks share
+      # the runner's cores. `--max-warnings=0` lives in every package's lint script.
+      - name: Lint, typecheck, unit tests
+        if: ${{ !cancelled() && steps.scope.outputs.ts_any == 'true' && steps.install.outcome == 'success' }}
+        run: pnpm turbo run lint typecheck test --continue
+      - name: Dependency audit
+        if: ${{ !cancelled() && steps.scope.outputs.ts_any == 'true' && steps.install.outcome == 'success' }}
+        run: pnpm audit:ci
+
+      # 06-api-design.md section F2: a regenerated spec must produce no diff
+      - name: OpenAPI contract drift
+        if: ${{ !cancelled() && steps.scope.outputs.api_any == 'true' && steps.install.outcome == 'success' }}
+        run: |
+          pnpm contract:generate
+          if ! git diff --quiet; then
+            echo "::error::API contract is out of sync with the code. Run 'pnpm contract:generate' and commit the result."
+            git diff --stat
             exit 1
           fi
 
-          echo "All checks passed or appropriately skipped based on scope."
+      # ---- 08-testing.md C+D: RLS and integration tests on a real Postgres ---
+      # Env is exported only here, so the steps above never see a live database.
+      - name: Prepare integration environment
+        id: integration-env
+        if: ${{ !cancelled() && steps.scope.outputs.api_any == 'true' && steps.install.outcome == 'success' }}
+        run: |
+          {
+            echo "MIGRATION_DATABASE_URL=postgres://postgres:postgres@localhost:5432/boilerplate_test"
+            echo "DATABASE_URL=postgres://boilerplate_app:app@localhost:5432/boilerplate_test"
+            echo "REDIS_URL=redis://localhost:6379"
+            echo "COOKIE_SECURE=false"
+            echo "JWT_ACCESS_SECRET=$(openssl rand -hex 32)"
+            echo "JWT_REFRESH_SECRET=$(openssl rand -hex 32)"
+          } >> "$GITHUB_ENV"
+          if find apps/api/drizzle -type f -name '*.sql' -print -quit 2>/dev/null | grep -q .; then
+            echo "has_migrations=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_migrations=false" >> "$GITHUB_OUTPUT"
+            echo "No SQL migrations found in apps/api/drizzle. Skipping DB migration and RLS tests."
+          fi
+      - name: Run migrations (privileged connection, SET ROLE boilerplate_owner)
+        id: migrate
+        if: ${{ !cancelled() && steps.integration-env.outputs.has_migrations == 'true' }}
+        run: pnpm db:migrate
+      # Deploys re-run migrate.ts against a database that already has roles and
+      # tables; a non-idempotent step here broke production once.
+      - name: Re-run migrations (must be idempotent)
+        id: migrate-again
+        if: ${{ !cancelled() && steps.migrate.outcome == 'success' }}
+        run: pnpm db:migrate
+      - name: Integration tests (app role, RLS in effect)
+        if: ${{ !cancelled() && steps.migrate-again.outcome == 'success' }}
+        run: pnpm test:integration

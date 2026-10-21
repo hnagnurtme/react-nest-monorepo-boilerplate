@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
  * next to a borderless neutral chip reads as two different components.
  */
 const TONE_STYLES = {
-  neutral: 'bg-muted text-muted-foreground border-border',
+  neutral: 'bg-chip text-muted-foreground border-border-strong',
   primary: 'bg-primary-light text-primary border-primary/25',
   success: 'bg-success-light text-success border-success-border',
   warning: 'bg-warning-light text-warning border-warning-border',

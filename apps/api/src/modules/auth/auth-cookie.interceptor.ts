@@ -33,6 +33,7 @@ export class AuthCookieInterceptor implements NestInterceptor {
         const typed = result as AuthResult<unknown>;
 
         for (const cookie of typed.cookies) {
+          this.clearHostOnly(response, cookie.name, cookie.path);
           response.cookie(cookie.name, cookie.value, {
             ...this.baseOptions(),
             httpOnly: cookie.httpOnly,
@@ -46,11 +47,28 @@ export class AuthCookieInterceptor implements NestInterceptor {
           // silently keeps the original.
           response.clearCookie(name, { ...this.baseOptions(), path: '/api/v1/auth' });
           response.clearCookie(name, { ...this.baseOptions(), path: '/' });
+          this.clearHostOnly(response, name, '/api/v1/auth');
+          this.clearHostOnly(response, name, '/');
         }
 
         return typed.body;
       }),
     );
+  }
+
+  /**
+   * Expires the host-only cookie of this name, when cookies are shared on a
+   * domain.
+   *
+   * A browser that signed in before `COOKIE_DOMAIN` was set still holds the
+   * host-only pair, and a `Domain=` cookie does not replace it — the two live
+   * side by side, and the stale one is sent first. A stale `refresh_token` sent
+   * first reads as a reused token and revokes the whole family. Clearing it here
+   * means one sign-in is enough to leave the browser with one cookie of each.
+   */
+  private clearHostOnly(response: Response, name: string, path: string): void {
+    if (this.config.cookie.domain === undefined) return;
+    response.clearCookie(name, { ...this.baseOptions(), domain: undefined, path });
   }
 
   private baseOptions(): CookieOptions {

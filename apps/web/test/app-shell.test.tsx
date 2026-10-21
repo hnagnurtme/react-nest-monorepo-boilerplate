@@ -22,6 +22,7 @@ function renderShell(entry: string) {
       <Route element={<AppLayout />}>
         <Route path="/" element={<div data-testid="page">Home</div>} />
         <Route path="/users" element={<div data-testid="page">Users</div>} />
+        <Route path="/tenants" element={<div data-testid="page">Tenants</div>} />
       </Route>
       <Route path="/select-tenant" element={<div data-testid="chooser">Choose</div>} />
     </Routes>,
@@ -67,26 +68,27 @@ describe('the app shell', () => {
     // A member holds read:User, so the section stays — with Users and nothing else.
     expect(within(sidebar()).getByRole('link', { name: 'Users' })).toBeInTheDocument();
     expect(within(sidebar()).queryByRole('link', { name: 'Roles' })).not.toBeInTheDocument();
-    // No read:Role and no create:Tenant, so that whole section goes.
-    expect(within(sidebar()).queryByText('Organisation')).not.toBeInTheDocument();
+    // No create:Tenant either, so Tenants goes with Roles.
+    expect(within(sidebar()).queryByRole('link', { name: 'Tenants' })).not.toBeInTheDocument();
   });
 
-  it('shows the access-control section to a tenant admin, and no tenants section', async () => {
+  it('shows the access-control section to a tenant admin, without Tenants', async () => {
     mockApi(makeTenantAdmin(), TENANT_ADMIN_GRANTS);
     renderShell('/?tenant=acme');
 
     expect(await screen.findByTestId('page')).toBeInTheDocument();
     expect(within(sidebar()).getByText('Access control')).toBeInTheDocument();
-    // `create:Tenant` is platform-only, which is what keeps the section hidden.
-    expect(within(sidebar()).queryByText('Organisation')).not.toBeInTheDocument();
+    // `create:Tenant` is platform-only, which is what keeps the entry hidden.
+    expect(within(sidebar()).queryByRole('link', { name: 'Tenants' })).not.toBeInTheDocument();
   });
 
-  it('shows the organisation section to a platform admin', async () => {
+  it('shows Tenants inside access control to a platform admin', async () => {
     mockApi(makePlatformAdmin(), PLATFORM_ADMIN_GRANTS);
-    renderShell('/');
+    // On the page itself: a section only renders its items while it is open.
+    renderShell('/tenants');
 
     expect(await screen.findByTestId('page')).toBeInTheDocument();
-    expect(within(sidebar()).getByText('Organisation')).toBeInTheDocument();
+    expect(within(sidebar()).getByRole('link', { name: 'Tenants' })).toBeInTheDocument();
   });
 
   it('keeps the active tenant on every sidebar link', async () => {

@@ -27,6 +27,8 @@ export interface CookieSettings {
 export interface TelemetrySettings {
   serviceName: string;
   otlpEndpoint: string | undefined;
+  metricsPort: number | undefined;
+  lokiUrl: string | undefined;
 }
 
 export interface MailBrandSettings {
@@ -34,6 +36,21 @@ export interface MailBrandSettings {
   backgroundUrl: string | undefined;
   brandColor: string;
   supportEmail: string | undefined;
+}
+
+/**
+ * Object storage. `endpoint` undefined means the deployment has no bucket
+ * configured; `StorageService` then refuses signing rather than guessing.
+ */
+export interface StorageSettings {
+  endpoint: string | undefined;
+  region: string;
+  bucket: string;
+  accessKey: string | undefined;
+  secretKey: string | undefined;
+  forcePathStyle: boolean;
+  presignTtlSeconds: number;
+  maxUploadBytes: number;
 }
 
 export interface SmtpSettings {
@@ -129,6 +146,8 @@ export class AppConfig {
     return {
       serviceName: this.env.OTEL_SERVICE_NAME,
       otlpEndpoint: this.env.OTEL_EXPORTER_OTLP_ENDPOINT,
+      metricsPort: this.env.PROMETHEUS_METRICS_PORT,
+      lokiUrl: this.env.LOKI_URL,
     };
   }
 
@@ -154,5 +173,18 @@ export class AppConfig {
 
   get invitationTtlHours(): number {
     return this.env.INVITATION_TTL_HOURS;
+  }
+
+  get storage(): StorageSettings {
+    return {
+      endpoint: this.env.S3_ENDPOINT,
+      region: this.env.S3_REGION,
+      bucket: this.env.S3_BUCKET,
+      accessKey: this.env.S3_ACCESS_KEY,
+      secretKey: this.env.S3_SECRET_KEY,
+      forcePathStyle: this.env.S3_FORCE_PATH_STYLE,
+      presignTtlSeconds: this.env.S3_PRESIGN_TTL_SECONDS,
+      maxUploadBytes: this.env.S3_MAX_UPLOAD_BYTES,
+    };
   }
 }

@@ -1,0 +1,35 @@
+# Local development only. A deployment scrapes through service discovery and
+# keeps far more than 15 days; none of this file carries over.
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # The API's own metrics. `just dev` runs it on the host, not in a container,
+  # so Prometheus reaches it through host.docker.internal (Docker Desktop
+  # resolves this; on plain Linux add an extra_hosts entry in the compose file).
+  # Nothing is exposed until PROMETHEUS_METRICS_PORT is set in apps/api/.env.
+  - job_name: api
+    static_configs:
+      - targets: ['host.docker.internal:9464']
+        labels:
+          # Matches the span metrics Tempo generates, so one dashboard variable
+          # drives both: resource.service.name=api becomes service=api there.
+          service: api
+
+  # The same API when it runs as a container (compose profile `app`/`full`).
+  # One of the two jobs is always down — whichever way the API is not running
+  # — and that is why the dashboard's `up` panel is scoped to job="api".
+  - job_name: api-container
+    static_configs:
+      - targets: ['api:9464']
+        labels:
+          service: api
+
+  - job_name: tempo
+    static_configs:
+      - targets: ['tempo:3200']
+
+  - job_name: prometheus
+    static_configs:
+      - targets: ['localhost:9090']

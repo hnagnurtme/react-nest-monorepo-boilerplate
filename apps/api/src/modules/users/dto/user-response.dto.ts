@@ -9,6 +9,11 @@ export const userRoleResponseSchema = z.object({
   name: z.string(),
 });
 
+export const userTenantResponseSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+});
+
 /** Whitelisted shape of a user in API responses (docs/rules/06-api-design.md C6). */
 export const userResponseSchema = z.object({
   id: z.string().uuid(),
@@ -17,6 +22,13 @@ export const userResponseSchema = z.object({
   phoneNumber: z.string().nullable(),
   roles: z.array(userRoleResponseSchema),
   tenantId: z.string().uuid().nullable(),
+  /**
+   * Every tenant the account may act in, not only its home one: an account can
+   * belong to several (`user_tenants`), and a directory that shows one of them
+   * reads as if the others did not exist. RLS trims the list to what the caller
+   * may see, so a tenant admin gets its own tenant and nothing about the rest.
+   */
+  tenants: z.array(userTenantResponseSchema),
   isActive: z.boolean(),
   /**
    * False while an invited account has not followed its emailed link yet. The
