@@ -19,6 +19,13 @@ export type UserSortField = (typeof USER_SORT_FIELDS)[number];
 export interface UserFilter {
   /** Case-insensitive substring of the full name or the email. */
   search?: string | undefined;
+  /**
+   * Keeps only this one account. Set by the service for a caller whose
+   * `read:User` is `own_record`: RLS answers "this tenant" and nothing finer,
+   * so without it the directory is readable by everybody who may read their
+   * own profile.
+   */
+  onlyId?: string | undefined;
 }
 
 export interface UserPatch {
@@ -38,15 +45,20 @@ function escapeLikePattern(value: string): string {
 
 /**
  * Soft-deleted rows are always excluded. The leading `%` means this predicate
- * cannot use a b-tree index: add a trigram index (`pg_trgm`) if the table grows
- * past a few thousand rows.
+ * cannot use a b-tree index; the GIN trigram indexes on `full_name` and
+ * `email` (schema/users.ts) are what keep it an index scan.
  */
 function listWhere(filter: UserFilter): SQL | undefined {
-  const notDeleted = isNull(users.deletedAt);
-  if (filter.search === undefined || filter.search === '') return notDeleted;
+  const parts: SQL[] = [isNull(users.deletedAt)];
 
-  const pattern = `%${escapeLikePattern(filter.search)}%`;
-  return and(notDeleted, or(ilike(users.fullName, pattern), ilike(users.email, pattern)));
+  if (filter.onlyId !== undefined) parts.push(eq(users.id, filter.onlyId));
+
+  if (filter.search !== undefined && filter.search !== '') {
+    const pattern = `%${escapeLikePattern(filter.search)}%`;
+    parts.push(or(ilike(users.fullName, pattern), ilike(users.email, pattern)) ?? sql`true`);
+  }
+
+  return and(...parts);
 }
 
 /**

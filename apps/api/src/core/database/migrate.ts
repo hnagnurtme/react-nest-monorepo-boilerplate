@@ -34,6 +34,10 @@ async function main(): Promise<void> {
     // Roles first: the RLS policies name boilerplate_app in their `TO` clause,
     // so a migration would fail outright if the role did not exist yet.
     await pool.query(readSql('00-roles.sql'));
+    // Extensions need superuser, so they go in before the role drop. pg_trgm
+    // backs the trigram indexes that make `?search=` an index scan instead of
+    // a sequential one.
+    await pool.query('CREATE EXTENSION IF NOT EXISTS pg_trgm');
     await pool.query('SET ROLE boilerplate_owner');
 
     await migrate(drizzle(pool), {
