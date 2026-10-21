@@ -181,7 +181,7 @@ Do not hide type errors with `any`, `@ts-ignore`, or unchecked casts. Validate e
 
 ## CI
 
-`.github/workflows/ci.yml` runs on push and pull requests to `main` and `develop`: secret scan, commitlint, format and lint, typecheck, unit tests and dependency audit, integration tests (real Postgres and Redis, RLS), OpenAPI drift, and a small `conventions` job of grep checks. `CI Gate` aggregates all of them and is the only required check. There is no CD workflow; deployment is up to you.
+`.github/workflows/ci.yml` runs on pull requests into `main` only — not on push, and not on pull requests into any other branch. Run it by hand on another branch with `gh workflow run "CI Pipeline" --ref <branch>`. It is a single job, `CI Gate`, which is also the only check to require in branch protection (together with "require branches to be up to date", since the merge commit itself is never tested). Its steps: secret scan, convention greps, commitlint, UI conventions, format and lint, typecheck, unit tests, dependency audit, OpenAPI drift, and integration tests against real Postgres and Redis (RLS). There is no CD workflow; deployment is up to you.
 
 ## Security Expectations
 

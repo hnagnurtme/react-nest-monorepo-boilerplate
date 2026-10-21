@@ -1,14 +1,16 @@
 # Enforces docs/rules/09-git-va-ci.md section E.
 name: CI Pipeline
 
-# Pull requests only, no `push`: a merge would re-test the tree the pull
-# request already passed. That makes branch protection load-bearing — require
+# Pull requests into `main` only, no `push`: a merge would re-test the tree the
+# pull request already passed, and a pull request into any other branch is not
+# a release gate. That makes branch protection load-bearing — require
 # `CI Gate` **and** an up-to-date branch, or a merged tree may never have been
 # tested. Drafts are skipped; marking one ready for review runs the pipeline.
+# Need a run on another branch? `gh workflow run "CI Pipeline" --ref <branch>`.
 on:
   workflow_dispatch:
   pull_request:
-    branches: [main, develop]
+    branches: [main]
     types: [opened, synchronize, reopened, ready_for_review]
 
 concurrency:

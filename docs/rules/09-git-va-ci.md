@@ -153,8 +153,9 @@ jobs:
 ### E3. CI dưới 10 phút & Phân vùng thông minh 💡
 
 - Dùng GitHub Actions cache cho `.turbo` và `pnpm store`.
-- **PR vào `develop`**: Lọc đường dẫn thông minh — sửa tài liệu/docs thì bỏ qua build code; sửa Frontend Web thì không kích hoạt DB test .
+- **CI chỉ chạy cho PR vào `main`**. PR vào nhánh khác không kích hoạt workflow — muốn chạy tay thì dùng `gh workflow run "CI Pipeline" --ref <branch>`.
 - **PR vào `main`**: Bắt buộc chạy 100% test suite không skip.
+- Lọc đường dẫn thông minh (bỏ qua build code khi chỉ sửa docs) chỉ còn áp dụng cho các lần chạy tay bằng `workflow_dispatch` trên nhánh không phải `main`.
 - **Branch Protection**: Chỉ cần chọn duy nhất check `CI Gate`.
 
 ### E4. Không có bước nào được phép "cho phép thất bại" 🤖
