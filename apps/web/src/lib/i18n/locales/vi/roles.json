@@ -61,7 +61,7 @@
       "nameMin": "Tên phải có ít nhất 2 ký tự",
       "tenantRequired": "Vui lòng chọn tenant"
     },
-    "panelDescription": "Vai trò là một nhóm quyền có tên, trong phạm vi một tổ chức."
+    "panelDescription": "Vai trò là một nhóm quyền có tên, trong phạm vi một tenant."
   },
   "editor": {
     "title": "Vai trò: {{name}}",

@@ -1,6 +1,6 @@
 {
   "title": "Tenant",
-  "subtitle": "Các tổ chức trên nền tảng.",
+  "subtitle": "Các tenant trên nền tảng.",
   "loading": "Đang tải danh sách tenant...",
   "error": "Không thể tải danh sách tenant.",
   "empty": "Không có tenant.",
@@ -48,28 +48,28 @@
     "logo": "Logo",
     "logoChoose": "Chọn ảnh",
     "logoClear": "Xoá",
-    "logoFailed": "Đã tạo chi nhánh nhưng chưa tải được logo. Thêm lại từ trang chi nhánh.",
+    "logoFailed": "Đã tạo tenant nhưng chưa tải được logo. Thêm lại từ trang tenant.",
     "logoHint": "PNG, JPEG hoặc WebP, tối đa {{size}} MB.",
     "province": "Tỉnh / Thành phố",
     "provinceAny": "Không có địa chỉ",
     "ward": "Phường / Xã",
     "cancel": "Huỷ",
-    "open": "Tạo tổ chức",
+    "open": "Tạo tenant",
     "panelDescription": "Slug xuất hiện trong URL; để trống thì hệ thống tự tạo từ tên.",
-    "title": "Tạo tổ chức"
+    "title": "Tạo tenant"
   },
   "edit": {
     "open": "Sửa",
-    "title": "Sửa chi nhánh",
+    "title": "Sửa tenant",
     "panelDescription": "Slug không đổi được: nó nằm trong các liên kết đã chia sẻ.",
     "submit": "Lưu thay đổi",
-    "success": "Đã cập nhật chi nhánh.",
-    "error": "Không cập nhật được chi nhánh.",
+    "success": "Đã cập nhật tenant.",
+    "error": "Không cập nhật được tenant.",
     "logoFailed": "Không tải được logo nên chưa lưu gì cả."
   },
   "map": {
     "noAddress": "Chưa có địa chỉ",
-    "label": "Bản đồ Việt Nam với các tỉnh có chi nhánh của bạn",
+    "label": "Bản đồ Việt Nam với các tỉnh có tenant của bạn",
     "unavailable": "Không tải được bản đồ.",
     "tab": "Bản đồ",
     "listTab": "Danh sách",
@@ -82,6 +82,6 @@
       "paracel": "Quần đảo Hoàng Sa",
       "spratly": "Quần đảo Trường Sa"
     },
-    "more": "+{{count}} chi nhánh nữa"
+    "more": "+{{count}} tenant nữa"
   }
 }

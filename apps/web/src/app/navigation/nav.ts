@@ -52,6 +52,14 @@ export const NAV: NavSection[] = [
     icon: ShieldCheck,
     children: [
       {
+        path: '/tenants',
+        labelKey: 'items.tenants',
+        icon: Building2,
+        // Only a platform account may create a tenant, which is what keeps this
+        // entry out of a tenant admin's sidebar without naming the scope.
+        can: { action: 'create', subject: 'Tenant' },
+      },
+      {
         path: '/users',
         labelKey: 'items.users',
         icon: Users,
@@ -62,21 +70,6 @@ export const NAV: NavSection[] = [
         labelKey: 'items.roles',
         icon: ShieldCheck,
         can: { action: 'read', subject: 'Role' },
-      },
-    ],
-  },
-  {
-    id: 'organisation',
-    labelKey: 'sections.organisation',
-    icon: Building2,
-    children: [
-      {
-        path: '/tenants',
-        labelKey: 'items.tenants',
-        icon: Building2,
-        // Only a platform account may create a tenant, which is what makes the
-        // whole section platform-only without naming the scope.
-        can: { action: 'create', subject: 'Tenant' },
       },
     ],
   },

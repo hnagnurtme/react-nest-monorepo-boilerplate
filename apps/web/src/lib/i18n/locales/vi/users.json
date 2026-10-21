@@ -92,7 +92,7 @@
     "save": "Lưu vai trò",
     "cancel": "Hủy",
     "loading": "Đang tải vai trò...",
-    "panelDescription": "Chọn các vai trò của tài khoản trong tổ chức đang làm việc."
+    "panelDescription": "Chọn các vai trò của tài khoản trong tenant đang làm việc."
   },
   "invite": {
     "prompt": "{{email}} đã có tài khoản. Hãy mời tài khoản đó tham gia tenant này — chủ tài khoản phải chấp nhận.",
