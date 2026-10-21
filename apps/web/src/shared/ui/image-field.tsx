@@ -165,14 +165,14 @@ export function ImageField({
               ? 'border-border text-foreground-disabled cursor-not-allowed'
               : 'cursor-pointer',
             isDraggingOver && !isDisabled
-              ? 'border-primary-solid bg-selected'
+              ? 'border-primary bg-selected'
               : 'border-border-strong bg-sunken hover:bg-muted',
           )}
         >
           <span
             className={cn(
               'bg-card text-muted-foreground rounded-pill flex size-10 items-center justify-center',
-              isDraggingOver && !isDisabled && 'text-primary-solid',
+              isDraggingOver && !isDisabled && 'text-primary',
             )}
           >
             {isDraggingOver ? (
@@ -198,9 +198,7 @@ export function ImageField({
           }}
           className={cn(
             'rounded-surface flex items-center gap-4 border p-3 transition-colors',
-            isDraggingOver && !isDisabled
-              ? 'border-primary-solid bg-selected'
-              : 'border-border bg-card',
+            isDraggingOver && !isDisabled ? 'border-primary bg-selected' : 'border-border bg-card',
           )}
         >
           <span

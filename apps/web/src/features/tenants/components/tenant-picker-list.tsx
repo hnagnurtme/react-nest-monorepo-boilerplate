@@ -49,9 +49,7 @@ export function TenantPickerList({ tenants, activeTenantId, onSelect }: TenantPi
                 )
               }
               trailing={
-                isActive ? (
-                  <Check className="text-primary-solid size-4" aria-hidden="true" />
-                ) : undefined
+                isActive ? <Check className="text-primary size-4" aria-hidden="true" /> : undefined
               }
             />
           </li>

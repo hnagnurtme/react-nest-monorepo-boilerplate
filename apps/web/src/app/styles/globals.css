@@ -144,6 +144,38 @@
   /* Selected row / active nav item. */
   --color-selected: var(--color-primary-50);
 
+  /*
+   * Map regions: North, Central, South. Three fixed hues the tenant map uses.
+   * They name a place, not a state, so they are tokens of their own rather
+   * than a reading of info/warning/success, and they do not flip per theme —
+   * a province does not move when the lights go out.
+   */
+  --color-region-north: #ec1b6e;
+  --color-region-central: #fb8b24;
+  --color-region-south: #7ac143;
+
+  /*
+   * The land and coast each hue is drawn in. The accent above is a signal
+   * colour: at pin size it is exactly right, and at province size three of
+   * them at full strength are a flag, not a map. These are the same hues taken
+   * to a surface and a line weight, so a province is opaque — a translucent
+   * tint over the sea picks the sea's warmth up and every band drifts towards
+   * the same colour.
+   */
+  --color-region-north-surface: #fbc6dc;
+  --color-region-north-line: #e8689f;
+  --color-region-central-surface: #fdd7a4;
+  --color-region-central-line: #ef9a3c;
+  --color-region-south-surface: #d4ebba;
+  --color-region-south-line: #8cbd54;
+
+  /*
+   * The sea the map is drawn on. Cool, so the warm land reads as land against
+   * it; its own token because the picker's panel is `sunken`, and a country on
+   * the same colour as its container has no coastline at all.
+   */
+  --color-map-sea: #cfe4f2;
+
   /* Four text levels: title, body, supporting, unavailable. */
   --color-foreground: var(--color-base-900);
   --color-foreground-secondary: var(--color-base-700);
@@ -269,6 +301,39 @@
   /* The app shell: full sidebar, and the collapsed rail that shows icons only. */
   --container-sidebar: 16rem;
   --container-rail: 4rem;
+  /*
+   * The side panel: a create or edit form docked to the right edge. Wider than
+   * a dialog because the list it edits stays visible beside it, and `lg` is for
+   * a two-column form.
+   */
+  --container-panel: 30rem;
+  --container-panel-lg: 42rem;
+
+  /*
+   * Overlay entrances. A panel that appears instantly reads as a page swap;
+   * the slide is what says the list behind it is still there. Both are short
+   * enough to stay out of the way of a second click.
+   */
+  --animate-panel-in: panel-in 160ms ease-out;
+  --animate-scrim-in: scrim-in 160ms ease-out;
+
+  @keyframes panel-in {
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes scrim-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
 }
 
 /*
@@ -288,6 +353,14 @@
   --color-foreground-secondary: var(--color-base-300);
   --color-muted-foreground: var(--color-base-400);
   --color-foreground-disabled: var(--color-base-600);
+
+  --color-region-north-surface: #5a1639;
+  --color-region-north-line: #b02d6a;
+  --color-region-central-surface: #5a3011;
+  --color-region-central-line: #b56e23;
+  --color-region-south-surface: #284c1e;
+  --color-region-south-line: #639b41;
+  --color-map-sea: #0e1c26;
 
   --color-border: var(--color-base-800);
   --color-border-strong: var(--color-base-700);
