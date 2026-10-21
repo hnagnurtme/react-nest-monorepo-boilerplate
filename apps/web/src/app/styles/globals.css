@@ -143,31 +143,55 @@
   --color-sunken: var(--color-base-200);
   /* Selected row / active nav item. */
   --color-selected: var(--color-primary-50);
+  /*
+   * The fill of a neutral chip. It cannot be `muted`: row hover is `muted/60`,
+   * so a muted chip on a hovered row measured 1.05:1 and its fill vanished
+   * under the pointer. A step further down the ramp keeps the chip readable as
+   * a chip in every row state, and in dark mode it goes *up* the ramp instead —
+   * a chip is a raised label, not the well that `sunken` describes.
+   */
+  --color-chip: var(--color-base-200);
 
   /*
    * Map regions: North, Central, South. Three fixed hues the tenant map uses.
    * They name a place, not a state, so they are tokens of their own rather
-   * than a reading of info/warning/success, and they do not flip per theme —
-   * a province does not move when the lights go out.
-   */
-  --color-region-north: #ec1b6e;
-  --color-region-central: #fb8b24;
-  --color-region-south: #7ac143;
-
-  /*
-   * The land and coast each hue is drawn in. The accent above is a signal
-   * colour: at pin size it is exactly right, and at province size three of
-   * them at full strength are a flag, not a map. These are the same hues taken
-   * to a surface and a line weight, so a province is opaque — a translucent
-   * tint over the sea picks the sea's warmth up and every band drifts towards
-   * the same colour.
+   * than a reading of info/warning/success.
+   *
+   * Each hue exists as a surface and a line. The surface is a wash — three
+   * saturated bands at province size are a flag, not a map — and because the
+   * wash is only 1.02–1.13:1 against the sea, the *line* is what actually says
+   * where the land stops. That makes the coast a boundary WCAG 1.4.11 governs,
+   * so each line clears 3:1 twice over: against the sea it runs along, and
+   * against the band it encloses. The old lines managed 1.68–2.32:1 on water.
+   *
+   * There is no third, brighter "accent" step any more. It existed for the
+   * region callouts, where it measured 1.68:1 on the sea; the callouts now
+   * draw in the line colour, which is the same hue at a weight that can be
+   * seen, and which ties each leader to the coast it starts from.
    */
   --color-region-north-surface: #fbc6dc;
-  --color-region-north-line: #e8689f;
+  --color-region-north-line: #c13d78;
   --color-region-central-surface: #fdd7a4;
-  --color-region-central-line: #ef9a3c;
+  --color-region-central-line: #9a5a12;
   --color-region-south-surface: #d4ebba;
-  --color-region-south-line: #8cbd54;
+  --color-region-south-line: #4f7a28;
+
+  /*
+   * The two states a province can be in on that map: holding a tenant, and
+   * selected. Both are drawn in the brand, and both are information, so both
+   * clear 3:1 on the sea. They are semantic tokens rather than the scale steps
+   * the map used to name directly, because a raw step cannot flip: on the dark
+   * sea `primary-600` fell to 2.59:1 while `primary-400` sat at 6.23:1, so the
+   * selected province came out *quieter* than a merely occupied one and the
+   * hierarchy read backwards.
+   *
+   * `map-held` is one value for both themes — primary-500 is 3.19:1 on the
+   * light sea and 4.14:1 on the dark one. Only the darker partner flips.
+   */
+  --color-map-held: var(--color-primary-500);
+  --color-map-held-line: var(--color-primary-700);
+  --color-map-active: var(--color-primary-700);
+  --color-map-active-line: var(--color-primary-900);
 
   /*
    * The sea the map is drawn on. Cool, so the warm land reads as land against
@@ -185,7 +209,14 @@
   /* Three line weights: default hairline, emphasised, control outline. */
   --color-border: var(--color-base-200);
   --color-border-strong: var(--color-base-300);
-  --color-input: var(--color-base-300);
+  /*
+   * 500, not 300: an input's edge is the control's boundary, so WCAG 1.4.11 asks
+   * for 3:1 against the surface behind it. base-300 measured 1.53:1 on a card —
+   * a border nobody with low vision can find. base-500 is 3.73:1 on card and
+   * 3.52:1 on the page, and it is light enough in dark mode too, so one value
+   * serves both themes and the dark block leaves it alone.
+   */
+  --color-input: var(--color-base-500);
   --color-input-focus: var(--color-primary-600);
   /* One focus ring for the whole product; see FOCUS_RING in shared/ui. */
   --color-ring: var(--color-primary-600);
@@ -354,23 +385,34 @@
   --color-muted: var(--color-base-900);
   --color-sunken: var(--color-base-950);
   --color-selected: var(--color-primary-950);
+  --color-chip: var(--color-base-800);
 
   --color-foreground: var(--color-base-100);
   --color-foreground-secondary: var(--color-base-300);
   --color-muted-foreground: var(--color-base-400);
   --color-foreground-disabled: var(--color-base-600);
 
+  /*
+   * The bands go down, not up: on a near-black sea the coast has to be the
+   * brighter of the two, and the light theme's margin between line and band
+   * (3.38–4.01:1) only survives here if the band keeps its distance.
+   */
   --color-region-north-surface: #5a1639;
-  --color-region-north-line: #b02d6a;
-  --color-region-central-surface: #5a3011;
+  --color-region-north-line: #d4538a;
+  --color-region-central-surface: #4e2a0d;
   --color-region-central-line: #b56e23;
-  --color-region-south-surface: #284c1e;
+  --color-region-south-surface: #22411a;
   --color-region-south-line: #639b41;
   --color-map-sea: #0e1c26;
 
+  /* Land is lighter than water here, so the pair turns over. */
+  --color-map-held-line: var(--color-primary-300);
+  --color-map-active: var(--color-primary-300);
+  --color-map-active-line: var(--color-primary-100);
+
   --color-border: var(--color-base-800);
   --color-border-strong: var(--color-base-700);
-  --color-input: var(--color-base-700);
+  /* --color-input is not overridden: base-500 is 4.48:1 on `card` here. */
   --color-input-focus: var(--color-primary-400);
   --color-ring: var(--color-primary-400);
 

@@ -19,11 +19,15 @@ const MAP_EXTENT: [[number, number], [number, number]] = [
 ];
 
 /*
-  Each region is drawn in its own land and coast tokens rather than in the
-  accent at reduced opacity: the accent is a pin colour, and a translucent one
-  over the sea takes the sea's hue with it, which is how three distinct bands
-  end up looking like one. The pair is opaque and defined per theme, so the
-  bands keep their separation in the dark with no `dark:` class here.
+  Each region is drawn in its own land and coast tokens rather than in one hue
+  at reduced opacity: a translucent wash over the sea takes the sea's hue with
+  it, which is how three distinct bands end up looking like one. The pair is
+  opaque and defined per theme, so the bands keep their separation in the dark
+  with no `dark:` class here.
+
+  The band is a wash and barely separates from the water by luminance; the coast
+  line is what carries the boundary, and it is the token held to 3:1 on both
+  sides. Drawing the two from one ramp is what keeps that true in either theme.
 */
 const REGION_SHAPE: Record<VnRegion, string> = {
   north: 'fill-region-north-surface stroke-region-north-line',
@@ -31,10 +35,16 @@ const REGION_SHAPE: Record<VnRegion, string> = {
   south: 'fill-region-south-surface stroke-region-south-line',
 };
 
-const REGION_ACCENT: Record<VnRegion, string> = {
-  north: 'fill-region-north stroke-region-north',
-  central: 'fill-region-central stroke-region-central',
-  south: 'fill-region-south stroke-region-south',
+/*
+  The callout dot and its leader, in the same colour as the coast the leader
+  starts from. They used to have a brighter accent of their own, which measured
+  1.68:1 against the sea for the southern band — a line drawn over water that
+  nobody with low vision could follow back to the land it came from.
+*/
+const REGION_MARK: Record<VnRegion, string> = {
+  north: 'fill-region-north-line stroke-region-north-line',
+  central: 'fill-region-central-line stroke-region-central-line',
+  south: 'fill-region-south-line stroke-region-south-line',
 };
 
 /** The leader line's length, from the coast anchor to the label. */
@@ -296,9 +306,9 @@ export function TenantMap({ tenants, activeTenantId, onSelect }: TenantMapProps)
             */
             className={
               isActive
-                ? 'fill-primary-600 stroke-primary-800'
+                ? 'fill-map-active stroke-map-active-line'
                 : held.length > 0
-                  ? 'fill-primary-400 stroke-primary-600'
+                  ? 'fill-map-held stroke-map-held-line'
                   : REGION_SHAPE[regionOf(province.code)]
             }
             /* The hovered pin's province is outlined too, so a cluster of pins
@@ -344,7 +354,7 @@ export function TenantMap({ tenants, activeTenantId, onSelect }: TenantMapProps)
       */}
       {callouts.map(({ region, x, y, labelY }) => (
         <g key={`callout-${region}`} className="pointer-events-none">
-          <circle cx={x} cy={y} r={2} className={REGION_ACCENT[region]} />
+          <circle cx={x} cy={y} r={2} className={REGION_MARK[region]} />
           {/*
             An elbow, not a straight line: the labels are pushed apart to the
             gap below, so the end of the leader rarely sits at the latitude it
@@ -354,7 +364,7 @@ export function TenantMap({ tenants, activeTenantId, onSelect }: TenantMapProps)
           <path
             d={`M ${String(x)} ${String(y)} H ${String(x + 12)} L ${String(x + CALLOUT_RUN - 8)} ${String(labelY)} H ${String(x + CALLOUT_RUN)}`}
             fill="none"
-            className={REGION_ACCENT[region]}
+            className={REGION_MARK[region]}
             strokeWidth={1}
             strokeLinejoin="round"
           />
@@ -384,17 +394,20 @@ export function TenantMap({ tenants, activeTenantId, onSelect }: TenantMapProps)
                 cx={pin.x}
                 cy={pin.y}
                 r={pin.isActive ? 11 : 9}
-                className="fill-primary-500/25 pointer-events-none"
+                className="fill-map-held/25 pointer-events-none"
               />
             ) : null}
             <circle
               cx={pin.x}
               cy={pin.y}
               r={pin.isActive ? 7 : 5}
+              /* The pin takes its state's line colour, so it reads as the
+                 same object as the province edge under it; the `card` ring is
+                 what separates the two. */
               className={
                 pin.isActive
-                  ? 'fill-primary-800 stroke-card pointer-events-none'
-                  : 'fill-primary-600 stroke-card pointer-events-none'
+                  ? 'fill-map-active-line stroke-card pointer-events-none'
+                  : 'fill-map-held-line stroke-card pointer-events-none'
               }
               strokeWidth={2}
             />

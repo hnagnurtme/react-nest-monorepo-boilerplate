@@ -3,9 +3,17 @@ import { describe, expect, it } from 'vitest';
 // Raw globals.css, injected by `define` in vite.config.ts (see the note there).
 const CSS = GLOBALS_CSS_RAW;
 
-/** Returns the body of the first `selector { ... }` block, brace-balanced. */
+/**
+ * Returns the body of the first `selector { ... }` block, brace-balanced.
+ *
+ * The selector is matched at the start of a line, not anywhere in the file: a
+ * comment that merely names `:root.dark` used to win the `indexOf`, and the
+ * block that came back was the comment's own, so every dark token read as
+ * missing.
+ */
 function blockBody(selector: string): string {
-  const selectorAt = CSS.indexOf(selector);
+  const anchor = new RegExp(String.raw`^${selector.replace('.', String.raw`\.`)}\s*\{`, 'm');
+  const selectorAt = CSS.search(anchor);
   expect(selectorAt, `${selector} not found in globals.css`).toBeGreaterThan(-1);
 
   const start = CSS.indexOf('{', selectorAt);
@@ -92,6 +100,9 @@ const TEXT_PAIRS: readonly [foreground: string, background: string][] = [
   ['muted-foreground', 'card'],
   ['muted-foreground', 'muted'],
   ['muted-foreground', 'sunken'],
+  ['muted-foreground', 'chip'],
+  // The archipelago names, drawn straight onto the map's water.
+  ['muted-foreground', 'map-sea'],
   ['primary', 'card'],
   ['primary', 'primary-light'],
   ['primary-foreground', 'primary'],
@@ -105,8 +116,59 @@ const TEXT_PAIRS: readonly [foreground: string, background: string][] = [
   ['tooltip-foreground', 'tooltip'],
 ];
 
+/**
+ * Boundaries and meaningful graphics, which WCAG 2.1 SC 1.4.11 holds to 3:1 —
+ * the rule the text pairs below do not cover and the one that let an input
+ * border ship at 1.53:1. A pair belongs here when losing it costs the user
+ * information: the edge that says where a control is, the focus indicator, an
+ * icon or a status dot drawn with no label of its own. Decorative hairlines
+ * (`border`, `border-strong` between table rows) are deliberately absent.
+ */
+const UI_PAIRS: readonly [foreground: string, background: string][] = [
+  ['input', 'card'],
+  ['input', 'background'],
+  ['input-focus', 'card'],
+  ['ring', 'card'],
+  ['ring', 'background'],
+  // Icon-only buttons and the StatusDot tones paint these on a row.
+  ['primary', 'card'],
+  ['destructive', 'card'],
+  ['success', 'card'],
+  ['muted-foreground', 'card'],
+];
+
+/**
+ * The tenant map, which paints on its own sea rather than on a page surface and
+ * so is covered by none of the pairs above.
+ *
+ * The bands themselves are absent on purpose: a wash is 1.02–1.13:1 against the
+ * water by design, and raising it to 3:1 would turn the map into a flag. What
+ * has to be visible is the coast that encloses the wash, the brand fill that
+ * says a province is held or selected, and the leader lines that tie each
+ * region's count back to its band — all of which are below.
+ */
+const MAP_PAIRS: readonly [foreground: string, background: string][] = [
+  ['region-north-line', 'map-sea'],
+  ['region-central-line', 'map-sea'],
+  ['region-south-line', 'map-sea'],
+  // The same coast seen from the land side.
+  ['region-north-line', 'region-north-surface'],
+  ['region-central-line', 'region-central-surface'],
+  ['region-south-line', 'region-south-surface'],
+  ['map-held', 'map-sea'],
+  ['map-active', 'map-sea'],
+  // `map-*-line` is not held to its own fill: a brand province is edged in a
+  // darker step of the colour it is filled with, so the two are one object and
+  // the boundary that carries meaning is the one against the water, above. The
+  // pin drawn in that same line colour is separated by its `card` ring, not by
+  // a luminance step.
+];
+
 /** WCAG 2.1 AA for body text. */
 const AA_TEXT = 4.5;
+
+/** WCAG 2.1 AA for user-interface components and graphical objects. */
+const AA_NON_TEXT = 3;
 
 const PALETTES: readonly [name: string, tokens: Map<string, string>][] = [
   ['light', LIGHT_RAW],
@@ -134,6 +196,50 @@ describe('theme tokens meet WCAG AA', () => {
       ratio,
       `${foreground} (${fg}) on ${background} (${bg}) is ${ratio.toFixed(2)}:1`,
     ).toBeGreaterThanOrEqual(AA_TEXT);
+  });
+
+  it.each(PALETTES)('%s resolves every token the UI pairs reference', (_name, tokens) => {
+    for (const [foreground, background] of UI_PAIRS) {
+      expect(resolve(`--color-${foreground}`, tokens), `--color-${foreground}`).toBeDefined();
+      expect(resolve(`--color-${background}`, tokens), `--color-${background}`).toBeDefined();
+    }
+  });
+
+  it.each(
+    PALETTES.flatMap(([name, tokens]) =>
+      UI_PAIRS.map(([foreground, background]) => [name, tokens, foreground, background] as const),
+    ),
+  )('%s: %#  boundary passes 3:1', (_name, tokens, foreground, background) => {
+    const fg = resolve(`--color-${foreground}`, tokens) ?? '#000000';
+    const bg = resolve(`--color-${background}`, tokens) ?? '#ffffff';
+    const ratio = contrast(fg, bg);
+
+    expect(
+      ratio,
+      `${foreground} (${fg}) on ${background} (${bg}) is ${ratio.toFixed(2)}:1`,
+    ).toBeGreaterThanOrEqual(AA_NON_TEXT);
+  });
+
+  it.each(PALETTES)('%s resolves every token the map pairs reference', (_name, tokens) => {
+    for (const [foreground, background] of MAP_PAIRS) {
+      expect(resolve(`--color-${foreground}`, tokens), `--color-${foreground}`).toBeDefined();
+      expect(resolve(`--color-${background}`, tokens), `--color-${background}`).toBeDefined();
+    }
+  });
+
+  it.each(
+    PALETTES.flatMap(([name, tokens]) =>
+      MAP_PAIRS.map(([foreground, background]) => [name, tokens, foreground, background] as const),
+    ),
+  )('%s: %#  map mark passes 3:1', (_name, tokens, foreground, background) => {
+    const fg = resolve(`--color-${foreground}`, tokens) ?? '#000000';
+    const bg = resolve(`--color-${background}`, tokens) ?? '#ffffff';
+    const ratio = contrast(fg, bg);
+
+    expect(
+      ratio,
+      `${foreground} (${fg}) on ${background} (${bg}) is ${ratio.toFixed(2)}:1`,
+    ).toBeGreaterThanOrEqual(AA_NON_TEXT);
   });
 
   it('redefines the dark palette rather than inheriting the light one', () => {
