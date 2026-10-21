@@ -61,6 +61,15 @@ export const envSchema = z
     /** Origin of the SPA, used for the CSRF `Origin` allowlist check. */
     WEB_ORIGIN: z.string().url().default('http://localhost:5173'),
 
+    /**
+     * Reverse proxies in front of the API (Express `trust proxy`). Behind
+     * nginx this must be 1, or `req.ip` is the proxy's address and every
+     * client shares one per-IP throttle bucket (login 5/min for everyone).
+     * Leave 0 when clients reach the API directly: a trusted hop that is not
+     * there lets any client pick its own IP through `X-Forwarded-For`.
+     */
+    TRUST_PROXY_HOPS: z.coerce.number().int().min(0).default(0),
+
     COOKIE_DOMAIN: z.preprocess(
       (value) => (value === '' ? undefined : value),
       z.string().optional(),
@@ -80,9 +89,17 @@ export const envSchema = z
       z.string().url().optional(),
     ),
 
+    /** Sentry-compatible DSN for error reporting. Blank switches it off. */
+    SENTRY_DSN: z.preprocess(
+      (value) => (value === '' ? undefined : value),
+      z.string().url().optional(),
+    ),
+
     // Email Configuration
-    SMTP_HOST: z.string().default('smtp.gmail.com'),
-    SMTP_PORT: z.coerce.number().int().positive().default(587),
+    // Mailpit by default (docker compose): an unset SMTP host must never fall
+    // back to a real relay, or a developer machine mails real addresses.
+    SMTP_HOST: z.string().default('localhost'),
+    SMTP_PORT: z.coerce.number().int().positive().default(1025),
     SMTP_SECURE: z
       .enum(['true', 'false'])
       .default('false')
