@@ -3,8 +3,7 @@ import { useId, type ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
 
-import { CONTROL_HEIGHT, CONTROL_PADDING } from './control';
-import { FOCUS_RING_INSET } from './focus-ring';
+import { NAV_ROW_BASE, NAV_ROW_TONE, navRowLayout } from './nav-row';
 
 export interface NavGroupProps {
   label: string;
@@ -47,11 +46,14 @@ export function NavGroup({
         aria-label={isIconOnly ? label : undefined}
         title={isIconOnly ? label : undefined}
         className={cn(
-          'text-body rounded-control flex w-full cursor-pointer items-center gap-3 font-semibold transition-colors',
-          CONTROL_HEIGHT.md,
-          isIconOnly ? 'justify-center px-0' : CONTROL_PADDING.md,
-          hasActiveChild && !isOpen ? 'text-primary' : 'text-foreground hover:bg-muted',
-          FOCUS_RING_INSET,
+          NAV_ROW_BASE,
+          'w-full cursor-pointer',
+          navRowLayout(isIconOnly),
+          hasActiveChild
+            ? isOpen
+              ? NAV_ROW_TONE['current-open']
+              : NAV_ROW_TONE.current
+            : NAV_ROW_TONE.idle,
         )}
       >
         <span className="shrink-0">{icon}</span>

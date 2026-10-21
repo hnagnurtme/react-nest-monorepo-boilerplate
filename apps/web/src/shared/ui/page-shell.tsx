@@ -49,9 +49,12 @@ export function PageShell({
       className={cn(
         /*
           Less gutter on a handset: 24px around a 390px screen spends an eighth
-          of the width on nothing.
+          of the width on nothing. Less again from `lg`, where the sidebar is a
+          real column rather than a drawer: the shell's own border already
+          separates the page from the chrome, so a second 24px of air only
+          narrows the table it surrounds.
         */
-        'bg-background p-4 sm:p-6',
+        'bg-background p-4 sm:p-6 lg:px-5 lg:py-4',
         isFullHeight ? 'h-full overflow-hidden' : 'min-h-full',
         isCentered ? 'flex flex-col items-center justify-center' : '',
         className,
