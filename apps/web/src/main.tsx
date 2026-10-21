@@ -10,6 +10,9 @@ import { useAuthStore } from '@/entities/session/store';
 import { broadcastLogout, broadcastRefreshed } from '@/entities/session/sync';
 import { setTenantProvider, setTokenProvider, setUnauthorizedHandler } from '@/lib/http/client';
 import { setRefreshHandler } from '@/lib/http/refresh';
+import { installStaleChunkReload } from '@/lib/stale-chunk';
+
+installStaleChunkReload();
 
 setTokenProvider(() => useAuthStore.getState().accessToken);
 setTenantProvider(() => useAuthStore.getState().activeTenantId);

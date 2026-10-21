@@ -25,6 +25,19 @@ export function AppProviders({ children }: { children?: ReactNode }) {
             retry: 1,
             refetchOnWindowFocus: true,
           },
+          mutations: {
+            /*
+              Offline, a mutation must **fail** rather than pause.
+
+              With the default `'online'`, a mutation fired while the browser
+              reports no connection goes to `paused`: `isPending` stays true and
+              `onError` never runs, so a form shows a spinner indistinguishable
+              from a slow request and no retry path is ever armed. Failing hands
+              control back to the caller, which is what makes a retry possible
+              at all.
+            */
+            networkMode: 'always',
+          },
         },
       }),
   );
