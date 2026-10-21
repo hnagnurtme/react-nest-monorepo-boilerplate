@@ -2,6 +2,7 @@ import { Pool } from 'pg';
 
 import { loadEnvFile, validateEnv } from '@/config/index.js';
 
+import { syncAdministrativeUnits } from './administrative-units-sync.js';
 import { syncAuthzCatalog } from './authz-sync.js';
 import { PLATFORM_ADMIN_EMAIL, SEED_PASSWORD, seedDevData } from './seed-core.js';
 
@@ -85,10 +86,11 @@ async function main(): Promise<void> {
     const tables = await truncatePublicTables(pool);
     process.stdout.write(`Truncated ${String(tables.length)} tables.\n`);
 
-    // The catalog lives in code and is written by the migration job, so a
-    // truncate has to put it back before anything can authorize a request.
+    // The catalogs live in code and are written by the migration job, so a
+    // truncate has to put them back before anything can authorize a request.
     await pool.query('RESET ROLE');
     await syncAuthzCatalog(pool);
+    await syncAdministrativeUnits(pool);
 
     // The seed stays on the superuser connection: `FORCE ROW LEVEL SECURITY`
     // subjects even the owning role to the policies, so an owner-role insert

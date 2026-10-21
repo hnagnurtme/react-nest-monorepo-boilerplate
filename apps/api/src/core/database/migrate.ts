@@ -7,6 +7,7 @@ import { Pool } from 'pg';
 
 import { loadEnvFile, validateEnv } from '@/config/index.js';
 
+import { syncAdministrativeUnits } from './administrative-units-sync.js';
 import { syncAuthzCatalog } from './authz-sync.js';
 
 const readSql = (name: string): string =>
@@ -47,6 +48,7 @@ async function main(): Promise<void> {
     await pool.query(readSql('99-grants.sql'));
 
     await syncAuthzCatalog(pool);
+    await syncAdministrativeUnits(pool);
     process.stdout.write('Migrations applied.\n');
   } finally {
     await pool.end();
