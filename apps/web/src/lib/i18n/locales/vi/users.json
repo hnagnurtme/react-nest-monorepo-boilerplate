@@ -55,7 +55,7 @@
     "title": "Tạo người dùng",
     "fullName": "Họ tên",
     "email": "Email",
-    "phone": "Số điện thoại (tùy chọn)",
+    "phone": "Số điện thoại",
     "phonePlaceholder": "+84901234567",
     "password": "Mật khẩu",
     "tenant": "Tổ chức",

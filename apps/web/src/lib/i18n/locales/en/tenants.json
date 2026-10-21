@@ -27,7 +27,7 @@
   },
   "create": {
     "name": "Name",
-    "slug": "Slug (optional)",
+    "slug": "Slug",
     "slugPlaceholder": "derived from the name",
     "submit": "Create tenant",
     "success": "Tenant created.",

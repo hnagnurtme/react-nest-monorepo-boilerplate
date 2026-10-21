@@ -74,9 +74,13 @@ export function TenantAddressFields<T extends TenantAddressValues>({
         error={fieldErrors.provinceCode?.message}
         onChange={onProvinceChange}
       />
+      {/* The ward is required only once a province is chosen: the address
+          block as a whole is optional, but a province without a ward is
+          rejected. */}
       <Combobox
         id="tenant-ward"
         label={t('create.ward')}
+        isRequired={provinceCode !== ''}
         placeholder={wards.isPending && provinceCode !== '' ? t('create.loadingUnits') : ''}
         options={wardOptions}
         value={wardCode}

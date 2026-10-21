@@ -60,6 +60,7 @@ export function ResetStep({
       <Input
         id="reset-otp"
         label={t('forgotPasswordModal.otpLabel')}
+        isRequired
         type="text"
         inputMode="numeric"
         autoComplete="one-time-code"

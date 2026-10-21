@@ -16,6 +16,8 @@ export interface SelectOption {
 export interface SelectProps extends Omit<SelectHTMLAttributes<HTMLSelectElement>, 'size'> {
   label?: string | undefined;
   error?: string | undefined;
+  /** Shows the asterisk on the label and sets `aria-required`. */
+  isRequired?: boolean | undefined;
   size?: ControlSize | undefined;
   options: readonly SelectOption[];
   /** Rendered as a disabled-looking first entry with an empty value. */
@@ -26,6 +28,7 @@ export function Select({
   id,
   label,
   error,
+  isRequired = false,
   size = 'md',
   options,
   placeholder,
@@ -41,7 +44,11 @@ export function Select({
      * on the inner element alone would leave the icon floating beside nothing.
      */
     <div className={cn('w-full space-y-1.5', className)}>
-      {label === undefined ? null : <Label htmlFor={id}>{label}</Label>}
+      {label === undefined ? null : (
+        <Label htmlFor={id} isRequired={isRequired}>
+          {label}
+        </Label>
+      )}
       {/*
         The native arrow is drawn by the platform: a different glyph per OS, in a
         colour the theme cannot reach, hard against the right edge. `appearance-none`
@@ -51,6 +58,7 @@ export function Select({
       <div className="relative">
         <select
           id={id}
+          aria-required={isRequired}
           aria-invalid={hasError}
           aria-describedby={fieldErrorId(id, hasError)}
           className={cn(

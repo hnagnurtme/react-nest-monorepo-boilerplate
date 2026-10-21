@@ -27,7 +27,7 @@
   },
   "create": {
     "name": "Tên",
-    "slug": "Slug (tùy chọn)",
+    "slug": "Slug",
     "slugPlaceholder": "tự tạo từ tên",
     "submit": "Tạo tổ chức",
     "success": "Đã tạo tổ chức.",

@@ -25,6 +25,8 @@ export interface ComboboxProps {
   id?: string | undefined;
   label?: string | undefined;
   error?: string | undefined;
+  /** Shows the asterisk on the label and sets `aria-required`. */
+  isRequired?: boolean | undefined;
   size?: ControlSize | undefined;
   options: readonly SelectOption[];
   /** The selected option's value, or `''` for none. */
@@ -91,6 +93,7 @@ export function Combobox({
   id,
   label,
   error,
+  isRequired = false,
   size = 'md',
   options,
   value,
@@ -226,7 +229,11 @@ export function Combobox({
 
   return (
     <div className={cn('w-full space-y-1.5', className)}>
-      {label === undefined ? null : <Label htmlFor={fieldId}>{label}</Label>}
+      {label === undefined ? null : (
+        <Label htmlFor={fieldId} isRequired={isRequired}>
+          {label}
+        </Label>
+      )}
       <div className="relative">
         <input
           ref={inputRef}
@@ -236,6 +243,7 @@ export function Combobox({
           autoComplete="off"
           aria-autocomplete="list"
           aria-expanded={isOpen}
+          aria-required={isRequired}
           aria-controls={listId}
           aria-invalid={hasError}
           aria-describedby={fieldErrorId(fieldId, hasError)}

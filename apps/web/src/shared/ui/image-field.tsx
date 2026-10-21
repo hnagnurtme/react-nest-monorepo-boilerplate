@@ -16,6 +16,8 @@ export type ImageFieldShape = 'square' | 'circle';
 
 export interface ImageFieldProps {
   label?: string | undefined;
+  /** Shows the asterisk on the label and sets `aria-required` on the picker. */
+  isRequired?: boolean | undefined;
   /** The file the user has chosen in this session; null once cleared. */
   file: File | null;
   onChange: (file: File | null) => void;
@@ -47,6 +49,7 @@ export interface ImageFieldProps {
  */
 export function ImageField({
   label,
+  isRequired = false,
   file,
   onChange,
   currentUrl = null,
@@ -130,13 +133,18 @@ export function ImageField({
 
   return (
     <div className="space-y-1.5">
-      {label === undefined ? null : <Label htmlFor={inputId}>{label}</Label>}
+      {label === undefined ? null : (
+        <Label htmlFor={inputId} isRequired={isRequired}>
+          {label}
+        </Label>
+      )}
 
       <FileInput
         ref={inputRef}
         id={inputId}
         accept={accept.join(',')}
         disabled={isDisabled}
+        aria-required={isRequired}
         aria-describedby={message === undefined ? undefined : errorId}
         onChange={(event) => {
           take(event.target.files?.[0] ?? null);

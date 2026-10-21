@@ -85,12 +85,12 @@ async function openForm(user: ReturnType<typeof userEvent.setup>) {
  * and set the password directly.
  */
 async function fillCommon(user: ReturnType<typeof userEvent.setup>) {
-  await user.type(screen.getByLabelText('Full name'), 'Jane Doe');
-  await user.type(screen.getByLabelText('Email'), 'jane@example.com');
+  await user.type(screen.getByLabelText(/^Full name/), 'Jane Doe');
+  await user.type(screen.getByLabelText(/^Email\*$/), 'jane@example.com');
   await user.click(
     screen.getByLabelText('Email an invitation so the user sets their own password'),
   );
-  await user.type(screen.getByLabelText('Password'), 'supersecret1');
+  await user.type(screen.getByLabelText(/^Password/), 'supersecret1');
 }
 
 async function submit(user: ReturnType<typeof userEvent.setup>) {
@@ -120,8 +120,8 @@ describe('CreateUserForm', () => {
     await openForm(user);
     expect(screen.queryByLabelText('Password')).not.toBeInTheDocument();
 
-    await user.type(screen.getByLabelText('Full name'), 'Jane Doe');
-    await user.type(screen.getByLabelText('Email'), 'jane@example.com');
+    await user.type(screen.getByLabelText(/^Full name/), 'Jane Doe');
+    await user.type(screen.getByLabelText(/^Email\*$/), 'jane@example.com');
     await user.click(await screen.findByLabelText('Tenant member'));
     await submit(user);
 
@@ -177,7 +177,7 @@ describe('CreateUserForm', () => {
 
     await openForm(user);
     await fillCommon(user);
-    await user.type(screen.getByLabelText('Phone (optional)'), '+84901234567');
+    await user.type(screen.getByLabelText('Phone'), '+84901234567');
     await user.click(await screen.findByLabelText('Tenant member'));
 
     await submit(user);
@@ -266,8 +266,8 @@ describe('CreateUserForm', () => {
     const user = userEvent.setup();
 
     await openForm(user);
-    await user.type(screen.getByLabelText('Full name'), 'Jane Doe');
-    await user.type(screen.getByLabelText('Email'), 'jane@example.com');
+    await user.type(screen.getByLabelText(/^Full name/), 'Jane Doe');
+    await user.type(screen.getByLabelText(/^Email\*$/), 'jane@example.com');
     await user.click(await screen.findByLabelText('Tenant member'));
     await submit(user);
 

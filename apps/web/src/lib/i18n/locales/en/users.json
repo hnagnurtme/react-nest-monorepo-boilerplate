@@ -55,7 +55,7 @@
     "title": "Create user",
     "fullName": "Full name",
     "email": "Email",
-    "phone": "Phone (optional)",
+    "phone": "Phone",
     "phonePlaceholder": "+84901234567",
     "password": "Password",
     "tenant": "Tenant",

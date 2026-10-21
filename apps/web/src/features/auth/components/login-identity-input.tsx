@@ -20,6 +20,7 @@ export function LoginIdentityInput({ form }: LoginIdentityInputProps) {
     <Input
       id="auth-identity"
       label={t('form.identityLabel')}
+      isRequired
       {...register('email')}
       type="text"
       autoComplete="username"

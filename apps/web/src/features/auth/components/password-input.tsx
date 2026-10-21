@@ -32,6 +32,7 @@ export function PasswordInput({
       <PasswordHeader onForgotPassword={onForgotPassword} />
       <Input
         id="auth-password"
+        aria-required
         {...register('password')}
         type={showPassword ? 'text' : 'password'}
         autoComplete="current-password"

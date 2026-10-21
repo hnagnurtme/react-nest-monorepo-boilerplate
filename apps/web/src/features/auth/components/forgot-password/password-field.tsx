@@ -22,6 +22,7 @@ export function PasswordField({ id, label, placeholder, error, registration }: P
     <Input
       id={id}
       label={label}
+      isRequired
       type={isVisible ? 'text' : 'password'}
       autoComplete="new-password"
       placeholder={placeholder}

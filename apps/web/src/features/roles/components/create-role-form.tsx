@@ -75,6 +75,7 @@ export function CreateRoleForm({ options, onClose }: CreateRoleFormProps) {
       <Input
         id="create-role-name"
         label={t('create.name')}
+        isRequired
         autoComplete="off"
         value={name}
         error={nameError}
@@ -86,6 +87,7 @@ export function CreateRoleForm({ options, onClose }: CreateRoleFormProps) {
         <Select
           id="create-role-tenant"
           label={t('create.tenant')}
+          isRequired
           placeholder={t('create.tenantPlaceholder')}
           value={tenantId}
           error={tenantError}

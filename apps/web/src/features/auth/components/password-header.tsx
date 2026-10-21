@@ -11,7 +11,9 @@ export function PasswordHeader({ onForgotPassword }: PasswordHeaderProps) {
 
   return (
     <div className="flex items-center justify-between">
-      <Label htmlFor="auth-password">{t('form.passwordLabel')}</Label>
+      <Label htmlFor="auth-password" isRequired>
+        {t('form.passwordLabel')}
+      </Label>
       <LinkButton size="small" onClick={onForgotPassword}>
         {t('form.forgotPassword')}
       </LinkButton>

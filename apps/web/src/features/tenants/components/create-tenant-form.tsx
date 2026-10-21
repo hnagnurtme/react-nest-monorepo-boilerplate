@@ -166,6 +166,7 @@ export function CreateTenantForm({
       <Input
         id="tenant-name"
         label={t('create.name')}
+        isRequired
         autoComplete="off"
         error={errors.name?.message}
         {...register('name')}

@@ -170,6 +170,7 @@ function RoleEditorBody({ role, options, onClose }: RoleEditorBodyProps) {
             <Input
               id="role-name"
               label={t('editor.name')}
+              isRequired
               autoComplete="off"
               value={name}
               error={nameError}

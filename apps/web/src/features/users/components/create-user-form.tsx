@@ -223,6 +223,7 @@ export function CreateUserForm({ onCreated, onCancel, variant = 'panel' }: Creat
       <Input
         id="create-user-full-name"
         label={t('create.fullName')}
+        isRequired
         autoComplete="off"
         error={errors.fullName?.message}
         {...register('fullName')}
@@ -231,6 +232,7 @@ export function CreateUserForm({ onCreated, onCancel, variant = 'panel' }: Creat
         id="create-user-email"
         type="email"
         label={t('create.email')}
+        isRequired
         autoComplete="off"
         error={errors.email?.message}
         {...register('email')}
@@ -249,6 +251,7 @@ export function CreateUserForm({ onCreated, onCancel, variant = 'panel' }: Creat
           id="create-user-password"
           type="password"
           label={t('create.password')}
+          isRequired
           autoComplete="new-password"
           error={errors.password?.message}
           {...register('password')}
@@ -291,6 +294,7 @@ export function CreateUserForm({ onCreated, onCancel, variant = 'panel' }: Creat
         <Select
           id="create-user-tenant"
           label={t('create.tenant')}
+          isRequired
           placeholder={t('create.tenantPlaceholder')}
           error={errors.tenantId?.message}
           options={(tenants.data?.items ?? []).map((tenant) => ({

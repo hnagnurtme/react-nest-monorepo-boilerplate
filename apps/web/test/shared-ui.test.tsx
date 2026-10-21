@@ -226,6 +226,20 @@ describe('Input adornments', () => {
 
     expect(screen.getByLabelText('Name')).not.toHaveAttribute('aria-describedby');
   });
+
+  it('marks a required field with an asterisk and leaves an optional one bare', () => {
+    render(
+      <>
+        <Input id="needed" label="Full name" isRequired />
+        <Input id="spare" label="Phone" />
+      </>,
+    );
+
+    expect(screen.getByLabelText(/^Full name\*$/)).toHaveAttribute('aria-required', 'true');
+    const optional = screen.getByLabelText('Phone');
+    expect(optional).not.toHaveAttribute('aria-required', 'true');
+    expect(screen.queryByText(/optional/i)).not.toBeInTheDocument();
+  });
 });
 
 describe('Textarea', () => {
