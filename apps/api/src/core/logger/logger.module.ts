@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ClsService } from 'nestjs-cls';
 import { LoggerModule } from 'nestjs-pino';
+import type { TransportTargetOptions } from 'pino';
 
 import { AppConfig } from '@/config/index.js';
 import { CLS_KEYS, type AppClsStore } from '@/core/database/request-context.js';
@@ -23,6 +24,48 @@ const REDACT_PATHS = [
   '*.refreshToken',
   '*.tokenHash',
 ];
+
+/**
+ * Where the log lines go.
+ *
+ * `pino-pretty` is the readable dev console; `pino-loki` ships the same lines
+ * to Loki so Grafana can jump from a span to the logs that carry its
+ * `traceId`. Both are optional and independent: a blank LOKI_URL leaves the
+ * console alone, and production drops pretty-printing and keeps JSON on
+ * stdout, which is what a container log collector expects.
+ *
+ * Returning an empty array would silence the logger entirely, so the stdout
+ * target is always present.
+ */
+function buildTransportTargets(config: AppConfig): TransportTargetOptions[] {
+  const targets: TransportTargetOptions[] = [
+    config.isProduction
+      ? { target: 'pino/file', options: { destination: 1 } }
+      : { target: 'pino-pretty', options: { singleLine: true } },
+  ];
+
+  const { lokiUrl, serviceName } = config.telemetry;
+
+  if (lokiUrl !== undefined) {
+    targets.push({
+      target: 'pino-loki',
+      options: {
+        host: lokiUrl,
+        // The label set is what Loki indexes; everything else stays in the log
+        // line. Keep it small and bounded — a label per traceId or per userId
+        // makes one stream per request and brings Loki down.
+        labels: { service: serviceName, env: config.nodeEnv },
+        // A failed push must never take the API down with it, and a dev
+        // machine without `just observability` running is the normal case.
+        silenceErrors: true,
+        batching: true,
+        interval: 5,
+      },
+    });
+  }
+
+  return targets;
+}
 
 /**
  * Pino, wired so every line already carries the request's identity.
@@ -48,9 +91,7 @@ const REDACT_PATHS = [
             userId: cls.get(CLS_KEYS.userId),
             tenantId: cls.get(CLS_KEYS.tenantId),
           }),
-          ...(config.isProduction
-            ? {}
-            : { transport: { target: 'pino-pretty', options: { singleLine: true } } }),
+          transport: { targets: buildTransportTargets(config) },
         },
       }),
     }),

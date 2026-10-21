@@ -100,6 +100,97 @@ services:
       timeout: 5s
       retries: 10
 
+  # ---------------------------------------------------------------------------
+  # Observability stack for local development, behind the `tracing` profile so
+  # the everyday `just up` stays four containers. Start it with
+  # `just observability`.
+  #
+  # Tempo holds traces, Prometheus metrics, Loki logs, Grafana shows all three.
+  # The API ships nothing until its three switches are set in apps/api/.env:
+  # OTEL_EXPORTER_OTLP_ENDPOINT (traces), PROMETHEUS_METRICS_PORT (metrics,
+  # scraped rather than pushed) and LOKI_URL (logs). A running stack with blank
+  # switches collects nothing, and no part of it fails loudly to say so.
+  # ---------------------------------------------------------------------------
+  tempo:
+    image: grafana/tempo:2.6.1
+    container_name: ${CONTAINER_PREFIX:-react-nest}-tempo
+    profiles: ['tracing', 'full']
+    restart: unless-stopped
+    # The image's entrypoint is the binary itself, so the config path is an
+    # argument rather than a command.
+    command: ['-config.file=/etc/tempo/tempo.yaml']
+    volumes:
+      - ./docker/tempo/tempo.yaml:/etc/tempo/tempo.yaml:ro
+      - tempo-data:/var/tempo
+    ports:
+      # 4318 is OTLP/HTTP (what the API uses), 4317 OTLP/gRPC, 3200 Tempo's own
+      # API — Grafana reaches 3200 over the compose network, but publishing it
+      # makes `curl localhost:3200/api/echo` a usable liveness check.
+      - '${TEMPO_OTLP_HTTP_PORT:-4318}:4318'
+      - '${TEMPO_OTLP_GRPC_PORT:-4317}:4317'
+      - '${TEMPO_HTTP_PORT:-3200}:3200'
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    container_name: ${CONTAINER_PREFIX:-react-nest}-grafana
+    profiles: ['tracing', 'full']
+    restart: unless-stopped
+    environment:
+      # Anonymous admin, no login form: a local trace viewer behind a password
+      # is friction with nothing behind it. Never copy this to a deployment.
+      GF_AUTH_ANONYMOUS_ENABLED: 'true'
+      GF_AUTH_ANONYMOUS_ORG_ROLE: 'Admin'
+      GF_AUTH_DISABLE_LOGIN_FORM: 'true'
+      # Opens on the provisioned dashboard instead of the welcome page.
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: '/var/lib/grafana/dashboards/api-traces.json'
+      GF_FEATURE_TOGGLES_ENABLE: 'traceqlEditor'
+    volumes:
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./docker/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      # Not 3000: the API already holds it.
+      - '${GRAFANA_PORT:-3001}:3000'
+    depends_on:
+      - tempo
+      - prometheus
+      - loki
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: ${CONTAINER_PREFIX:-react-nest}-prometheus
+    profiles: ['tracing', 'full']
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      # Tempo's metrics-generator PUSHES span metrics; a scrape-only Prometheus
+      # answers 404 on /api/v1/write and the generator retries forever.
+      - '--web.enable-remote-write-receiver'
+      # Needed by the exemplar link that jumps from a metric to the trace.
+      - '--enable-feature=exemplar-storage'
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - '${PROMETHEUS_PORT:-9090}:9090'
+    extra_hosts:
+      # Docker Desktop defines this already; plain Linux does not, and without
+      # it the `api` scrape job cannot reach a host-run `just dev`.
+      - 'host.docker.internal:host-gateway'
+
+  loki:
+    image: grafana/loki:3.2.1
+    container_name: ${CONTAINER_PREFIX:-react-nest}-loki
+    profiles: ['tracing', 'full']
+    restart: unless-stopped
+    command: ['-config.file=/etc/loki/loki.yaml']
+    volumes:
+      - ./docker/loki/loki.yaml:/etc/loki/loki.yaml:ro
+      - loki-data:/loki
+    ports:
+      - '${LOKI_PORT:-3100}:3100'
+
   api:
     build:
       context: .
@@ -122,6 +213,15 @@ services:
       SMTP_SECURE: 'false'
       # The containerised API reaches MinIO by service name, not localhost.
       S3_ENDPOINT: 'http://minio:9000'
+      # Same for Tempo. The host .env points at localhost, which inside the
+      # container is the container itself. Blank when the `tracing` profile is
+      # not running: an unset endpoint means spans are created and not shipped,
+      # while a dead endpoint means a retry loop in the exporter.
+      OTEL_EXPORTER_OTLP_ENDPOINT: '${COMPOSE_OTEL_ENDPOINT:-}'
+      LOKI_URL: '${COMPOSE_LOKI_URL:-}'
+      # Scraped at api:9464 by the `api-container` job, not published to the
+      # host: a scrape endpoint has no reason to leave the compose network.
+      PROMETHEUS_METRICS_PORT: '${COMPOSE_METRICS_PORT:-}'
     depends_on:
       postgres:
         condition: service_healthy
@@ -136,3 +236,7 @@ volumes:
   postgres-data:
   redis-data:
   minio-data:
+  tempo-data:
+  grafana-data:
+  prometheus-data:
+  loki-data:

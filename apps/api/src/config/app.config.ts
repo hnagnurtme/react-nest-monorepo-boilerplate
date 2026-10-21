@@ -27,6 +27,8 @@ export interface CookieSettings {
 export interface TelemetrySettings {
   serviceName: string;
   otlpEndpoint: string | undefined;
+  metricsPort: number | undefined;
+  lokiUrl: string | undefined;
 }
 
 export interface MailBrandSettings {
@@ -144,6 +146,8 @@ export class AppConfig {
     return {
       serviceName: this.env.OTEL_SERVICE_NAME,
       otlpEndpoint: this.env.OTEL_EXPORTER_OTLP_ENDPOINT,
+      metricsPort: this.env.PROMETHEUS_METRICS_PORT,
+      lokiUrl: this.env.LOKI_URL,
     };
   }
 

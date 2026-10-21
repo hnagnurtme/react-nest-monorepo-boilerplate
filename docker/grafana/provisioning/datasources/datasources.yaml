@@ -1,0 +1,70 @@
+# Provisioned at boot, so nobody adds a datasource by hand.
+#
+# The three are cross-linked on purpose: a trace opens its logs, a log line
+# opens its trace, and a span-metrics series opens an example trace. That
+# linking is the whole reason to run all three rather than three separate tools.
+apiVersion: 1
+
+datasources:
+  - name: Tempo
+    type: tempo
+    uid: tempo
+    access: proxy
+    # Grafana talks to Tempo inside the compose network, not through the host.
+    url: http://tempo:3200
+    isDefault: true
+    jsonData:
+      nodeGraph:
+        enabled: true
+      search:
+        hide: false
+      # Trace -> logs. The API's Pino mixin puts `traceId` on every line and
+      # pino-loki labels the stream `service`, so both halves of the query
+      # exist without any further wiring.
+      tracesToLogsV2:
+        datasourceUid: loki
+        spanStartTimeShift: '-5m'
+        spanEndTimeShift: '5m'
+        filterByTraceID: false
+        customQuery: true
+        query: '{service="$${__span.tags["service.name"]}"} | json | traceId="$${__span.traceId}"'
+      # Trace -> metrics, using the span metrics Tempo generates itself.
+      tracesToMetrics:
+        datasourceUid: prometheus
+        spanStartTimeShift: '-5m'
+        spanEndTimeShift: '5m'
+        queries:
+          - name: 'Request rate for this span name'
+            query: 'sum(rate(traces_spanmetrics_calls_total{service=~"$${__span.tags["service.name"]}", span_name=~"$${__span.name}"}[5m]))'
+      # Powers the service graph tab; the generator writes these series.
+      serviceMap:
+        datasourceUid: prometheus
+
+  - name: Prometheus
+    type: prometheus
+    uid: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    jsonData:
+      httpMethod: POST
+      # Metric -> trace, through the exemplars the generator sends.
+      exemplarTraceIdDestinations:
+        - name: trace_id
+          datasourceUid: tempo
+          urlDisplayLabel: 'View trace'
+
+  - name: Loki
+    type: loki
+    uid: loki
+    access: proxy
+    url: http://loki:3100
+    jsonData:
+      # Log -> trace. `traceId` is a JSON field of the log line, not a label,
+      # so the regex reads the line itself.
+      derivedFields:
+        - name: TraceID
+          matcherType: regex
+          matcherRegex: '"traceId":"([a-f0-9]{32})"'
+          url: '$${__value.raw}'
+          datasourceUid: tempo
+          urlDisplayLabel: 'View trace'

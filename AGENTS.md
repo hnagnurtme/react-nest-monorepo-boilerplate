@@ -13,8 +13,9 @@ All build, test, lint, migration, and dev commands **MUST** go through `just`. N
 | Command                 | What it actually runs                                                                             |
 | :---------------------- | :------------------------------------------------------------------------------------------------ |
 | `just install`          | `pnpm install --frozen-lockfile`                                                                  |
-| `just up` / `just down` | `docker compose up -d` / `docker compose down` (Postgres 16 + Redis 7 + Mailpit)                  |
+| `just up` / `just down` | `docker compose up -d` / `docker compose down` (Postgres 16 + Redis 7 + Mailpit + MinIO)          |
 | `just mail`             | opens Mailpit at `http://localhost:8025`, where every dev email lands instead of a real inbox     |
+| `just observability`    | starts Tempo + Prometheus + Loki + Grafana (profile `tracing`), opens `http://localhost:3001`     |
 | `just stop`             | `docker compose stop` and kills listeners on ports 3000 and 5173                                  |
 | `just dev`              | `turbo run dev` (api + web)                                                                       |
 | `just api` / `just web` | `pnpm --filter @repo/<app> dev`                                                                   |
@@ -27,6 +28,7 @@ All build, test, lint, migration, and dev commands **MUST** go through `just`. N
 | `just secrets`          | `gitleaks detect --config .gitleaks.toml --no-banner --redact` — requires `brew install gitleaks` |
 
 - `just db-migrate`, `just db-seed`, `just db-studio` require a running Postgres — run `just up` first.
+- **Observability is wired but collects nothing by default.** Three independent switches in `apps/api/.env`, each off when blank, each retrying in the background when pointed at a backend that is not up — leave one blank rather than stale. `OTEL_EXPORTER_OTLP_ENDPOINT` (traces): spans are always created, so `traceId` reaches the logs and the RFC 9457 error body; only the OTLP exporter is conditional. `PROMETHEUS_METRICS_PORT` (metrics): `PrometheusExporter` opens a listener of its own (9464 locally) rather than adding a Nest route — a scrape endpoint must not sit behind the auth stack, and a separate port is one a deployment can keep off the public load balancer. `LOKI_URL` (logs): adds a `pino-loki` transport target beside the console one, labelled `service` and `env` only (a label per `traceId` would make one Loki stream per request). `just observability` starts the local stack: Tempo stores traces, its metrics-generator derives RED metrics and the service graph from those same spans and remote-writes them to Prometheus (so RED costs no API code), Loki holds logs, Grafana shows all three at `http://localhost:3001` with the dashboards `API traces` and `API metrics (RED)`. The datasources are cross-linked both ways (trace → logs by `traceId`, log → trace by derived field, metric → trace by exemplar). Config lives in `docker/{tempo,prometheus,loki,grafana}/`; all of it is development-only. Same placeholder pattern for `SENTRY_DSN`: blank means `Sentry.init` is a no-op and every `reportError` is dropped.
 - `just test` runs **unit tests only**. Integration tests: `pnpm test:integration` (inside `apps/api`, needs `just up` + `just db-migrate`).
 - Node `>=20.18.0`; package manager `pnpm@9.15.4` (enforced by `packageManager` field).
 - The seed creates one account — `admin@platform.com` / `Password123!` (`PLATFORM_ADMIN`, no tenant) — plus two empty tenants (Acme, Globex). It is deliberately the only one: every other account is created through the API by that admin, and roles are assigned through `user_roles`.

@@ -95,6 +95,22 @@ export const envSchema = z
       z.string().url().optional(),
     ),
 
+    /**
+     * Port for the Prometheus scrape endpoint. Blank switches metrics off, the
+     * same way a blank OTLP endpoint switches trace export off.
+     *
+     * It is a port of its own, not a route on the API: a scrape endpoint must
+     * not sit behind the auth stack, and leaving it off the public listener
+     * means no deployment can expose it by accident.
+     */
+    PROMETHEUS_METRICS_PORT: blankToUndefined(z.coerce.number().int().positive().optional()),
+
+    /**
+     * Loki push URL (`http://localhost:3100` locally). Blank switches log
+     * shipping off and the logs stay on stdout.
+     */
+    LOKI_URL: blankToUndefined(z.string().url().optional()),
+
     // Email Configuration
     // Mailpit by default (docker compose): an unset SMTP host must never fall
     // back to a real relay, or a developer machine mails real addresses.
