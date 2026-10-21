@@ -1,4 +1,4 @@
-import { useMemo, useState, type SyntheticEvent } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useAbility } from '@/features/auth';
@@ -16,39 +16,33 @@ import {
   toRoleSubject,
   type PresetSelection,
 } from '@/features/roles/utils/permissions';
-import { Button, ConfirmDialog, Dialog, Input, useToast } from '@/shared/ui';
+import { Button, ConfirmDialog, Input, PanelForm, useToast } from '@/shared/ui';
 
 const MIN_NAME_LENGTH = 2;
 
-export interface RoleEditorDialogProps {
+export interface RoleEditorProps {
   role: RoleItem;
   options: readonly PermissionOption[];
   onClose: () => void;
 }
 
 /** Loads the fresh role, then renders the editor (state is initialised from it once). */
-export function RoleEditorDialog({ role, options, onClose }: RoleEditorDialogProps) {
+export function RoleEditorForm({ role, options, onClose }: RoleEditorProps) {
   const { t } = useTranslation('roles');
   const detail = useRole(role.id);
 
-  return (
-    <Dialog
-      title={t('editor.title', { name: role.name })}
-      closeLabel={t('close')}
-      onClose={onClose}
-    >
-      {detail.data ? (
-        <RoleEditorBody role={detail.data} options={options} onClose={onClose} />
-      ) : (
-        <p className="text-muted-foreground text-body">
-          {detail.isError ? t('editor.loadError') : t('loading')}
-        </p>
-      )}
-    </Dialog>
-  );
+  if (!detail.data) {
+    return (
+      <p className="text-muted-foreground text-body p-4">
+        {detail.isError ? t('editor.loadError') : t('loading')}
+      </p>
+    );
+  }
+
+  return <RoleEditorBody role={detail.data} options={options} onClose={onClose} />;
 }
 
-interface RoleEditorBodyProps extends RoleEditorDialogProps {
+interface RoleEditorBodyProps extends RoleEditorProps {
   role: RoleItem;
 }
 
@@ -74,8 +68,7 @@ function RoleEditorBody({ role, options, onClose }: RoleEditorBodyProps) {
   const canUpdate = !role.isSystem && ability.can('update', target);
   const canDelete = !role.isSystem && ability.can('delete', target);
 
-  const onRename = (event: SyntheticEvent<HTMLFormElement>): void => {
-    event.preventDefault();
+  const onRename = (): void => {
     const trimmed = name.trim();
     if (trimmed.length < MIN_NAME_LENGTH) {
       setNameError(t('create.validation.nameMin'));
@@ -123,8 +116,46 @@ function RoleEditorBody({ role, options, onClose }: RoleEditorBodyProps) {
     });
   };
 
+  /*
+    Saving the matrix is the panel's primary action, so the action row belongs
+    to the shell rather than to the rename form inside it: the permission list
+    is long, and a Save below the fold is a Save nobody presses.
+  */
   return (
-    <div className="space-y-4">
+    <PanelForm
+      label={t('editor.title', { name: role.name })}
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (canUpdate) onSavePermissions();
+      }}
+      leading={
+        canDelete ? (
+          <Button
+            type="button"
+            variant="destructive"
+            size="sm"
+            isLoading={deleteRole.isPending}
+            onClick={() => {
+              setIsConfirmingDelete(true);
+            }}
+          >
+            {t('editor.delete')}
+          </Button>
+        ) : null
+      }
+      actions={
+        <>
+          <Button type="button" variant="outline" onClick={onClose}>
+            {t('close')}
+          </Button>
+          {canUpdate ? (
+            <Button type="submit" isLoading={setPermissions.isPending}>
+              {t('editor.save')}
+            </Button>
+          ) : null}
+        </>
+      }
+    >
       {role.isSystem ? (
         <p className="bg-muted text-muted-foreground rounded-inner text-label px-3 py-2">
           {t('editor.systemNotice')}
@@ -132,7 +163,9 @@ function RoleEditorBody({ role, options, onClose }: RoleEditorBodyProps) {
       ) : null}
 
       {canUpdate ? (
-        <form onSubmit={onRename} noValidate className="flex items-end gap-2">
+        /* Renaming is its own request, so it keeps its own button; a nested
+           form is invalid HTML, hence the div and an explicit click. */
+        <div className="flex items-end gap-2">
           <div className="flex-1">
             <Input
               id="role-name"
@@ -145,10 +178,15 @@ function RoleEditorBody({ role, options, onClose }: RoleEditorBodyProps) {
               }}
             />
           </div>
-          <Button type="submit" variant="outline" isLoading={updateRole.isPending}>
+          <Button
+            type="button"
+            variant="outline"
+            isLoading={updateRole.isPending}
+            onClick={onRename}
+          >
             {t('editor.rename')}
           </Button>
-        </form>
+        </div>
       ) : null}
 
       <PermissionMatrix
@@ -159,33 +197,6 @@ function RoleEditorBody({ role, options, onClose }: RoleEditorBodyProps) {
           setSelection((previous) => ({ ...previous, [key]: preset }));
         }}
       />
-
-      <div className="flex justify-between gap-2">
-        <div>
-          {canDelete ? (
-            <Button
-              type="button"
-              variant="destructive"
-              isLoading={deleteRole.isPending}
-              onClick={() => {
-                setIsConfirmingDelete(true);
-              }}
-            >
-              {t('editor.delete')}
-            </Button>
-          ) : null}
-        </div>
-        <div className="flex gap-2">
-          <Button type="button" variant="outline" onClick={onClose}>
-            {t('close')}
-          </Button>
-          {canUpdate ? (
-            <Button type="button" isLoading={setPermissions.isPending} onClick={onSavePermissions}>
-              {t('editor.save')}
-            </Button>
-          ) : null}
-        </div>
-      </div>
 
       {isConfirmingDelete ? (
         <ConfirmDialog
@@ -201,6 +212,6 @@ function RoleEditorBody({ role, options, onClose }: RoleEditorBodyProps) {
           }}
         />
       ) : null}
-    </div>
+    </PanelForm>
   );
 }

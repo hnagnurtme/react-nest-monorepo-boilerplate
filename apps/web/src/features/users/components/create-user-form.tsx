@@ -16,7 +16,17 @@ import {
   type CreateUserSchemaOptions,
 } from '@/features/users/schemas/create-user.schema';
 import type { CreateUserBody, InviteToTenantBody } from '@/features/users/types';
-import { Alert, Button, CheckboxField, FieldError, Input, Select, useToast } from '@/shared/ui';
+import {
+  Alert,
+  Button,
+  CheckboxField,
+  FieldError,
+  Input,
+  PanelForm,
+  Select,
+  useToast,
+  type PanelFormVariant,
+} from '@/shared/ui';
 
 const CONFLICT_STATUS = 409;
 const FORBIDDEN_STATUS = 403;
@@ -31,6 +41,8 @@ const ROLE_OPTIONS_LIMIT = 100;
 export interface CreateUserFormProps {
   onCreated?: () => void;
   onCancel?: () => void;
+  /** `panel` fills a flush `SidePanel`; `card` is the standalone block. */
+  variant?: PanelFormVariant;
 }
 
 /**
@@ -67,7 +79,7 @@ function visibleRoles(roles: readonly RoleItem[], tenantId: string): RoleItem[] 
   );
 }
 
-export function CreateUserForm({ onCreated, onCancel }: CreateUserFormProps) {
+export function CreateUserForm({ onCreated, onCancel, variant = 'panel' }: CreateUserFormProps) {
   const { t } = useTranslation('users');
   const { showToast } = useToast();
   const isPlatformActor = useAuthStore((state) => state.user?.scope === 'platform');
@@ -189,13 +201,24 @@ export function CreateUserForm({ onCreated, onCancel }: CreateUserFormProps) {
   };
 
   return (
-    <form
-      aria-label={t('create.title')}
+    <PanelForm
+      label={t('create.title')}
+      variant={variant}
       onSubmit={(event) => {
         void handleSubmit(onSubmit)(event);
       }}
-      noValidate
-      className="border-border bg-card rounded-surface grid gap-3 border p-4 sm:grid-cols-2"
+      actions={
+        <>
+          {onCancel ? (
+            <Button type="button" variant="outline" onClick={onCancel}>
+              {t('create.cancel')}
+            </Button>
+          ) : null}
+          <Button type="submit" isLoading={createUser.isPending}>
+            {t('create.submit')}
+          </Button>
+        </>
+      }
     >
       <Input
         id="create-user-full-name"
@@ -298,17 +321,6 @@ export function CreateUserForm({ onCreated, onCancel }: CreateUserFormProps) {
           </div>
         </Alert>
       )}
-
-      <div className="flex justify-end gap-2 sm:col-span-2">
-        {onCancel ? (
-          <Button type="button" variant="outline" onClick={onCancel}>
-            {t('create.cancel')}
-          </Button>
-        ) : null}
-        <Button type="submit" isLoading={createUser.isPending}>
-          {t('create.submit')}
-        </Button>
-      </div>
-    </form>
+    </PanelForm>
   );
 }

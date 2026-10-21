@@ -4,8 +4,8 @@ import { useTranslation } from 'react-i18next';
 
 import { CanAction } from '@/features/auth';
 import { usePermissionOptions, useRoles } from '@/features/roles/api/use-roles';
-import { CreateRoleDialog } from '@/features/roles/components/create-role-dialog';
-import { RoleEditorDialog } from '@/features/roles/components/role-editor-dialog';
+import { CreateRoleForm } from '@/features/roles/components/create-role-form';
+import { RoleEditorForm } from '@/features/roles/components/role-editor-form';
 import type { RoleItem } from '@/features/roles/types';
 import {
   urlNumber,
@@ -27,6 +27,7 @@ import {
   PageHeader,
   PageShell,
   Pagination,
+  SidePanel,
   TableToolbar,
   TextCell,
   useColumnVisibility,
@@ -211,17 +212,39 @@ export function RolesPage() {
 
       {createDialog.isOpen ? (
         <CanAction I="create" a="Role">
-          <CreateRoleDialog options={options} onClose={createDialog.close} />
+          <SidePanel
+            title={t('create.title')}
+            description={t('create.panelDescription')}
+            closeLabel={tCommon('actions.close')}
+            onClose={createDialog.close}
+            // A half-filled form must not vanish on a stray click outside it.
+            closeOnOverlayClick={false}
+            // The form owns the scroll: its action row stays pinned below it.
+            isFlush
+          >
+            <CreateRoleForm options={options} onClose={createDialog.close} />
+          </SidePanel>
         </CanAction>
       ) : null}
       {editing ? (
-        <RoleEditorDialog
-          role={editing}
-          options={options}
+        <SidePanel
+          title={t('editor.title', { name: editing.name })}
+          description={t('editor.panelDescription')}
+          closeLabel={tCommon('actions.close')}
           onClose={() => {
             setEditingId(null);
           }}
-        />
+          closeOnOverlayClick={false}
+          isFlush
+        >
+          <RoleEditorForm
+            role={editing}
+            options={options}
+            onClose={() => {
+              setEditingId(null);
+            }}
+          />
+        </SidePanel>
       ) : null}
     </PageShell>
   );

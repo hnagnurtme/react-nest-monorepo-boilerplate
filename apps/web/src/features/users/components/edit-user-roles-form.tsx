@@ -6,17 +6,17 @@ import { useSetUserRoles } from '@/features/users/api/use-set-user-roles';
 import { RoleChecklist } from '@/features/users/components/role-checklist';
 import type { UserListItem } from '@/features/users/types';
 import { useApiErrorMessage } from '@/shared/hooks';
-import { Button, Dialog, useToast } from '@/shared/ui';
+import { Button, PanelForm, useToast } from '@/shared/ui';
 
 const ROLE_OPTIONS_LIMIT = 100;
 const FORBIDDEN_STATUS = 403;
 
-export interface EditUserRolesDialogProps {
+export interface EditUserRolesFormProps {
   user: UserListItem;
   onClose: () => void;
 }
 
-export function EditUserRolesDialog({ user, onClose }: EditUserRolesDialogProps) {
+export function EditUserRolesForm({ user, onClose }: EditUserRolesFormProps) {
   const { t } = useTranslation('users');
   const { showToast } = useToast();
   const toMessage = useApiErrorMessage();
@@ -64,10 +64,22 @@ export function EditUserRolesDialog({ user, onClose }: EditUserRolesDialogProps)
   };
 
   return (
-    <Dialog
-      title={t('rolesDialog.title', { email: user.email })}
-      closeLabel={t('rolesDialog.cancel')}
-      onClose={onClose}
+    <PanelForm
+      label={t('rolesDialog.title', { email: user.email })}
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (selected.length > 0) save();
+      }}
+      actions={
+        <>
+          <Button type="button" variant="outline" onClick={onClose}>
+            {t('rolesDialog.cancel')}
+          </Button>
+          <Button type="submit" isLoading={setUserRoles.isPending} disabled={selected.length === 0}>
+            {t('rolesDialog.save')}
+          </Button>
+        </>
+      }
     >
       {rolesQuery.isPending ? (
         <p className="text-muted-foreground text-body">{t('rolesDialog.loading')}</p>
@@ -81,19 +93,6 @@ export function EditUserRolesDialog({ user, onClose }: EditUserRolesDialogProps)
           onToggle={toggle}
         />
       )}
-      <div className="flex justify-end gap-2">
-        <Button type="button" variant="outline" onClick={onClose}>
-          {t('rolesDialog.cancel')}
-        </Button>
-        <Button
-          type="button"
-          isLoading={setUserRoles.isPending}
-          disabled={selected.length === 0}
-          onClick={save}
-        >
-          {t('rolesDialog.save')}
-        </Button>
-      </div>
-    </Dialog>
+    </PanelForm>
   );
 }

@@ -10,7 +10,7 @@ import { useResendInvitation } from '@/features/users/api/use-resend-invitation'
 import { useUpdateUser } from '@/features/users/api/use-update-user';
 import { USER_SORT_FIELDS, useUsers } from '@/features/users/api/use-users';
 import { CreateUserForm } from '@/features/users/components/create-user-form';
-import { EditUserRolesDialog } from '@/features/users/components/edit-user-roles-dialog';
+import { EditUserRolesForm } from '@/features/users/components/edit-user-roles-form';
 import { PendingInvitations } from '@/features/users/components/pending-invitations';
 import type { UserListItem } from '@/features/users/types';
 import {
@@ -38,6 +38,7 @@ import {
   PageHeader,
   PageShell,
   Pagination,
+  SidePanel,
   TableToolbar,
   TextCell,
   parseSort,
@@ -293,12 +294,6 @@ export function UsersPage() {
         }
       />
 
-      {createForm.isOpen ? (
-        <CanAction I="create" a="User">
-          <CreateUserForm onCreated={createForm.close} onCancel={createForm.close} />
-        </CanAction>
-      ) : null}
-
       <PendingInvitations />
 
       <DataTable
@@ -398,14 +393,46 @@ export function UsersPage() {
         }
       />
 
+      {createForm.isOpen ? (
+        <CanAction I="create" a="User">
+          <SidePanel
+            title={t('create.title')}
+            description={t('create.panelDescription')}
+            closeLabel={tCommon('actions.close')}
+            onClose={createForm.close}
+            // A half-filled form must not vanish on a stray click outside it.
+            closeOnOverlayClick={false}
+            // The form owns the scroll: its action row stays pinned below it.
+            isFlush
+          >
+            <CreateUserForm
+              variant="panel"
+              onCreated={createForm.close}
+              onCancel={createForm.close}
+            />
+          </SidePanel>
+        </CanAction>
+      ) : null}
+
       {editingRoles ? (
-        <EditUserRolesDialog
-          key={editingRoles.id}
-          user={editingRoles}
+        <SidePanel
+          title={t('rolesDialog.title', { email: editingRoles.email })}
+          description={t('rolesDialog.panelDescription')}
+          closeLabel={tCommon('actions.close')}
           onClose={() => {
             setEditingRolesId(null);
           }}
-        />
+          closeOnOverlayClick={false}
+          isFlush
+        >
+          <EditUserRolesForm
+            key={editingRoles.id}
+            user={editingRoles}
+            onClose={() => {
+              setEditingRolesId(null);
+            }}
+          />
+        </SidePanel>
       ) : null}
 
       {pendingDelete ? (

@@ -1,4 +1,4 @@
-import { useState, type SyntheticEvent } from 'react';
+import { useState, type BaseSyntheticEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useAuthStore } from '@/entities/session';
@@ -8,17 +8,17 @@ import type { CreateRoleBody, PermissionOption } from '@/features/roles/types';
 import { roleErrorMessage } from '@/features/roles/utils/error-message';
 import { permissionsFromSelection, type PresetSelection } from '@/features/roles/utils/permissions';
 import { useTenants } from '@/features/tenants';
-import { Button, Dialog, Input, Select, useToast } from '@/shared/ui';
+import { Button, Input, PanelForm, Select, useToast } from '@/shared/ui';
 
 const TENANT_OPTIONS_LIMIT = 100;
 const MIN_NAME_LENGTH = 2;
 
-export interface CreateRoleDialogProps {
+export interface CreateRoleFormProps {
   options: readonly PermissionOption[];
   onClose: () => void;
 }
 
-export function CreateRoleDialog({ options, onClose }: CreateRoleDialogProps) {
+export function CreateRoleForm({ options, onClose }: CreateRoleFormProps) {
   const { t } = useTranslation('roles');
   const { showToast } = useToast();
   const isPlatformActor = useAuthStore((state) => state.user?.scope === 'platform');
@@ -31,7 +31,7 @@ export function CreateRoleDialog({ options, onClose }: CreateRoleDialogProps) {
   const [nameError, setNameError] = useState<string | undefined>();
   const [tenantError, setTenantError] = useState<string | undefined>();
 
-  const onSubmit = (event: SyntheticEvent<HTMLFormElement>): void => {
+  const onSubmit = (event: BaseSyntheticEvent): void => {
     event.preventDefault();
     const trimmed = name.trim();
     const hasNameError = trimmed.length < MIN_NAME_LENGTH;
@@ -58,52 +58,54 @@ export function CreateRoleDialog({ options, onClose }: CreateRoleDialogProps) {
   };
 
   return (
-    <Dialog title={t('create.title')} closeLabel={t('close')} onClose={onClose}>
-      <form onSubmit={onSubmit} noValidate className="space-y-4">
-        <Input
-          id="create-role-name"
-          label={t('create.name')}
-          autoComplete="off"
-          value={name}
-          error={nameError}
-          onChange={(event) => {
-            setName(event.target.value);
-          }}
-        />
-        {isPlatformActor ? (
-          <Select
-            id="create-role-tenant"
-            label={t('create.tenant')}
-            placeholder={t('create.tenantPlaceholder')}
-            value={tenantId}
-            error={tenantError}
-            options={(tenants.data?.items ?? []).map((tenant) => ({
-              value: tenant.id,
-              label: tenant.name,
-            }))}
-            onChange={(event) => {
-              setTenantId(event.target.value);
-            }}
-          />
-        ) : null}
-
-        <PermissionMatrix
-          options={options}
-          selection={selection}
-          onChange={(key, preset) => {
-            setSelection((previous) => ({ ...previous, [key]: preset }));
-          }}
-        />
-
-        <div className="flex justify-end gap-2">
+    <PanelForm
+      label={t('create.title')}
+      onSubmit={onSubmit}
+      actions={
+        <>
           <Button type="button" variant="outline" onClick={onClose}>
             {t('cancel')}
           </Button>
           <Button type="submit" isLoading={createRole.isPending}>
             {t('create.submit')}
           </Button>
-        </div>
-      </form>
-    </Dialog>
+        </>
+      }
+    >
+      <Input
+        id="create-role-name"
+        label={t('create.name')}
+        autoComplete="off"
+        value={name}
+        error={nameError}
+        onChange={(event) => {
+          setName(event.target.value);
+        }}
+      />
+      {isPlatformActor ? (
+        <Select
+          id="create-role-tenant"
+          label={t('create.tenant')}
+          placeholder={t('create.tenantPlaceholder')}
+          value={tenantId}
+          error={tenantError}
+          options={(tenants.data?.items ?? []).map((tenant) => ({
+            value: tenant.id,
+            label: tenant.name,
+          }))}
+          onChange={(event) => {
+            setTenantId(event.target.value);
+          }}
+        />
+      ) : null}
+
+      <PermissionMatrix
+        options={options}
+        selection={selection}
+        onChange={(key, preset) => {
+          setSelection((previous) => ({ ...previous, [key]: preset }));
+        }}
+      />
+    </PanelForm>
   );
 }
