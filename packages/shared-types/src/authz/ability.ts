@@ -40,24 +40,37 @@ export interface UserContext {
 type Conditions = Record<string, unknown>;
 
 /**
- * Turns a stored preset into a CASL condition for one (action, subject).
+ * Turns a stored preset into CASL conditions for one (action, subject).
  *
  * The preset is a closed vocabulary on purpose: tenants pick how far a
  * permission reaches but never author a query, so a role cannot be crafted to
  * match rows outside its tenant. Returns `null` when the combination is
  * meaningless, and the grant is then dropped (fail closed).
+ *
+ * An **array** means one grant that reaches two disjoint sets of rows, and
+ * `buildAbility` turns it into one `can` rule per entry. CASL's mongo matcher
+ * reads `$or` as a field named `$or`, not as a disjunction, so a union has to
+ * be several rules — rules are OR-ed by CASL itself.
  */
 export function conditionsFor(
   grant: PermissionGrant,
   user: UserContext,
-): Conditions | undefined | null {
+): Conditions | Conditions[] | undefined | null {
   if (grant.preset === 'any') return undefined;
   if (user.tenantId === undefined) return null;
 
   const { subject, preset } = grant;
 
   if (preset === 'own_record') {
-    return subject === 'User' ? { id: user.id } : null;
+    // 'own_record' means a different column per subject, so every subject that
+    // offers the preset needs a branch here. A subject without one falls
+    // through to null and the grant is dropped — fail closed, never "all rows".
+    switch (subject) {
+      case 'User':
+        return { id: user.id };
+      default:
+        return null;
+    }
   }
 
   // own_tenant
@@ -86,8 +99,14 @@ export function buildAbility(grants: readonly PermissionGrant[], user: UserConte
     // `can(action, subject, conditions?)` is typed per subject; the grant comes
     // from a validated catalog, so the loose call is safe here.
     const grantSubject = grant.subject as Subject | 'all';
-    if (conditions === undefined) can(grant.action, grantSubject);
-    else can(grant.action, grantSubject, conditions as never);
+    if (conditions === undefined) {
+      can(grant.action, grantSubject);
+      continue;
+    }
+    /* An array is a union: one rule each, and CASL OR-s its own rules. */
+    for (const condition of Array.isArray(conditions) ? conditions : [conditions]) {
+      can(grant.action, grantSubject, condition as never);
+    }
   }
 
   // Invariant, independent of what any role row says: system roles are immutable.
