@@ -144,6 +144,7 @@ describe('UsersService', () => {
   let authz: {
     current: Mock;
     currentGrants: Mock;
+    currentProfile: Mock;
     activeTenantId: Mock;
     invalidateUsers: Mock;
   };
@@ -168,6 +169,7 @@ describe('UsersService', () => {
       buildAbility(actor.grants, { id: actor.auth.id, tenantId: actor.auth.tenantId }),
     );
     authz.currentGrants.mockReturnValue([...actor.grants]);
+    authz.currentProfile.mockReturnValue({ userId: actor.auth.id });
     authz.activeTenantId.mockReturnValue(actor.auth.tenantId);
     return actor.auth;
   }
@@ -202,6 +204,7 @@ describe('UsersService', () => {
     authz = {
       current: vi.fn(),
       currentGrants: vi.fn(() => []),
+      currentProfile: vi.fn(),
       activeTenantId: vi.fn(),
       invalidateUsers: vi.fn(),
     };
@@ -257,6 +260,42 @@ describe('UsersService', () => {
   function invitationBody(): Omit<typeof body, 'password'> {
     return { email: body.email, fullName: body.fullName };
   }
+
+  describe('list', () => {
+    it('leaves the directory unfiltered for a caller who may read the tenant', async () => {
+      act(tenantAdmin());
+      repository.list.mockResolvedValue([]);
+      repository.count.mockResolvedValue(0);
+
+      await service.list({ page: 1, limit: 20, sortOrder: 'desc' });
+
+      expect(repository.count).toHaveBeenCalledWith({}, { search: undefined });
+    });
+
+    it('narrows the directory to the caller when read:User is own_record', async () => {
+      // `@CheckPolicies` checks the permission with a string subject, so CASL
+      // drops the conditions, and RLS stops at the tenant: without this the
+      // whole tenant is readable by anybody who may read their own profile.
+      act({
+        auth: {
+          id: 'u-1',
+          email: 'e@x.test',
+          tenantId: TENANT,
+          tenantIds: [TENANT],
+          scope: 'tenant',
+          roles: ['TENANT_EMPLOYEE'],
+          jti: 'j',
+        },
+        grants: [{ action: 'read', subject: 'User', preset: 'own_record' }],
+      });
+      repository.list.mockResolvedValue([]);
+      repository.count.mockResolvedValue(0);
+
+      await service.list({ page: 1, limit: 20, sortOrder: 'desc' });
+
+      expect(repository.count).toHaveBeenCalledWith({}, { search: undefined, onlyId: 'u-1' });
+    });
+  });
 
   describe('read / update / delete', () => {
     it('throws not found when the row is invisible (other tenant or missing)', async () => {

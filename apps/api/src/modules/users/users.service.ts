@@ -83,7 +83,7 @@ export class UsersService {
 
   async list(query: ListUsersQuery): Promise<{ items: UserResponse[]; meta: PaginationMeta }> {
     const sort = parseSort(query, USER_SORT_FIELDS);
-    const filter = { search: query.search };
+    const filter = { search: query.search, ...this.reachOfRead() };
 
     const [rows, total, roles] = await this.transactions.runInRequestContext(async (tx) => {
       const page = await this.repository.list(
@@ -106,6 +106,31 @@ export class UsersService {
       items: rows.map((row) => toUserResponse(row, roles.get(row.id) ?? [])),
       meta: buildPaginationMeta(query, total),
     };
+  }
+
+  /**
+   * The directory narrowed to what the caller may actually read.
+   *
+   * `@CheckPolicies` is a permission check with a string subject, which CASL
+   * resolves without conditions (AGENTS.md section 6), and RLS stops at the
+   * tenant. So an account whose `read:User` is `own_record` — whose only use
+   * for the grant is their own profile — would otherwise page through every
+   * colleague in the tenant.
+   */
+  private reachOfRead(): { onlyId?: string } {
+    const reads = this.authz
+      .currentGrants()
+      .filter(
+        (grant) =>
+          (grant.action === 'read' || grant.action === 'manage') &&
+          (grant.subject === 'User' || grant.subject === 'all'),
+      );
+    if (reads.length === 0 || reads.some((grant) => grant.preset !== 'own_record')) return {};
+
+    const userId = this.authz.currentProfile()?.userId;
+    // No profile means no session, which the guard already refused.
+    if (userId === undefined) throw new ForbiddenActionError('read', 'User');
+    return { onlyId: userId };
   }
 
   /**
