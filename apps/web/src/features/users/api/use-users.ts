@@ -1,9 +1,8 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 
+import { USER_ENDPOINTS } from '@/features/users/endpoints';
 import type { UserListItem, UsersPage } from '@/features/users/types';
 import { rawPagedRequest, type ApiError } from '@/lib/http/client';
-
-export const USERS_ENDPOINT = '/api/v1/users';
 
 /**
  * The fields `GET /users` allow-lists for `sortBy`. Anything else is dropped by
@@ -29,7 +28,7 @@ export function useUsers(
   return useQuery<UsersPage, ApiError>({
     queryKey: usersKeys.list(page, limit, search, sort),
     queryFn: async () => {
-      const response = await rawPagedRequest<UserListItem>(USERS_ENDPOINT, {
+      const response = await rawPagedRequest<UserListItem>(USER_ENDPOINTS.USERS, {
         params: {
           page,
           limit,

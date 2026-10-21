@@ -1,9 +1,11 @@
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
 
 import { abilityKeys } from '@/features/auth';
-import { ROLES_ENDPOINT, rolesKeys } from '@/features/roles/api/use-roles';
+import { rolesKeys } from '@/features/roles/api/use-roles';
+import { ROLE_ENDPOINTS } from '@/features/roles/endpoints';
 import type { RoleItem, SetRolePermissionsBody } from '@/features/roles/types';
 import { rawRequest, type ApiError } from '@/lib/http/client';
+import { apiPath } from '@/lib/http/path';
 
 export interface SetRolePermissionsVariables {
   id: string;
@@ -19,7 +21,7 @@ export function useSetRolePermissions(): UseMutationResult<
 
   return useMutation<RoleItem, ApiError, SetRolePermissionsVariables>({
     mutationFn: ({ id, body }) =>
-      rawRequest<RoleItem>(`${ROLES_ENDPOINT}/${encodeURIComponent(id)}/permissions`, {
+      rawRequest<RoleItem>(apiPath(ROLE_ENDPOINTS.ROLE_PERMISSIONS, { id }), {
         method: 'PUT',
         body: JSON.stringify(body),
       }),

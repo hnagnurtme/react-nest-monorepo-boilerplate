@@ -7,14 +7,14 @@ import {
 } from '@tanstack/react-query';
 
 import { usersKeys } from '@/features/users/api/use-users';
+import { USER_ENDPOINTS } from '@/features/users/endpoints';
 import type {
   InviteToTenantBody,
   TenantInvitationPreview,
   TenantInvitationSummary,
 } from '@/features/users/types';
 import { rawRequest, type ApiError } from '@/lib/http/client';
-
-export const TENANT_INVITATIONS_ENDPOINT = '/api/v1/tenant-invitations';
+import { apiPath } from '@/lib/http/path';
 
 export const tenantInvitationKeys = {
   all: ['tenant-invitations'] as const,
@@ -33,7 +33,7 @@ export function useInviteToTenant(): UseMutationResult<undefined, ApiError, Invi
 
   return useMutation<undefined, ApiError, InviteToTenantBody>({
     mutationFn: async (body): Promise<undefined> => {
-      await rawRequest<undefined>(TENANT_INVITATIONS_ENDPOINT, {
+      await rawRequest<undefined>(USER_ENDPOINTS.TENANT_INVITATIONS, {
         method: 'POST',
         body: JSON.stringify(body),
       });
@@ -51,7 +51,7 @@ export function usePendingInvitations(
 ): UseQueryResult<TenantInvitationSummary[], ApiError> {
   return useQuery<TenantInvitationSummary[], ApiError>({
     queryKey: tenantInvitationKeys.pending(),
-    queryFn: () => rawRequest<TenantInvitationSummary[]>(TENANT_INVITATIONS_ENDPOINT),
+    queryFn: () => rawRequest<TenantInvitationSummary[]>(USER_ENDPOINTS.TENANT_INVITATIONS),
     enabled: options.enabled ?? true,
   });
 }
@@ -61,7 +61,7 @@ export function useRevokeInvitation(): UseMutationResult<undefined, ApiError, st
 
   return useMutation<undefined, ApiError, string>({
     mutationFn: async (id): Promise<undefined> => {
-      await rawRequest<undefined>(`${TENANT_INVITATIONS_ENDPOINT}/${encodeURIComponent(id)}`, {
+      await rawRequest<undefined>(apiPath(USER_ENDPOINTS.TENANT_INVITATION, { id }), {
         method: 'DELETE',
       });
       return undefined;
@@ -79,10 +79,9 @@ export function useRevokeInvitation(): UseMutationResult<undefined, ApiError, st
 export function useResendInvitationToTenant(): UseMutationResult<undefined, ApiError, string> {
   return useMutation<undefined, ApiError, string>({
     mutationFn: async (id): Promise<undefined> => {
-      await rawRequest<undefined>(
-        `${TENANT_INVITATIONS_ENDPOINT}/${encodeURIComponent(id)}/resend`,
-        { method: 'POST' },
-      );
+      await rawRequest<undefined>(apiPath(USER_ENDPOINTS.TENANT_INVITATION_RESEND, { id }), {
+        method: 'POST',
+      });
       return undefined;
     },
   });
@@ -96,7 +95,7 @@ export function useTenantInvitationPreview(
     queryKey: tenantInvitationKeys.preview(token),
     queryFn: () =>
       rawRequest<TenantInvitationPreview>(
-        `${TENANT_INVITATIONS_ENDPOINT}/token/${encodeURIComponent(token)}`,
+        apiPath(USER_ENDPOINTS.TENANT_INVITATION_BY_TOKEN, { token }),
       ),
     enabled: token !== '',
     // A bad or spent token will not become good on a retry.
@@ -109,7 +108,7 @@ export function useAcceptTenantInvitation(): UseMutationResult<undefined, ApiErr
 
   return useMutation<undefined, ApiError, string>({
     mutationFn: async (token): Promise<undefined> => {
-      await rawRequest<undefined>(`${TENANT_INVITATIONS_ENDPOINT}/accept`, {
+      await rawRequest<undefined>(USER_ENDPOINTS.TENANT_INVITATION_ACCEPT, {
         method: 'POST',
         body: JSON.stringify({ token }),
       });

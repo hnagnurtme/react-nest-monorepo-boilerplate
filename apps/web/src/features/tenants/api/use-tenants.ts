@@ -1,9 +1,8 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 
+import { TENANT_ENDPOINTS } from '@/features/tenants/endpoints';
 import type { Tenant, TenantsPageData } from '@/features/tenants/types';
 import { rawPagedRequest, type ApiError } from '@/lib/http/client';
-
-export const TENANTS_ENDPOINT = '/api/v1/tenants';
 
 export const tenantsKeys = {
   all: ['tenants'] as const,
@@ -19,7 +18,7 @@ export function useTenants(
     queryKey: tenantsKeys.list(page, limit),
     enabled: options.enabled ?? true,
     queryFn: async () => {
-      const response = await rawPagedRequest<Tenant>(TENANTS_ENDPOINT, {
+      const response = await rawPagedRequest<Tenant>(TENANT_ENDPOINTS.TENANTS, {
         params: { page, limit },
       });
       return { items: response.data, meta: response.meta };

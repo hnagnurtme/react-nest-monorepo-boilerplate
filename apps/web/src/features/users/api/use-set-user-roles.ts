@@ -1,8 +1,10 @@
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
 
-import { USERS_ENDPOINT, usersKeys } from '@/features/users/api/use-users';
+import { usersKeys } from '@/features/users/api/use-users';
+import { USER_ENDPOINTS } from '@/features/users/endpoints';
 import type { SetUserRolesBody, UserListItem } from '@/features/users/types';
 import { rawRequest, type ApiError } from '@/lib/http/client';
+import { apiPath } from '@/lib/http/path';
 
 export interface SetUserRolesVariables {
   id: string;
@@ -18,7 +20,7 @@ export function useSetUserRoles(): UseMutationResult<
 
   return useMutation<UserListItem, ApiError, SetUserRolesVariables>({
     mutationFn: ({ id, body }) =>
-      rawRequest<UserListItem>(`${USERS_ENDPOINT}/${encodeURIComponent(id)}/roles`, {
+      rawRequest<UserListItem>(apiPath(USER_ENDPOINTS.USER_ROLES, { id }), {
         method: 'PUT',
         body: JSON.stringify(body),
       }),

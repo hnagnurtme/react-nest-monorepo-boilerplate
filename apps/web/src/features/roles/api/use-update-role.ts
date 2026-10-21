@@ -1,8 +1,10 @@
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
 
-import { ROLES_ENDPOINT, rolesKeys } from '@/features/roles/api/use-roles';
+import { rolesKeys } from '@/features/roles/api/use-roles';
+import { ROLE_ENDPOINTS } from '@/features/roles/endpoints';
 import type { RoleItem, UpdateRoleBody } from '@/features/roles/types';
 import { rawRequest, type ApiError } from '@/lib/http/client';
+import { apiPath } from '@/lib/http/path';
 
 export interface UpdateRoleVariables {
   id: string;
@@ -15,7 +17,7 @@ export function useUpdateRole(): UseMutationResult<RoleItem, ApiError, UpdateRol
 
   return useMutation<RoleItem, ApiError, UpdateRoleVariables>({
     mutationFn: ({ id, body }) =>
-      rawRequest<RoleItem>(`${ROLES_ENDPOINT}/${encodeURIComponent(id)}`, {
+      rawRequest<RoleItem>(apiPath(ROLE_ENDPOINTS.ROLE, { id }), {
         method: 'PATCH',
         body: JSON.stringify(body),
       }),

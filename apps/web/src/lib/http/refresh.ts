@@ -8,6 +8,7 @@
 
 import { env } from '@/config/env';
 
+import { SYSTEM_ENDPOINTS } from './constants';
 import { CSRF_HEADER_NAME, expireCsrfCookie, isCsrfFailure } from './csrf';
 
 export type RefreshOutcome =
@@ -22,7 +23,7 @@ let refreshHandler: RefreshHandler | null = null;
 let inFlight: Promise<RefreshOutcome> | null = null;
 
 const REFRESH_LOCK_NAME = 'app-refresh';
-const REFRESH_ENDPOINT = `${env.VITE_API_URL.replace(/\/$/, '')}/api/v1/auth/refresh`;
+const REFRESH_ENDPOINT = `${env.VITE_API_URL.replace(/\/$/, '')}${SYSTEM_ENDPOINTS.AUTH_REFRESH}`;
 
 /**
  * Get CSRF token from cookie.

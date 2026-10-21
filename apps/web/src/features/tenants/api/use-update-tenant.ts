@@ -1,8 +1,10 @@
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
 
-import { TENANTS_ENDPOINT, tenantsKeys } from '@/features/tenants/api/use-tenants';
+import { tenantsKeys } from '@/features/tenants/api/use-tenants';
+import { TENANT_ENDPOINTS } from '@/features/tenants/endpoints';
 import type { Tenant, UpdateTenantBody } from '@/features/tenants/types';
 import { rawRequest, type ApiError } from '@/lib/http/client';
+import { apiPath } from '@/lib/http/path';
 
 export interface UpdateTenantVariables {
   id: string;
@@ -14,7 +16,7 @@ export function useUpdateTenant(): UseMutationResult<Tenant, ApiError, UpdateTen
 
   return useMutation<Tenant, ApiError, UpdateTenantVariables>({
     mutationFn: ({ id, body }) =>
-      rawRequest<Tenant>(`${TENANTS_ENDPOINT}/${encodeURIComponent(id)}`, {
+      rawRequest<Tenant>(apiPath(TENANT_ENDPOINTS.TENANT, { id }), {
         method: 'PATCH',
         body: JSON.stringify(body),
       }),
