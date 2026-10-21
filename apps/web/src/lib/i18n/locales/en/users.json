@@ -80,13 +80,15 @@
     "sendInvitation": "Email an invitation so the user sets their own password",
     "sendInvitationHint": "No password is set now. The user receives a link that expires after a limited time.",
     "manualPasswordHint": "You set the password yourself and pass it to the user out of band.",
-    "invitationSent": "User created. An invitation email has been sent."
+    "invitationSent": "User created. An invitation email has been sent.",
+    "panelDescription": "The account is created active; leaving the password blank sends an invitation instead."
   },
   "rolesDialog": {
     "title": "Edit roles for {{email}}",
     "save": "Save roles",
     "cancel": "Cancel",
-    "loading": "Loading roles..."
+    "loading": "Loading roles...",
+    "panelDescription": "Choose the roles this account holds in the active tenant."
   },
   "invite": {
     "prompt": "{{email}} already has an account. Invite it to join this tenant instead — the account holder has to accept.",

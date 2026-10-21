@@ -80,13 +80,15 @@
     "sendInvitation": "Gửi email mời để người dùng tự đặt mật khẩu",
     "sendInvitationHint": "Không đặt mật khẩu ngay. Người dùng nhận một liên kết có thời hạn.",
     "manualPasswordHint": "Bạn tự đặt mật khẩu và chuyển cho người dùng bằng kênh khác.",
-    "invitationSent": "Đã tạo người dùng. Email mời đã được gửi."
+    "invitationSent": "Đã tạo người dùng. Email mời đã được gửi.",
+    "panelDescription": "Tài khoản được tạo ở trạng thái hoạt động; bỏ trống mật khẩu thì hệ thống gửi lời mời."
   },
   "rolesDialog": {
     "title": "Sửa vai trò của {{email}}",
     "save": "Lưu vai trò",
     "cancel": "Hủy",
-    "loading": "Đang tải vai trò..."
+    "loading": "Đang tải vai trò...",
+    "panelDescription": "Chọn các vai trò của tài khoản trong tổ chức đang làm việc."
   },
   "invite": {
     "prompt": "{{email}} đã có tài khoản. Hãy mời tài khoản đó tham gia tenant này — chủ tài khoản phải chấp nhận.",

@@ -44,5 +44,16 @@
     "label": "Theme",
     "toLight": "Switch to light theme",
     "toDark": "Switch to dark theme"
+  },
+  "imageField": {
+    "dragOrChoose": "Drag an image here, or click to choose",
+    "replace": "Replace",
+    "remove": "Remove",
+    "dropHere": "Drop the image here",
+    "hint": "{{types}}, up to {{size}}",
+    "current": "Current image",
+    "preview": "Preview of the chosen image",
+    "tooLarge": "That file is {{size}}; the limit is {{limit}}.",
+    "wrongType": "That file is not one of {{types}}."
   }
 }

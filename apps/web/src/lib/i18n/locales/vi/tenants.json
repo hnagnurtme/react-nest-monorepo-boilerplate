@@ -37,7 +37,51 @@
       "nameMin": "Tên phải có ít nhất 2 ký tự",
       "nameMax": "Tên tối đa 100 ký tự",
       "slugMax": "Slug tối đa 60 ký tự",
-      "slugFormat": "Chỉ dùng chữ thường, chữ số và dấu gạch ngang"
-    }
+      "slugFormat": "Chỉ dùng chữ thường, chữ số và dấu gạch ngang",
+      "addressMax": "Địa chỉ tối đa 200 ký tự",
+      "wardRequired": "Chọn phường / xã",
+      "wardRequiredForAddress": "Chọn tỉnh và phường / xã cho địa chỉ này"
+    },
+    "addressLine": "Địa chỉ",
+    "addressPlaceholder": "Số nhà và tên đường",
+    "loadingUnits": "Đang tải...",
+    "logo": "Logo",
+    "logoChoose": "Chọn ảnh",
+    "logoClear": "Xoá",
+    "logoFailed": "Đã tạo chi nhánh nhưng chưa tải được logo. Thêm lại từ trang chi nhánh.",
+    "logoHint": "PNG, JPEG hoặc WebP, tối đa {{size}} MB.",
+    "province": "Tỉnh / Thành phố",
+    "provinceAny": "Không có địa chỉ",
+    "ward": "Phường / Xã",
+    "cancel": "Huỷ",
+    "open": "Tạo tổ chức",
+    "panelDescription": "Slug xuất hiện trong URL; để trống thì hệ thống tự tạo từ tên.",
+    "title": "Tạo tổ chức"
+  },
+  "edit": {
+    "open": "Sửa",
+    "title": "Sửa chi nhánh",
+    "panelDescription": "Slug không đổi được: nó nằm trong các liên kết đã chia sẻ.",
+    "submit": "Lưu thay đổi",
+    "success": "Đã cập nhật chi nhánh.",
+    "error": "Không cập nhật được chi nhánh.",
+    "logoFailed": "Không tải được logo nên chưa lưu gì cả."
+  },
+  "map": {
+    "noAddress": "Chưa có địa chỉ",
+    "label": "Bản đồ Việt Nam với các tỉnh có chi nhánh của bạn",
+    "unavailable": "Không tải được bản đồ.",
+    "tab": "Bản đồ",
+    "listTab": "Danh sách",
+    "region": {
+      "north": "Miền Bắc",
+      "central": "Miền Trung",
+      "south": "Miền Nam"
+    },
+    "archipelago": {
+      "paracel": "Quần đảo Hoàng Sa",
+      "spratly": "Quần đảo Trường Sa"
+    },
+    "more": "+{{count}} chi nhánh nữa"
   }
 }

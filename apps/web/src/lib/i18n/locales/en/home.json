@@ -1,0 +1,8 @@
+{
+  "launcher": {
+    "subtitle": "Pick a tenant to open its details.",
+    "error": "Could not load the tenants.",
+    "emptyTitle": "No tenants yet",
+    "emptyDescription": "Create one from the Tenants page to get started."
+  }
+}

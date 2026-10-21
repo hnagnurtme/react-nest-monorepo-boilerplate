@@ -60,7 +60,8 @@
     "validation": {
       "nameMin": "Tên phải có ít nhất 2 ký tự",
       "tenantRequired": "Vui lòng chọn tenant"
-    }
+    },
+    "panelDescription": "Vai trò là một nhóm quyền có tên, trong phạm vi một tổ chức."
   },
   "editor": {
     "title": "Vai trò: {{name}}",
@@ -77,7 +78,8 @@
     "saveSuccess": "Đã lưu quyền.",
     "saveError": "Không thể lưu quyền.",
     "deleteSuccess": "Đã xóa vai trò.",
-    "deleteError": "Không thể xóa vai trò."
+    "deleteError": "Không thể xóa vai trò.",
+    "panelDescription": "Đổi tên vai trò, hoặc thay đổi quyền của nó."
   },
   "errors": {
     "forbidden": "Bạn không có quyền thực hiện thao tác này.",

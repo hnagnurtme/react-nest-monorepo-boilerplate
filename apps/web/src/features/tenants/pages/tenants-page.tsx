@@ -1,20 +1,19 @@
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useMemo } from 'react';
-import { useForm } from 'react-hook-form';
+import { Pencil, Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { useCreateTenant } from '@/features/tenants/api/use-create-tenant';
+import { CanAction } from '@/features/auth';
+import { useTenant } from '@/features/tenants/api/use-tenant';
 import { useTenants } from '@/features/tenants/api/use-tenants';
 import { useUpdateTenant } from '@/features/tenants/api/use-update-tenant';
-import {
-  createTenantSchema,
-  type CreateTenantFormValues,
-} from '@/features/tenants/schemas/create-tenant.schema';
+import { CreateTenantForm } from '@/features/tenants/components/create-tenant-form';
+import { EditTenantForm } from '@/features/tenants/components/edit-tenant-form';
 import type { Tenant } from '@/features/tenants/types';
 import {
   urlNumber,
   useApiErrorMessage,
+  useDisclosure,
   usePageParam,
+  urlString,
   useUrlState,
   type UrlStateSchema,
 } from '@/shared/hooks';
@@ -22,16 +21,16 @@ import {
   ActionsCell,
   Badge,
   Button,
-  Card,
   CodeCell,
   ColumnVisibilityMenu,
   DataTable,
   EmptyState,
   ErrorState,
-  Input,
   PageHeader,
   PageShell,
   Pagination,
+  SidePanel,
+  Spinner,
   TableToolbar,
   TextCell,
   useColumnVisibility,
@@ -44,13 +43,16 @@ const DEFAULT_PAGE_SIZE = 20;
 
 /**
  * `GET /tenants` takes neither `search` nor `sortBy`, so the page size is the
- * only view state worth a URL param, and no column declares `sortable`.
+ * only list state worth a URL param, and no column declares `sortable`.
+ *
+ * `detail` is the open panel's tenant. It lives in the URL rather than in
+ * component state because the home chooser links straight to one tenant's
+ * details, and a reload on that link has to reopen the same panel.
  */
-const VIEW_SCHEMA: UrlStateSchema<{ limit: number }> = {
+const VIEW_SCHEMA: UrlStateSchema<{ limit: number; detail: string }> = {
   limit: urlNumber(DEFAULT_PAGE_SIZE),
+  detail: urlString(),
 };
-const CONFLICT_STATUS = 409;
-
 export function TenantsPage() {
   const { t } = useTranslation('tenants');
   const { t: tCommon } = useTranslation('common');
@@ -60,37 +62,23 @@ export function TenantsPage() {
 
   const [view, setView] = useUrlState(VIEW_SCHEMA, { resetPageOn: ['limit'] });
   const { data, isPending, isError, isFetching, refetch } = useTenants(page, view.limit);
-  const createTenant = useCreateTenant();
   const updateTenant = useUpdateTenant();
+  const createForm = useDisclosure();
 
-  const schema = useMemo(() => createTenantSchema(t), [t]);
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm<CreateTenantFormValues>({
-    resolver: zodResolver(schema),
-    defaultValues: { name: '', slug: '' },
-  });
+  const detailId = view.detail === '' ? null : view.detail;
+  /*
+    The row comes from the loaded page when it is there, and from its own read
+    when it is not: `detail` may name a tenant on another page of the table, or
+    one the chooser linked to before any page was fetched.
+  */
+  const detail = useTenant(data?.items.some((t) => t.id === detailId) === true ? null : detailId);
+  const editingRow = data?.items.find((t) => t.id === detailId) ?? detail.data ?? null;
 
-  const onSubmit = (values: CreateTenantFormValues): void => {
-    const body = values.slug === '' ? { name: values.name } : values;
-    createTenant.mutate(body, {
-      onSuccess: () => {
-        showToast({ type: 'success', message: t('create.success') });
-        reset();
-      },
-      onError: (error) => {
-        showToast({
-          type: 'error',
-          message:
-            error.status === CONFLICT_STATUS
-              ? t('create.duplicate')
-              : toMessage(error, t('create.error')),
-        });
-      },
-    });
+  const openDetail = (id: string): void => {
+    setView({ detail: id });
+  };
+  const closeDetail = (): void => {
+    setView({ detail: '' });
   };
 
   const toggleActive = (tenant: Tenant): void => {
@@ -137,10 +125,23 @@ export function TenantsPage() {
       id: 'actions',
       header: t('columns.actions'),
       kind: 'actions',
-      width: 'sm',
+      /* Two buttons: `md` is narrow enough that they wrap onto two lines. */
+      width: 'lg',
       hideable: false,
       cell: (tenant) => (
         <ActionsCell>
+          <CanAction I="update" a="Tenant">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                openDetail(tenant.id);
+              }}
+            >
+              <Pencil aria-hidden="true" className="size-4" />
+              {t('edit.open')}
+            </Button>
+          </CanAction>
           <Button
             size="sm"
             variant="outline"
@@ -171,36 +172,17 @@ export function TenantsPage() {
   return (
     <PageShell>
       {/* No `title`: the app bar already shows "Tenants" from the nav entry. */}
-      <PageHeader subtitle={t('subtitle')} />
-
-      <Card>
-        <form
-          onSubmit={(event) => {
-            void handleSubmit(onSubmit)(event);
-          }}
-          noValidate
-          className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-start"
-        >
-          <Input
-            id="tenant-name"
-            label={t('create.name')}
-            autoComplete="off"
-            error={errors.name?.message}
-            {...register('name')}
-          />
-          <Input
-            id="tenant-slug"
-            label={t('create.slug')}
-            placeholder={t('create.slugPlaceholder')}
-            autoComplete="off"
-            error={errors.slug?.message}
-            {...register('slug')}
-          />
-          <Button type="submit" isLoading={createTenant.isPending} className="sm:mt-5">
-            {t('create.submit')}
-          </Button>
-        </form>
-      </Card>
+      <PageHeader
+        subtitle={t('subtitle')}
+        actions={
+          <CanAction I="create" a="Tenant">
+            <Button size="sm" onClick={createForm.open}>
+              <Plus aria-hidden="true" className="size-4" />
+              {t('create.open')}
+            </Button>
+          </CanAction>
+        }
+      />
 
       <DataTable
         caption={t('title')}
@@ -267,6 +249,60 @@ export function TenantsPage() {
           />
         }
       />
+
+      {/*
+        Docked to the right, not a block permanently above the table: a form two
+        fields long does not earn a third of the page on every visit.
+      */}
+      {createForm.isOpen ? (
+        <CanAction I="create" a="Tenant">
+          <SidePanel
+            title={t('create.title')}
+            description={t('create.panelDescription')}
+            closeLabel={tCommon('actions.close')}
+            onClose={createForm.close}
+            // A half-filled form must not vanish on a stray click outside it.
+            closeOnOverlayClick={false}
+            // The form owns the scroll: its action row stays pinned below it.
+            isFlush
+          >
+            <CreateTenantForm
+              variant="panel"
+              onCreated={createForm.close}
+              onCancel={createForm.close}
+            />
+          </SidePanel>
+        </CanAction>
+      ) : null}
+
+      {detailId === null ? null : (
+        <CanAction I="update" a="Tenant">
+          <SidePanel
+            title={t('edit.title')}
+            description={t('edit.panelDescription')}
+            closeLabel={tCommon('actions.close')}
+            onClose={closeDetail}
+            closeOnOverlayClick={false}
+            isFlush
+          >
+            {editingRow === null ? (
+              /* Linked straight to this tenant: its read is still in flight. */
+              <div className="flex items-center justify-center p-8">
+                <Spinner />
+              </div>
+            ) : (
+              /* Keyed by id: switching rows must rebuild the form's defaults. */
+              <EditTenantForm
+                key={editingRow.id}
+                tenant={editingRow}
+                variant="panel"
+                onSaved={closeDetail}
+                onCancel={closeDetail}
+              />
+            )}
+          </SidePanel>
+        </CanAction>
+      )}
     </PageShell>
   );
 }

@@ -44,5 +44,16 @@
     "label": "Giao diện",
     "toLight": "Chuyển sang giao diện sáng",
     "toDark": "Chuyển sang giao diện tối"
+  },
+  "imageField": {
+    "dragOrChoose": "Kéo ảnh vào đây, hoặc bấm để chọn",
+    "replace": "Đổi ảnh",
+    "remove": "Xoá",
+    "dropHere": "Thả ảnh vào đây",
+    "hint": "{{types}}, tối đa {{size}}",
+    "current": "Ảnh hiện tại",
+    "preview": "Xem trước ảnh đã chọn",
+    "tooLarge": "Tệp nặng {{size}}; giới hạn là {{limit}}.",
+    "wrongType": "Tệp không thuộc {{types}}."
   }
 }

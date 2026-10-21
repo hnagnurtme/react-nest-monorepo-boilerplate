@@ -1,17 +1,25 @@
-import type { components, operations } from '@repo/api-contract';
-
-import type { PageMeta } from '@/lib/http/types';
-
-type TenantListBody =
-  operations['TenantsController_list_v1']['responses'][200]['content']['application/json'];
+import type { DirectoryTenant } from '@/entities/tenant';
+import { type TENANT_ENDPOINTS } from '@/features/tenants/endpoints';
+import type { ApiRequestBody, ApiResponseData, PageMeta } from '@/lib/http/types';
 
 /** Tenant as returned by the tenants endpoints (typed by the API contract). */
-export type Tenant = TenantListBody['data'][number];
+export type Tenant = ApiResponseData<typeof TENANT_ENDPOINTS.TENANTS, 'get'>[number];
 
 export interface TenantsPageData {
   items: Tenant[];
   meta: PageMeta;
 }
 
-export type CreateTenantBody = components['schemas']['CreateTenantDto'];
-export type UpdateTenantBody = components['schemas']['UpdateTenantDto'];
+export type CreateTenantBody = ApiRequestBody<typeof TENANT_ENDPOINTS.TENANTS, 'post'>;
+export type UpdateTenantBody = ApiRequestBody<typeof TENANT_ENDPOINTS.TENANT, 'patch'>;
+
+/** A tenant on the picker, with the logo and address it draws. */
+export type MyTenant = DirectoryTenant;
+
+/** The address block: null on a tenant nobody has filled the form in for. */
+export type TenantDetail = NonNullable<Tenant['detail']>;
+
+export type AdministrativeUnit = ApiResponseData<typeof TENANT_ENDPOINTS.PROVINCES, 'get'>[number];
+
+export type LogoUpload = ApiResponseData<typeof TENANT_ENDPOINTS.LOGO_UPLOAD_URL, 'post'>;
+export type LogoUploadBody = ApiRequestBody<typeof TENANT_ENDPOINTS.LOGO_UPLOAD_URL, 'post'>;
