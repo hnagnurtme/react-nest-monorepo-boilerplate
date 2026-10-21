@@ -30,7 +30,16 @@ function HomeProbe() {
 
 const canManageAll = (ability: AppAbility): boolean => ability.can('manage', 'all');
 
-function renderGuard(checkAbility?: (ability: AppAbility) => boolean, initialEntry = '/protected') {
+function renderGuard(
+  checkAbility?: (ability: AppAbility) => boolean,
+  initialEntry = '/protected',
+  /*
+    Mirrors the route table: a page that works without a tenant chosen. A
+    platform account's own pages say so, because for it the tenant is a choice
+    among all of them rather than a membership.
+  */
+  allowsNoTenant = false,
+) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
@@ -40,7 +49,10 @@ function renderGuard(checkAbility?: (ability: AppAbility) => boolean, initialEnt
             <Route
               path="/protected"
               element={
-                <RouteGuard {...(checkAbility ? { checkAbility } : {})}>
+                <RouteGuard
+                  allowsNoTenant={allowsNoTenant}
+                  {...(checkAbility ? { checkAbility } : {})}
+                >
                   <ProtectedPage />
                 </RouteGuard>
               }
@@ -89,7 +101,7 @@ describe('RouteGuard with abilities', () => {
 
   it('shows the loader (no redirect) while the ability is loading, then renders', async () => {
     mockApi(makePlatformAdmin(), PLATFORM_ADMIN_GRANTS);
-    renderGuard(canManageAll);
+    renderGuard(canManageAll, '/protected', true);
 
     expect(screen.getByRole('status')).toBeInTheDocument();
     expect(screen.queryByTestId('home-page')).not.toBeInTheDocument();
@@ -99,7 +111,7 @@ describe('RouteGuard with abilities', () => {
 
   it('checkAbility true renders the protected route', async () => {
     mockApi(makePlatformAdmin(), PLATFORM_ADMIN_GRANTS);
-    renderGuard(canManageAll);
+    renderGuard(canManageAll, '/protected', true);
 
     expect(await screen.findByTestId('protected-page')).toBeInTheDocument();
   });
@@ -136,10 +148,42 @@ describe('RouteGuard with abilities', () => {
     expect(screen.queryByTestId('protected-page')).not.toBeInTheDocument();
   });
 
-  it('lets a platform user through without any tenant', async () => {
+  it('sends a platform user with no tenant chosen to its home chooser', async () => {
     setSessionUser(makePlatformAdmin());
     mockApi(makePlatformAdmin(), PLATFORM_ADMIN_GRANTS);
     renderGuard();
+
+    // Home, not `/select-tenant`: for a platform account the home page *is* the
+    // chooser, and the rest of the app stays reachable.
+    expect(await screen.findByTestId('home-page')).toBeInTheDocument();
+    expect(screen.queryByTestId('protected-page')).not.toBeInTheDocument();
+  });
+
+  it('still sends a tenant account to the picker on a page that needs no tenant', async () => {
+    mockApi(makeUser(), MEMBER_GRANTS);
+    setSessionUser(
+      makeUser({
+        tenants: [
+          { id: 'tenant-1', name: 'Acme', slug: 'acme' },
+          { id: 'tenant-2', name: 'Globex', slug: 'globex' },
+        ],
+      }),
+    );
+    renderGuard(undefined, '/protected', true);
+
+    /*
+      `allowsNoTenant` is for a platform account, which needs no header. A
+      tenant account sends none at all without a choice, so every request on
+      the page would answer `401 Missing x-tenant-id header`.
+    */
+    expect(await screen.findByTestId('select-tenant-page')).toBeInTheDocument();
+    expect(screen.queryByTestId('protected-page')).not.toBeInTheDocument();
+  });
+
+  it('lets a platform user onto a page that needs no tenant', async () => {
+    setSessionUser(makePlatformAdmin());
+    mockApi(makePlatformAdmin(), PLATFORM_ADMIN_GRANTS);
+    renderGuard(undefined, '/protected', true);
 
     expect(await screen.findByTestId('protected-page')).toBeInTheDocument();
   });

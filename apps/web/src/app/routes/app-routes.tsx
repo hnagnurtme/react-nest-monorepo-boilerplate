@@ -34,7 +34,7 @@ export function appRoutes(): React.ReactElement {
       <Route
         path="/"
         element={
-          <RouteGuard>
+          <RouteGuard allowsNoTenant>
             <HomePage />
           </RouteGuard>
         }
@@ -42,7 +42,7 @@ export function appRoutes(): React.ReactElement {
       <Route
         path="/users"
         element={
-          <RouteGuard checkAbility={guardFor('/users')}>
+          <RouteGuard allowsNoTenant checkAbility={guardFor('/users')}>
             <UsersPage />
           </RouteGuard>
         }
@@ -50,7 +50,7 @@ export function appRoutes(): React.ReactElement {
       <Route
         path="/roles"
         element={
-          <RouteGuard checkAbility={guardFor('/roles')}>
+          <RouteGuard allowsNoTenant checkAbility={guardFor('/roles')}>
             <RolesPage />
           </RouteGuard>
         }
@@ -58,7 +58,7 @@ export function appRoutes(): React.ReactElement {
       <Route
         path="/tenants"
         element={
-          <RouteGuard checkAbility={guardFor('/tenants')}>
+          <RouteGuard allowsNoTenant checkAbility={guardFor('/tenants')}>
             <TenantsPage />
           </RouteGuard>
         }

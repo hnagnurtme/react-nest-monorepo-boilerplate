@@ -97,7 +97,7 @@ function renderRoles() {
       <Route
         path="/roles"
         element={
-          <RouteGuard checkAbility={(ability) => ability.can('read', 'Role')}>
+          <RouteGuard allowsNoTenant checkAbility={(ability) => ability.can('read', 'Role')}>
             <RolesPage />
           </RouteGuard>
         }

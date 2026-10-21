@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
 
 import { useAuthStore } from '@/entities/session';
-import { useActiveTenant, useLogout } from '@/features/auth';
+import { useActiveTenant, useLogout, useTenantChooserPath } from '@/features/auth';
 import { cn } from '@/lib/utils';
 import { Button, buttonVariants } from '@/shared/ui';
 
@@ -26,6 +26,7 @@ export function UserMenu() {
   const location = useLocation();
   const user = useAuthStore((state) => state.user);
   const { tenants, activeTenant } = useActiveTenant();
+  const chooserPath = useTenantChooserPath();
   const logout = useLogout();
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -95,7 +96,7 @@ export function UserMenu() {
           {tenants.length < 2 ? null : (
             <Link
               role="menuitem"
-              to="/select-tenant?change=1"
+              to={chooserPath}
               state={{ from: { pathname: location.pathname } }}
               onClick={() => {
                 setIsOpen(false);
