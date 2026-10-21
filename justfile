@@ -5,7 +5,7 @@ default:
 install:
   pnpm install --frozen-lockfile
 
-# Postgres 16 + Redis 7 for local development.
+# Postgres 16, Redis 7 and Mailpit for local development.
 up:
   docker compose up -d
 
@@ -71,6 +71,16 @@ db-migrate:
 # Development data: two tenants plus a platform admin.
 db-seed:
   pnpm db:seed
+
+# Empty every table, re-sync the code-owned catalog and seed the platform admin
+# again. Development only: the data is gone for good.
+db-reset:
+  pnpm db:reset --yes
+
+# Mailpit catches every email the dev API sends.
+mail:
+  open http://localhost:8025 || echo "Mailpit UI: http://localhost:8025"
+
 
 db-studio:
   pnpm db:studio

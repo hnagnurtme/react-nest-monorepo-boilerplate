@@ -1,7 +1,12 @@
+# Container names carry a prefix so they cannot collide with another project's
+# containers on the same machine — a name is global to the Docker daemon, and a
+# fork of this boilerplate holding `boilerplate-postgres` made `just up` fail
+# with "container name is already in use". Override CONTAINER_PREFIX in .env to
+# run two checkouts of this repo side by side.
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: boilerplate-postgres
+    container_name: ${CONTAINER_PREFIX:-react-nest}-postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
@@ -20,7 +25,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: boilerplate-redis
+    container_name: ${CONTAINER_PREFIX:-react-nest}-redis
     restart: unless-stopped
     command: ['redis-server', '--appendonly', 'yes']
     ports:
@@ -33,11 +38,37 @@ services:
       timeout: 5s
       retries: 10
 
+  # Dev SMTP. Every email the API sends lands here instead of a real inbox, so
+  # a developer machine can never mail a real address — and the burst a retry
+  # loop produces can never get the production relay to block the IP.
+  mailpit:
+    image: axllent/mailpit:v1.21
+    container_name: ${CONTAINER_PREFIX:-react-nest}-mailpit
+    restart: unless-stopped
+    environment:
+      # Any username and password, so the app's own SMTP settings stay realistic:
+      # MailService builds no transporter when SMTP_USER or SMTP_PASS is blank,
+      # and then the SMTP path is exercised by nobody until production.
+      MP_SMTP_AUTH_ACCEPT_ANY: 'true'
+      # Plain auth over an unencrypted local hop; nothing here leaves the machine.
+      MP_SMTP_AUTH_ALLOW_INSECURE: 'true'
+      # A ring buffer, not a mailbox: a long dev session cannot fill the disk.
+      MP_MAX_MESSAGES: '2000'
+    ports:
+      # 1025 is SMTP, 8025 is the web UI that replaces reading the API's logs.
+      - '${MAILPIT_SMTP_PORT:-1025}:1025'
+      - '${MAILPIT_UI_PORT:-8025}:8025'
+    healthcheck:
+      test: ['CMD', '/mailpit', 'readyz']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   api:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
-    container_name: boilerplate-api
+    container_name: ${CONTAINER_PREFIX:-react-nest}-api
     profiles: ['app', 'full']
     restart: unless-stopped
     ports:
@@ -49,10 +80,16 @@ services:
       NODE_ENV: 'development'
       DATABASE_URL: 'postgres://postgres:postgres@postgres:5432/boilerplate_dev'
       REDIS_URL: 'redis://redis:6379'
+      # The containerised API reaches Mailpit by service name, not localhost.
+      SMTP_HOST: 'mailpit'
+      SMTP_PORT: '1025'
+      SMTP_SECURE: 'false'
     depends_on:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      mailpit:
         condition: service_healthy
 
 volumes:

@@ -110,6 +110,19 @@
         "COOKIE_DOMAIN"
       ],
       "dependsOn": ["^build"]
+    },
+    "db:reset": {
+      "cache": false,
+      "env": [
+        "DATABASE_URL",
+        "MIGRATION_DATABASE_URL",
+        "REDIS_URL",
+        "JWT_ACCESS_SECRET",
+        "JWT_REFRESH_SECRET",
+        "COOKIE_SECURE",
+        "COOKIE_DOMAIN"
+      ],
+      "dependsOn": ["^build"]
     }
   }
 }
