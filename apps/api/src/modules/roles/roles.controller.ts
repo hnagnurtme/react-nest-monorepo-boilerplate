@@ -21,6 +21,7 @@ import type { Response } from 'express';
 import {
   ApiProblemResponses,
   CurrentUser,
+  PlatformWide,
   type AuthContext,
   type PaginationMeta,
 } from '@/common/index.js';
@@ -41,10 +42,16 @@ import type { PermissionOption, RoleResponse } from './roles.types.js';
 
 const { UNAUTHORIZED, FORBIDDEN, NOT_FOUND, CONFLICT, UNPROCESSABLE_ENTITY } = HttpStatus;
 
+/**
+ * `@PlatformWide()`: the platform-scope roles and the permission catalogue are
+ * hidden from `tenant` mode, so a platform admin looking at one tenant could
+ * otherwise not administer roles at all.
+ */
 @ApiTags('roles')
 @ApiBearerAuth(ACCESS_TOKEN_SECURITY_SCHEME)
 @Controller({ version: '1' })
 @UseGuards(PoliciesGuard)
+@PlatformWide()
 export class RolesController {
   constructor(@Inject(RolesService) private readonly roles: RolesService) {}
 

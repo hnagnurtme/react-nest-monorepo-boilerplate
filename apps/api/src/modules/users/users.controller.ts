@@ -21,6 +21,7 @@ import type { Response } from 'express';
 import {
   ApiProblemResponses,
   CurrentUser,
+  PlatformWide,
   type AuthContext,
   type PaginationMeta,
 } from '@/common/index.js';
@@ -40,10 +41,19 @@ import type { UserResponse } from './users.types.js';
 
 const { UNAUTHORIZED, FORBIDDEN, NOT_FOUND, CONFLICT, UNPROCESSABLE_ENTITY } = HttpStatus;
 
+/**
+ * `@PlatformWide()`: accounts are platform-wide, not a tenant's property. One
+ * email is one account across the whole platform, a platform admin administers
+ * them all, and `POST /users` / `PUT /users/:id/roles` already take the tenant
+ * as an explicit field. A platform account that is currently looking at one
+ * tenant still manages accounts here; a tenant-scope caller is unaffected,
+ * since their mode comes from their memberships.
+ */
 @ApiTags('users')
 @ApiBearerAuth(ACCESS_TOKEN_SECURITY_SCHEME)
 @Controller({ path: 'users', version: '1' })
 @UseGuards(PoliciesGuard)
+@PlatformWide()
 export class UsersController {
   constructor(@Inject(UsersService) private readonly users: UsersService) {}
 

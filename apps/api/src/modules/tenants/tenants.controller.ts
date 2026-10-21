@@ -19,6 +19,7 @@ import type { Response } from 'express';
 import {
   ApiProblemResponses,
   CurrentUser,
+  PlatformWide,
   type AuthContext,
   type PaginationMeta,
 } from '@/common/index.js';
@@ -37,10 +38,16 @@ import type { TenantResponse } from './tenants.types.js';
 
 const { UNAUTHORIZED, FORBIDDEN, NOT_FOUND, CONFLICT, UNPROCESSABLE_ENTITY } = HttpStatus;
 
+/**
+ * `@PlatformWide()`: these endpoints are about tenants rather than inside one.
+ * Under a single tenant's policies the full list is invisible and a tenant
+ * cannot be created at all.
+ */
 @ApiTags('tenants')
 @ApiBearerAuth(ACCESS_TOKEN_SECURITY_SCHEME)
 @Controller({ path: 'tenants', version: '1' })
 @UseGuards(PoliciesGuard)
+@PlatformWide()
 export class TenantsController {
   constructor(@Inject(TenantsService) private readonly tenants: TenantsService) {}
 

@@ -44,7 +44,7 @@ describe('TenantsService', () => {
   let service: TenantsService;
   let repository: Record<'findById' | 'create' | 'update' | 'list' | 'count', Mock>;
   let audit: { record: Mock };
-  let authz: { current: Mock };
+  let authz: { current: Mock; invalidateTenant: Mock };
 
   const as = (actor: AuthContext, grants: readonly PermissionGrant[]): AuthContext => {
     authz.current.mockReturnValue(buildAbility(grants, { id: actor.id, tenantId: actor.tenantId }));
@@ -62,7 +62,7 @@ describe('TenantsService', () => {
       count: vi.fn(),
     };
     audit = { record: vi.fn() };
-    authz = { current: vi.fn() };
+    authz = { current: vi.fn(), invalidateTenant: vi.fn().mockResolvedValue(undefined) };
     const transactions = {
       runInRequestContext: vi.fn((fn: (tx: unknown) => Promise<unknown>) => fn({})),
     };

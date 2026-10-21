@@ -24,7 +24,13 @@ type ProfileRows = Pick<
 /** Read side of authorization. Callers pass a transaction opened in 'admin' mode. */
 @Injectable()
 export class AuthzRepository {
-  /** `undefined` for a missing, deleted or inactive user. */
+  /**
+   * `undefined` for a missing, deleted or inactive user.
+   *
+   * A deactivated tenant is not a membership any more: it must not reach the
+   * tenant picker, and a request naming it in `x-tenant-id` is rejected like
+   * any other tenant the account may not act in.
+   */
   async loadProfileRows(tx: Tx, userId: string): Promise<ProfileRows | undefined> {
     const [user] = await tx
       .select({ id: users.id, email: users.email, tenantId: users.tenantId })
@@ -37,7 +43,9 @@ export class AuthzRepository {
       .select({ id: tenants.id, name: tenants.name, slug: tenants.slug })
       .from(userTenants)
       .innerJoin(tenants, eq(tenants.id, userTenants.tenantId))
-      .where(and(eq(userTenants.userId, userId), isNull(tenants.deletedAt)));
+      .where(
+        and(eq(userTenants.userId, userId), isNull(tenants.deletedAt), eq(tenants.isActive, true)),
+      );
 
     const roleRows = await tx
       .select({
@@ -131,6 +139,26 @@ export class AuthzRepository {
       .select({ userId: userRoles.userId })
       .from(userRoles)
       .where(eq(userRoles.roleId, roleId));
+    return rows.map((row) => row.userId);
+  }
+
+  /** Whether a live, active tenant has this id. */
+  async tenantExists(tx: Tx, tenantId: string): Promise<boolean> {
+    const [row] = await tx
+      .select({ id: tenants.id })
+      .from(tenants)
+      .where(and(eq(tenants.id, tenantId), isNull(tenants.deletedAt), eq(tenants.isActive, true)))
+      .limit(1);
+
+    return row !== undefined;
+  }
+
+  /** Members of a tenant, for cache invalidation when the tenant is switched on or off. */
+  async userIdsInTenant(tx: Tx, tenantId: string): Promise<string[]> {
+    const rows = await tx
+      .select({ userId: userTenants.userId })
+      .from(userTenants)
+      .where(eq(userTenants.tenantId, tenantId));
     return rows.map((row) => row.userId);
   }
 

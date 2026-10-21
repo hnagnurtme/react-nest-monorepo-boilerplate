@@ -99,6 +99,11 @@ export class TenantsService {
     });
     if (updated === undefined) throw new ResourceNotFoundError('Tenant', id);
 
+    // The tenant's existence flag and its members' profiles both describe this
+    // row. Switching it off drops it from every membership, and a cached
+    // profile would keep offering it in the picker for the rest of the TTL.
+    await this.authz.invalidateTenant(id);
+
     return toTenantResponse(updated);
   }
 

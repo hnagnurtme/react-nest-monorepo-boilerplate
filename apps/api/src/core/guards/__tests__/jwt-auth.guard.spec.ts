@@ -14,6 +14,21 @@ describe('accessContextFor', () => {
     });
   });
 
+  it('runs a platform user inside the tenant they chose', () => {
+    expect(accessContextFor({ userId: 'p', scope: 'platform', tenants: [] }, 't-2')).toEqual({
+      accessMode: 'tenant',
+      tenantId: 't-2',
+    });
+  });
+
+  it('keeps a platform user platform-wide on a @PlatformWide route', () => {
+    expect(
+      accessContextFor({ userId: 'p', scope: 'platform', tenants: [] }, 't-2', {
+        isPlatformWide: true,
+      }),
+    ).toEqual({ accessMode: 'admin', reason: 'platform-user:p' });
+  });
+
   it('acts in the tenant the caller asked for', () => {
     expect(
       accessContextFor({ userId: 'u', scope: 'tenant', tenants: [ACME, GLOBEX] }, 't-2'),
