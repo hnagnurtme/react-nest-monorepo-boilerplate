@@ -294,7 +294,13 @@
 
   /* Named widths so no layout needs an arbitrary `max-w-[...]`. */
   --container-form: 26rem;
-  --container-page: 80rem;
+  /*
+   * 96rem, not 80: on a 1920px screen the old cap left ~190px of empty page on
+   * each side of an admin table, which reads as padding nobody asked for. A
+   * cap is still wanted — a table running the full width of an ultrawide is
+   * unreadable — but it belongs past the common desktop width, not inside it.
+   */
+  --container-page: 96rem;
   --container-dialog-sm: 25rem;
   --container-dialog-md: 32rem;
   --container-dialog-lg: 45rem;

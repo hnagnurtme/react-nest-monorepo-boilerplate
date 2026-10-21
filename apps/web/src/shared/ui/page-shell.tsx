@@ -54,7 +54,7 @@ export function PageShell({
           separates the page from the chrome, so a second 24px of air only
           narrows the table it surrounds.
         */
-        'bg-background p-4 sm:p-6 lg:px-5 lg:py-4',
+        'bg-background p-4 sm:p-6 lg:px-4 lg:py-3',
         isFullHeight ? 'h-full overflow-hidden' : 'min-h-full',
         isCentered ? 'flex flex-col items-center justify-center' : '',
         className,
