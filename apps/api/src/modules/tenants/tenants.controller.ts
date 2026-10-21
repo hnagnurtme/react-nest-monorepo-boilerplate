@@ -19,6 +19,7 @@ import type { Response } from 'express';
 import {
   ApiProblemResponses,
   CurrentUser,
+  NoTenantContext,
   PlatformWide,
   type AuthContext,
   type PaginationMeta,
@@ -29,12 +30,15 @@ import { ACCESS_TOKEN_SECURITY_SCHEME } from '@/modules/auth/index.js';
 import {
   CreateTenantDto,
   ListTenantsDto,
+  LogoUploadEnvelopeDto,
+  LogoUploadUrlDto,
   TenantEnvelopeDto,
   TenantListEnvelopeDto,
+  TenantPickerEnvelopeDto,
   UpdateTenantDto,
 } from './dto/index.js';
 import { TenantsService } from './tenants.service.js';
-import type { TenantResponse } from './tenants.types.js';
+import type { LogoUploadResponse, TenantResponse } from './tenants.types.js';
 
 const { UNAUTHORIZED, FORBIDDEN, NOT_FOUND, CONFLICT, UNPROCESSABLE_ENTITY } = HttpStatus;
 
@@ -87,6 +91,26 @@ export class TenantsController {
     return created;
   }
 
+  /** Declared before `:id` so the literal path is not parsed as a uuid. */
+  @Get('mine')
+  @NoTenantContext()
+  @ApiOperation({
+    summary: 'Every tenant the caller may act in — the tenant picker',
+    description:
+      'Answers before a tenant has been chosen, so it needs no x-tenant-id header. ' +
+      'Membership comes from the database-loaded profile; a platform account gets ' +
+      'every active tenant.',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: "The caller's tenants, ordered by name",
+    type: TenantPickerEnvelopeDto,
+  })
+  @ApiProblemResponses(UNAUTHORIZED)
+  listMine(@CurrentUser() actor: AuthContext): Promise<TenantResponse[]> {
+    return this.tenants.listMine(actor);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get one tenant' })
   @ApiResponse({ status: HttpStatus.OK, description: 'The tenant', type: TenantEnvelopeDto })
@@ -110,5 +134,28 @@ export class TenantsController {
     @Body() dto: UpdateTenantDto,
   ): Promise<TenantResponse> {
     return this.tenants.update(actor, id, dto);
+  }
+
+  /**
+   * Signs a PUT so the browser uploads straight to the bucket; the file never
+   * passes through NestJS. `PATCH /tenants/:id` with `detail.logoObjectKey`
+   * then confirms the key, which is what stops a caller from storing one it
+   * never uploaded to.
+   */
+  @Post(':id/logo/upload-url')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Sign an upload for a tenant logo' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'The signed PUT and the key to confirm',
+    type: LogoUploadEnvelopeDto,
+  })
+  @ApiBody({ type: LogoUploadUrlDto })
+  @ApiProblemResponses(UNAUTHORIZED, FORBIDDEN, NOT_FOUND, UNPROCESSABLE_ENTITY)
+  signLogoUpload(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: LogoUploadUrlDto,
+  ): Promise<LogoUploadResponse> {
+    return this.tenants.signLogoUpload(id, dto.contentType);
   }
 }

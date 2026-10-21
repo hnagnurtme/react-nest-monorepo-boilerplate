@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { and, count, desc, eq, isNull, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 
 import type { Tx } from '@/core/database/drizzle.module.js';
 import { tenants, type NewTenant, type Tenant } from '@/core/database/schema/index.js';
@@ -20,6 +20,27 @@ export class TenantsRepository {
       .orderBy(desc(tenants.createdAt), desc(tenants.id))
       .limit(page.limit)
       .offset(page.offset);
+  }
+
+  /**
+   * The tenant picker: every tenant the caller may act in, unpaginated and
+   * ordered by name. `null` means "not a member of anything in particular" —
+   * a platform account, which may act in any active tenant.
+   */
+  async listForPicker(tx: Tx, ids: string[] | null): Promise<Tenant[]> {
+    if (ids !== null && ids.length === 0) return [];
+
+    return tx
+      .select()
+      .from(tenants)
+      .where(
+        and(
+          isNull(tenants.deletedAt),
+          eq(tenants.isActive, true),
+          ...(ids === null ? [] : [inArray(tenants.id, ids)]),
+        ),
+      )
+      .orderBy(asc(tenants.name), asc(tenants.id));
   }
 
   async count(tx: Tx): Promise<number> {

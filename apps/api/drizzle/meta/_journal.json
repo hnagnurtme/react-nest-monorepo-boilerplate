@@ -50,6 +50,13 @@
       "when": 1792563761842,
       "tag": "0006_bent_dragon_man",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792565275745,
+      "tag": "0007_icy_silver_centurion",
+      "breakpoints": true
     }
   ]
 }
