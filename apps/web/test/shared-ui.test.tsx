@@ -7,6 +7,7 @@ import {
   Badge,
   Button,
   CheckboxField,
+  Combobox,
   DataTable,
   DividerLabel,
   EmptyState,
@@ -293,5 +294,88 @@ describe('DataTable responsive layout', () => {
     );
 
     expect(screen.getByText('Ada')).toHaveAttribute('data-label', 'Name');
+  });
+});
+
+describe('Combobox', () => {
+  const PROVINCES = [
+    { value: '01', label: 'Hà Nội' },
+    { value: '79', label: 'Thành phố Hồ Chí Minh' },
+    { value: '48', label: 'Đà Nẵng' },
+  ];
+
+  function renderCombobox(onChange = vi.fn()) {
+    render(
+      <Combobox
+        id="province"
+        label="Province"
+        options={PROVINCES}
+        value=""
+        onChange={onChange}
+        placeholder="Choose"
+      />,
+    );
+    return { input: screen.getByRole('combobox', { name: 'Province' }), onChange };
+  }
+
+  it('filters without the tone marks a keyboard does not type', () => {
+    const { input } = renderCombobox();
+
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: 'ha noi' } });
+
+    expect(screen.getByRole('option', { name: 'Hà Nội' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Đà Nẵng' })).not.toBeInTheDocument();
+  });
+
+  it('matches a name starting with đ typed as d', () => {
+    const { input } = renderCombobox();
+
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: 'da nang' } });
+
+    expect(screen.getByRole('option', { name: 'Đà Nẵng' })).toBeInTheDocument();
+  });
+
+  it('reports the chosen value and closes the list', () => {
+    const { input, onChange } = renderCombobox();
+
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: 'ho chi minh' } });
+    fireEvent.click(screen.getByRole('option', { name: 'Thành phố Hồ Chí Minh' }));
+
+    expect(onChange).toHaveBeenCalledWith('79');
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+  });
+
+  it('picks the active option with Enter instead of submitting the form', () => {
+    const onSubmit = vi.fn((event: { preventDefault: () => void }) => {
+      event.preventDefault();
+    });
+    const onChange = vi.fn();
+    render(
+      <form onSubmit={onSubmit}>
+        <Combobox id="province" label="Province" options={PROVINCES} value="" onChange={onChange} />
+      </form>,
+    );
+
+    const input = screen.getByRole('combobox', { name: 'Province' });
+    // Opening highlights the first option, so one ArrowDown lands on the second.
+    fireEvent.focus(input);
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    expect(onChange).toHaveBeenCalledWith('79');
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('says so when nothing matches', () => {
+    const { input } = renderCombobox();
+
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: 'zzz' } });
+
+    expect(screen.queryAllByRole('option')).toHaveLength(0);
+    expect(screen.getByText('No match')).toBeInTheDocument();
   });
 });

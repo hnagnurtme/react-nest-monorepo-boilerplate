@@ -8,6 +8,7 @@ export {
   type ButtonVariant,
 } from './button';
 export { Card, type CardProps } from './card';
+export { Combobox, type ComboboxProps } from './combobox';
 export { CheckboxField, type CheckboxFieldProps } from './checkbox-field';
 export { ConfirmDialog, type ConfirmDialogProps } from './confirm-dialog';
 export { CONTROL_HEIGHT, CONTROL_SIZE, type ControlSize } from './control';

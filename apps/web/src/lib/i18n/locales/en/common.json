@@ -10,6 +10,10 @@
     "retry": "Try again",
     "save": "Save"
   },
+  "combobox": {
+    "empty": "No match",
+    "clear": "Clear the selection"
+  },
   "errors": {
     "forbidden": "You do not have permission to do that.",
     "conflict": "That conflicts with existing data.",

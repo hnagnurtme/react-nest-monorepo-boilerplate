@@ -10,6 +10,10 @@
     "retry": "Thử lại",
     "save": "Lưu"
   },
+  "combobox": {
+    "empty": "Không có kết quả",
+    "clear": "Xoá lựa chọn"
+  },
   "errors": {
     "forbidden": "Bạn không có quyền thực hiện việc này.",
     "conflict": "Dữ liệu bị trùng với dữ liệu đã có.",
