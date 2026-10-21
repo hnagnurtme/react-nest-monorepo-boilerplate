@@ -1,17 +1,16 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowRight, Clock, KeyRound } from 'lucide-react';
-import { useMemo, type ChangeEvent } from 'react';
+import { ArrowRight, Clock } from 'lucide-react';
+import { useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
 import { createResetPasswordSchema } from '@/features/auth/schemas/forgot-password.schema';
 import type { ResetPasswordFormValues } from '@/features/auth/types';
-import { Alert, Button, Input, LinkButton } from '@/shared/ui';
+import { Alert, Button, LinkButton, OtpInput } from '@/shared/ui';
 
 import { PasswordField } from './password-field';
 
 const OTP_LENGTH = 6;
-const DIGITS_ONLY = /\D/g;
 
 export interface ResetStepProps {
   email: string;
@@ -33,15 +32,14 @@ export function ResetStep({
 }: ResetStepProps) {
   const { t } = useTranslation('auth');
   const schema = useMemo(() => createResetPasswordSchema(t), [t]);
-  const { register, handleSubmit, setValue, formState } = useForm<ResetPasswordFormValues>({
+  const { register, handleSubmit, setValue, watch, formState } = useForm<ResetPasswordFormValues>({
     resolver: zodResolver(schema),
     // The email is carried by the flow, not typed again; it still goes through
     // the same schema so one definition validates the whole payload.
     defaultValues: { email, otp: '', newPassword: '', confirmPassword: '' },
   });
   const { errors } = formState;
-
-  const otpRegistration = register('otp');
+  const otp = watch('otp');
 
   return (
     <form
@@ -57,23 +55,17 @@ export function ResetStep({
         </p>
       </Alert>
 
-      <Input
+      <OtpInput
         id="reset-otp"
         label={t('forgotPasswordModal.otpLabel')}
         isRequired
-        type="text"
-        inputMode="numeric"
-        autoComplete="one-time-code"
-        maxLength={OTP_LENGTH}
-        placeholder={t('forgotPasswordModal.otpInputPlaceholder')}
+        length={OTP_LENGTH}
+        value={otp}
         error={errors.otp?.message}
-        startIcon={<KeyRound className="size-4" />}
-        className="font-semibold tracking-widest"
-        {...otpRegistration}
-        onChange={(event: ChangeEvent<HTMLInputElement>) => {
-          void otpRegistration.onChange(event);
-          // Keep the field digits-only so a pasted code with spaces still works.
-          setValue('otp', event.target.value.replace(DIGITS_ONLY, '').slice(0, OTP_LENGTH));
+        onChange={(next) => {
+          // The boxes only ever emit digits, so the schema sees a clean value;
+          // revalidating as it fills clears the error the moment it is right.
+          setValue('otp', next, { shouldValidate: formState.isSubmitted });
         }}
       />
 

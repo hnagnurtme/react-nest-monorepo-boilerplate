@@ -81,3 +81,4 @@ export { ImageField, type ImageFieldProps, type ImageFieldShape } from './image-
 export { TypeCard, type TypeCardProps } from './type-card';
 export { PanelForm, type PanelFormProps, type PanelFormVariant } from './panel-form';
 export { SidePanel, type SidePanelProps, type SidePanelWidth } from './side-panel';
+export { OtpInput, type OtpInputProps } from './otp-input';

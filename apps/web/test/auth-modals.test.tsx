@@ -104,13 +104,15 @@ describe('ForgotPasswordModal', () => {
 
     // Step 2: Now in OTP and password step
     await waitFor(() => {
-      expect(screen.getByPlaceholderText('Enter the 6-digit code...')).toBeInTheDocument();
+      expect(screen.getByLabelText('1/6')).toBeInTheDocument();
     });
 
-    // Enter OTP, new password, confirm password
-    fireEvent.change(screen.getByPlaceholderText('Enter the 6-digit code...'), {
-      target: { value: '123456' },
-    });
+    // Enter OTP (one box per digit), new password, confirm password
+    for (const [index, digit] of Array.from('123456').entries()) {
+      fireEvent.change(screen.getByLabelText(`${String(index + 1)}/6`), {
+        target: { value: digit },
+      });
+    }
     fireEvent.change(screen.getByPlaceholderText('Minimum 8 characters'), {
       target: { value: 'newpassword123' },
     });
