@@ -64,6 +64,42 @@ services:
       timeout: 5s
       retries: 10
 
+  # ---------------------------------------------------------------------------
+  # MinIO withdrew its public images in October 2025 — `minio/minio` and
+  # `quay.io/minio/minio` now refuse unauthenticated pulls on every tag,
+  # historical ones included — and the project points at its paid product
+  # instead. `bitnamilegacy/minio` is an unmaintained mirror of the last free
+  # build (2025.5.24), which carries a reported auth-bypass (CVSS 8.8) that
+  # nobody will patch. That is acceptable for a bucket of images reachable only
+  # from a laptop; it is not acceptable in production, so a deployment points
+  # `S3_ENDPOINT` at a managed S3 service rather than this image.
+  #
+  # The bucket stays private. The API never hands a browser a bucket URL; it
+  # signs a short-lived GET per request, and signs a PUT for uploads so the file
+  # goes straight from the browser to MinIO instead of through NestJS.
+  # ---------------------------------------------------------------------------
+  minio:
+    image: bitnamilegacy/minio@sha256:451fe6858cb770cc9d0e77ba811ce287420f781c7c1b806a386f6896471a349c
+    container_name: ${CONTAINER_PREFIX:-react-nest}-minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      # Created on first boot, so no init container has to race the healthcheck.
+      MINIO_DEFAULT_BUCKETS: ${S3_BUCKET:-app-private}
+    ports:
+      # 9000 is the S3 API, 9001 the console at http://localhost:9001.
+      - '${MINIO_API_PORT:-9000}:9000'
+      - '${MINIO_CONSOLE_PORT:-9001}:9001'
+    volumes:
+      - minio-data:/bitnami/minio/data
+    healthcheck:
+      # `mc` ships in this image, but not configured: curl the liveness probe.
+      test: ['CMD-SHELL', 'curl -fsS http://localhost:9000/minio/health/live || exit 1']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   api:
     build:
       context: .
@@ -84,6 +120,8 @@ services:
       SMTP_HOST: 'mailpit'
       SMTP_PORT: '1025'
       SMTP_SECURE: 'false'
+      # The containerised API reaches MinIO by service name, not localhost.
+      S3_ENDPOINT: 'http://minio:9000'
     depends_on:
       postgres:
         condition: service_healthy
@@ -91,7 +129,10 @@ services:
         condition: service_healthy
       mailpit:
         condition: service_healthy
+      minio:
+        condition: service_healthy
 
 volumes:
   postgres-data:
   redis-data:
+  minio-data:

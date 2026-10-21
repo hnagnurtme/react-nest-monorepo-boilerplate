@@ -108,6 +108,35 @@ export const envSchema = z
     SMTP_PASS: z.string().default(''),
     SMTP_FROM: z.string().default('Starter App <no-reply@example.com>'),
 
+    /**
+     * Object storage (MinIO in dev, any S3-compatible service in production).
+     * Optional as a block: with `S3_ENDPOINT` blank the `StorageService` builds
+     * no client and the upload endpoints answer 503 instead of a stack trace,
+     * so an existing deployment keeps booting until its env file catches up.
+     *
+     * The bucket is private. Nothing here is ever handed to a browser; the API
+     * signs a short-lived URL per request instead.
+     */
+    S3_ENDPOINT: blankToUndefined(z.string().url().optional()),
+    S3_REGION: z.string().default('us-east-1'),
+    S3_BUCKET: z.string().default('app-private'),
+    S3_ACCESS_KEY: blankToUndefined(z.string().optional()),
+    S3_SECRET_KEY: blankToUndefined(z.string().optional()),
+    /** MinIO serves buckets as a path, not a subdomain. AWS wants the opposite. */
+    S3_FORCE_PATH_STYLE: z
+      .enum(['true', 'false'])
+      .default('true')
+      .transform((value) => value === 'true'),
+    /** How long a presigned GET on an image stays usable. */
+    S3_PRESIGN_TTL_SECONDS: z.coerce.number().int().min(60).max(3600).default(900),
+    /** The ceiling a signed upload may carry, enforced again on confirmation. */
+    S3_MAX_UPLOAD_BYTES: z.coerce
+      .number()
+      .int()
+      .min(1024)
+      .max(10 * 1024 * 1024)
+      .default(2 * 1024 * 1024),
+
     /** How long an invitation link stays usable. One week is the hard ceiling. */
     INVITATION_TTL_HOURS: z.coerce
       .number()

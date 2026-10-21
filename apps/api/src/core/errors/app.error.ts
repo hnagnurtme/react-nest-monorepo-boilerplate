@@ -153,6 +153,23 @@ export class ServiceUnavailableError extends AppError {
   }
 }
 
+/**
+ * An upstream system we only read from or write to is unreachable — today, the
+ * object store.
+ *
+ * Its own code, separate from SERVICE_UNAVAILABLE: a dead bucket takes the
+ * images and nothing else, so the client degrades one part of the page rather
+ * than treating the API as down.
+ */
+export class UpstreamUnavailableError extends AppError {
+  readonly code = ERROR_CODES.UPSTREAM_UNAVAILABLE;
+  readonly status = HttpStatus.SERVICE_UNAVAILABLE;
+
+  constructor(dependency: string) {
+    super(`Upstream "${dependency}" is unavailable`, { dependency });
+  }
+}
+
 export class InvalidOtpError extends AppError {
   readonly code = ERROR_CODES.VALIDATION_FAILED;
   readonly status = HttpStatus.BAD_REQUEST;

@@ -5,7 +5,7 @@ default:
 install:
   pnpm install --frozen-lockfile
 
-# Postgres 16, Redis 7 and Mailpit for local development.
+# Postgres 16, Redis 7, Mailpit and MinIO for local development.
 up:
   docker compose up -d
 
@@ -80,6 +80,10 @@ db-reset:
 # Mailpit catches every email the dev API sends.
 mail:
   open http://localhost:8025 || echo "Mailpit UI: http://localhost:8025"
+
+# The MinIO console, where the dev bucket's objects are visible.
+storage:
+  open http://localhost:9001 || echo "MinIO console: http://localhost:9001"
 
 
 db-studio:
